@@ -3,714 +3,527 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>nakfrg // breaker</title>
+<title>tamafroggi</title>
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="frog.png">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @font-face {
+    font-family: 'Pixel';
+    src: url(data:font/woff2;base64,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) format('woff2');
+    font-display: swap;
+  }
+  :root { --line:#fff; --dim:rgba(255,255,255,0.4); --faint:rgba(255,255,255,0.14); }
+  * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
-    background: #000;
-    cursor: default;
-    -webkit-user-select: none; user-select: none;
-    -webkit-tap-highlight-color: transparent;
+    width:100%; min-height:100%; background:#000; color:#fff;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  #wrap {
-    position: fixed; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-  }
-  /* The play field. Crisp pixels, white-on-black. */
-  #game {
-    display: block;
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    touch-action: none;
   }
+  body { display:flex; flex-direction:column; align-items:center; padding:14px 12px 28px; }
+  .pix { font-family:'Pixel', ui-monospace, monospace; -webkit-font-smoothing:none; font-smooth:never; }
 
-  /* Hidden link to CapyCalc — same easter-egg pattern as the homepage. */
-  .secret {
-    position: fixed;
-    right: 10px; bottom: 8px;
-    font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-    color: rgba(255,255,255,0.05);
-    text-decoration: none;
-    letter-spacing: 0.5px;
-    transition: color 0.3s ease;
-    z-index: 5;
+  /* ── thick pixel buttons ── */
+  .pixbtn {
+    font-family:'Pixel', monospace; font-size:10px; line-height:1; letter-spacing:0;
+    color:#fff; text-decoration:none; background:#000; cursor:pointer; text-transform:uppercase;
+    padding:11px 12px 13px; border:0; position:relative;
+    /* blocky stepped border made of solid box-shadows (thick pixels) */
+    box-shadow:
+      0 -4px 0 0 #fff, 0 4px 0 0 #fff, -4px 0 0 0 #fff, 4px 0 0 0 #fff,
+      0 0 0 4px #fff,
+      0 7px 0 0 rgba(255,255,255,0.25);  /* drop shadow block */
+    transition: transform .04s;
   }
-  .secret:hover { color: rgba(255,255,255,0.5); }
-  .secret:visited { color: rgba(255,255,255,0.05); }
-  .secret:visited:hover { color: rgba(255,255,255,0.5); }
+  .pixbtn:hover, .pixbtn:focus-visible { background:#fff; color:#000; outline:none; }
+  .pixbtn:active { transform: translateY(3px);
+    box-shadow: 0 -4px 0 0 #fff,0 4px 0 0 #fff,-4px 0 0 0 #fff,4px 0 0 0 #fff,0 0 0 4px #fff; }
+  .pixbtn[disabled] { opacity:.28; pointer-events:none; }
+  .pixbtn.alert { animation: pulse .7s steps(2) infinite; }
+  @keyframes pulse { 50% { background:#fff; color:#000; } }
+
+  #nav { display:flex; gap:14px; justify-content:center; margin-bottom:18px; }
+
+  #app { width:100%; max-width:360px; }
+  .title { text-align:center; font-size:15px; letter-spacing:1px; margin-bottom:12px; }
+
+  #screen { position:relative; width:100%; height:250px; background:#000; overflow:hidden;
+    box-shadow: 0 0 0 4px #fff; margin: 4px 0 18px; }
+  #pet { display:block; width:100%; height:100%; image-rendering:pixelated; }
+  #stageTag { position:absolute; top:7px; left:9px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  #ageTag   { position:absolute; top:7px; right:9px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  #nameTag  { position:absolute; bottom:8px; left:0; right:0; text-align:center; font-size:12px; }
+
+  #stats { margin:18px 0 4px; }
+  .stat { display:flex; align-items:center; gap:8px; margin:7px 0; }
+  .stat .lab { width:62px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  .track { flex:1; height:14px; position:relative; box-shadow:0 0 0 3px #fff; background:#000; }
+  .seg { position:absolute; top:0; bottom:0; left:0; background:#fff; width:50%;
+         transition:width .25s steps(10); }
+  .stat.low .seg { animation: blinkfill .6s steps(2) infinite; }
+  @keyframes blinkfill { 50% { opacity:.25; } }
+
+  #growthRow { display:flex; align-items:center; gap:8px; margin:14px 0 16px; }
+  #growthRow .lab { width:62px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  #growthTrack { flex:1; height:8px; position:relative; box-shadow:0 0 0 3px var(--faint); }
+  #growthFill { position:absolute; inset:0; width:0%; background:var(--dim); transition:width .3s steps(8); }
+
+  #actions, #foodPicker { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin: 6px 0 6px; }
+  #foodPicker { display:none; grid-template-columns: 1fr 1fr auto; }
+  #healWrap { margin:6px 0; display:none; }
+  #healWrap .pixbtn { width:100%; }
+
+  #msg  { min-height:14px; text-align:center; font-size:11px; color:var(--dim); margin:14px 0 4px; }
+  #hint { text-align:center; font-size:10px; line-height:1.6; color:var(--faint); margin-bottom:14px; min-height:30px; }
+
+  #footer { display:flex; justify-content:center; gap:18px; align-items:center; margin-top:4px; }
+  .linkbtn { background:none; border:none; color:var(--dim); cursor:pointer; padding:6px;
+             font:10px/1 ui-monospace, monospace; letter-spacing:1px; text-transform:uppercase; }
+  .linkbtn:hover { color:#fff; }
+
+  .secret { position:fixed; right:10px; bottom:8px; font:11px/1 ui-monospace, monospace;
+            color:rgba(255,255,255,0.05); text-decoration:none; transition:color .3s; z-index:5; }
+  .secret:hover { color:rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
-  <div id="wrap">
-    <canvas id="game"></canvas>
+  <nav id="nav">
+    <a class="pixbtn" href="https://capycalc.nakfrg.com/">capycalc</a>
+    <a class="pixbtn" href="breaker.html">breaker</a>
+  </nav>
+
+  <div id="app">
+    <div class="title pix">TAMAFROGGI</div>
+
+    <div id="screen">
+      <span id="stageTag" class="pix">BABY</span>
+      <span id="ageTag" class="pix">0M</span>
+      <canvas id="pet"></canvas>
+      <span id="nameTag" class="pix">PADPOLE</span>
+    </div>
+
+    <div id="stats">
+      <div class="stat" data-k="full">  <span class="lab pix">FULL</span>  <div class="track"><div class="seg"></div></div></div>
+      <div class="stat" data-k="happy"> <span class="lab pix">HAPPY</span> <div class="track"><div class="seg"></div></div></div>
+      <div class="stat" data-k="energy"><span class="lab pix">ENERGY</span><div class="track"><div class="seg"></div></div></div>
+      <div class="stat" data-k="clean"> <span class="lab pix">CLEAN</span> <div class="track"><div class="seg"></div></div></div>
+    </div>
+
+    <div id="growthRow">
+      <span class="lab pix">GROWTH</span>
+      <div id="growthTrack"><div id="growthFill"></div></div>
+    </div>
+
+    <div id="actions">
+      <button class="pixbtn" data-act="feed">Feed</button>
+      <button class="pixbtn" data-act="play">Play</button>
+      <button class="pixbtn" data-act="clean">Clean</button>
+      <button class="pixbtn" data-act="rest">Rest</button>
+    </div>
+
+    <div id="foodPicker">
+      <button class="pixbtn" data-food="meat">Meat</button>
+      <button class="pixbtn" data-food="veggie">Veg</button>
+      <button class="pixbtn" data-food="cancel">X</button>
+    </div>
+
+    <div id="healWrap">
+      <button class="pixbtn alert" data-act="heal">Heal</button>
+    </div>
+
+    <div id="msg"></div>
+    <div id="hint"></div>
+
+    <div id="footer">
+      <button class="linkbtn" id="newBtn">&#8634; new padpole</button>
+      <button class="linkbtn" id="muteBtn">&#9834; sound</button>
+    </div>
   </div>
 
-  <!-- Hidden link to CapyCalc -->
-  <a class="secret" href="https://capycalc.nakfrg.com/" title="?">·</a>
+  <a class="secret" href="https://capycalc.nakfrg.com/" title="?">&middot;</a>
 
 <script>
 (function () {
   "use strict";
 
-  // ─────────────────────────────────────────────────────────────
-  //  nakfrg // breaker  — a tiny frog-themed brick breaker.
-  //  Pure black, white line work, pixel frog. No dependencies.
-  // ─────────────────────────────────────────────────────────────
+  // ── sprites: '#' white, ' ' empty ──
+  var SPR = {
+    padpole:["                ","     ######     ","   ##########   ","  ###  ##  ###  ","  ## #    # ##  ","  ##  ####  ## #","  ##########  ##","   ########  ## ","    ######  ##  ","      ##  ###   ","        ###     ","                ","                "],
+    hoplet:["                ","    ##    ##    ","   #  #  #  #   ","   # ## ## #    ","    ##    ##    ","    ########    ","   ##########   ","  ############  ","  ###      ###  ","  ##  ####  ##  ","   #  #  #  #   ","      #  #      ","                "],
+    chubbin:["                ","    ##    ##    ","   #  #  #  #   ","  ##############"," ## ##    ## ## "," ##  #    #  ## "," ############## "," ##  ####  ## # "," ###      ### # ","  ############  ","  ##        ##  ","  #          #  ","                "],
+    dewdrop:["                ","     ######     ","   ##########   ","  ### #### ###  ","  ## #    # ##  ","  ## #    # ##  ","  ### #### ###  ","  ############  ","  ##  ####  ##  ","   ##########   ","  ##  #  #  ##  ","  #   #  #   #  ","                "],
+    springer:["      ####      ","     #    #     ","    # ## # #    ","    #      #    ","     ##  ##     ","   ##########   ","  ###      ###  "," ###  ####  ### ","###  ##  ##  ###","##   ##  ##   ##"," ##        ##   ","  ###    ###    ","    ##  ##      "],
+    dartling:["                ","    ##    ##    ","   #  #  #  #   ","   # ###### #   ","    ##    ##    ","   ### ## ###   ","  ## #    # ##  ","  # ##    ## #  ","  ###  ##  ###  ","   #  #  #  #   ","   ## #  # ##   ","    #      #    ","                "],
+    bullhorn:["    ##      ##  ","   #  #    #  # ","  ## ## #### ## ","  #  #      #  #"," ###############"," ##           ##"," # ########### #"," ##           ##","  ############# ","   ###      ### ","    ##########  ","     ########   ","      ######    "],
+    toadsage:["                ","   ##########   ","  ############  ","  ### #### ###  ","  ## #    # ##  ","  #          #  ","  # ######## #  ","  ############  ","  # ## ## ## #  ","  ############  ","   ##########   ","   ##      ##   ","                "],
+    canopy:["    ##    ##    ","   #  #  #  #   ","   # #    # #   ","    ## #### ##  ","   ##########   ","  ### #### ###  "," ############## ","##  ########  ##","#    ######    #","##  ##    ##  ##"," # #        # # ","## #        # ##","#            # #"],
+    lotus:["       ##       ","   #   ##   #   ","  # #  ##  # #  ","  #  ######  #  "," ## ##    ## ## "," #  # #### #  # "," ## ##    ## ## ","  #  ######  #  ","   ########     ","  ############  "," ############## ","  #  #    #  #  ","   ###    ###   "]
+  };
+  var FORM_NAMES = { padpole:"PADPOLE",hoplet:"HOPLET",chubbin:"CHUBBIN",dewdrop:"DEWDROP",
+    springer:"SPRINGER",dartling:"DARTLING",bullhorn:"BULLHORN",toadsage:"TOADSAGE",canopy:"CANOPY",lotus:"LOTUS" };
 
-  var canvas = document.getElementById('game');
-  var ctx = canvas.getContext('2d');
+  // food + poop pixel art
+  var MEAT = ["  #####  "," ####### ","#########","#########"," ####### ","   ###   ","   ###   "];
+  var VEG  = ["  #   #  "," ### ### ","#########"," ####### ","   ###   ","   ###   ","   ###   "];
+  var POOP = ["  ##  "," #  # "," #### ","######"];
 
-  // Virtual play field — everything is drawn in these units, then
-  // the whole thing is scaled to fit the viewport (crisp pixels).
-  var VW = 320, VH = 440;
+  // ── tuning ──
+  var BABY_DUR  = 3600;   // 1h: baby -> junior
+  var ADULT_AGE = 7200;   // 2h: junior -> adult
+  var DECAY = { full:100/2700, happy:100/2400, energy:100/5400, clean:100/3600 }; // per second
+  var POOP_MAX = 4;
+  var POOP_DIRTY = 100/3000;     // extra clean drain per poop per second
+  var POOP_SICK_TIME = 300;      // a poop left this long makes the frog sick (5 min)
+  var NEGLECT_MAX = 3*24*3600;   // sick this long -> hops back to the pond (~3 days)
+  var MAX_CATCHUP = 3*24*3600 + 3600;
+  var FEED_FULL = 30;            // total fullness per meal (3 bites)
+  var SAVE_KEY = 'tamafroggi_save_v2';
 
-  // Layout
-  var HUD_H   = 26;                 // top strip for score / lives / level
-  var WALL    = 8;                  // inset border thickness from the frame
-  var BRICK_TOP = HUD_H + 22;       // y where the brick field begins
-  var COLS = 9, ROWS = 6;
-  var BRICK_GAP = 3;
-  var BRICK_W, BRICK_H = 13;        // BRICK_W computed from field width
-  var PADDLE_W = 56, PADDLE_H = 7;
-  var PADDLE_Y = VH - 34;
-  var BALL_R  = 6;                  // collision radius for the frog
+  function poopInterval(){ return 110 + Math.random()*90; } // ~2-3 min
 
-  // ── Brick layouts. '#': brick, '.': gap. Frog face, diamond, full. ──
-  var PATTERNS = [
-    [ // a little frog face
-      "..#...#..",
-      ".#O#.#O#.",
-      ".#######.",
-      "#########",
-      "#.#####.#",
-      "..#...#.."
-    ],
-    [ // diamond
-      "....#....",
-      "...###...",
-      "..#####..",
-      ".#######.",
-      "#########",
-      ".#######."
-    ],
-    [ // brick wall
-      "#########",
-      "#########",
-      "#########",
-      "#########",
-      "#########",
-      ".........",
-    ]
-  ];
+  // ── DOM ──
+  var $ = function(s){ return document.querySelector(s); };
+  var petCanvas=$('#pet'), pctx=petCanvas.getContext('2d');
+  var stageTag=$('#stageTag'), ageTag=$('#ageTag'), nameTag=$('#nameTag');
+  var growthFill=$('#growthFill'), msgEl=$('#msg'), hintEl=$('#hint');
+  var actionsEl=$('#actions'), pickerEl=$('#foodPicker'), healWrap=$('#healWrap');
 
-  // ── Pixel frog sprite (drawn as the ball). '#': white, 'O': eye (gap). ──
-  var FROG = [
-    "..#...#..",
-    ".#O#.#O#.",
-    ".#######.",
-    "#########",
-    "#########",
-    "#.#####.#",
-    ".#.....#."
-  ];
-  var FROG_W = FROG[0].length, FROG_H = FROG.length;
+  // ── state ──
+  function fresh(){
+    return { v:2, stage:'baby', form:'padpole',
+      stats:{ full:70, happy:70, energy:70, clean:70 },
+      age:0, care:{ feed:0, play:0, clean:0, rest:0 }, diet:{ meat:0, veggie:0 },
+      poops:[], poopTimer: poopInterval(),
+      sick:false, sickT:0, lastSeen:Date.now(), born:Date.now() };
+  }
+  var S = loadSave() || fresh();
+  if (!S.diet) S.diet = { meat:0, veggie:0 };
+  if (!S.poops) S.poops = [];
 
-  // ── Game state ──
-  var STATE = { TITLE:0, READY:1, PLAY:2, DEAD:3, CLEAR:4, OVER:5, WIN:6 };
-  var game = {
-    state: STATE.TITLE,
-    score: 0,
-    lives: 3,
-    level: 0,
-    bricks: [],
-    remaining: 0,
-    flashT: 0,        // brief white flash timer (level clear etc.)
-    msgT: 0
+  function loadSave(){
+    try { var raw=localStorage.getItem(SAVE_KEY); if(!raw) return null;
+      var s=JSON.parse(raw); if(!s||s.v!==2||!SPR[s.form]) return null; return s; } catch(e){ return null; }
+  }
+  function save(){ try{ S.lastSeen=Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+
+  // ── audio ──
+  var muted=false; try{ muted=localStorage.getItem('tamafroggi_mute')==='1'; }catch(e){}
+  var actx=null;
+  function blip(f,d,t,v){ if(muted) return; try{
+    if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    var o=actx.createOscillator(), g=actx.createGain(); o.type=t||'square'; o.frequency.value=f;
+    g.gain.value=v==null?0.05:v; o.connect(g); g.connect(actx.destination);
+    var n=actx.currentTime; g.gain.setValueAtTime(g.gain.value,n);
+    g.gain.exponentialRampToValueAtTime(0.0001,n+(d||0.08)); o.start(n); o.stop(n+(d||0.08)); }catch(e){} }
+  $('#muteBtn').addEventListener('click',function(){ muted=!muted;
+    try{ localStorage.setItem('tamafroggi_mute',muted?'1':'0'); }catch(e){}
+    $('#muteBtn').innerHTML = (muted?'&#9834; muted':'&#9834; sound'); });
+  $('#muteBtn').innerHTML = (muted?'&#9834; muted':'&#9834; sound');
+
+  // ── sim ──
+  function clamp(v){ return v<0?0:v>100?100:v; }
+  function avgStat(){ var s=S.stats; return (s.full+s.happy+s.energy+s.clean)/4; }
+  function poopOverdue(){ for(var i=0;i<S.poops.length;i++) if(S.poops[i].age>POOP_SICK_TIME) return true; return false; }
+
+  function freeSlot(){
+    var used={}; for(var i=0;i<S.poops.length;i++) used[S.poops[i].slot]=1;
+    for(var k=0;k<POOP_MAX;k++) if(!used[k]) return k; return 0;
+  }
+  function spawnPoop(){ if(S.poops.length>=POOP_MAX) return; S.poops.push({ slot:freeSlot(), age:0 }); }
+
+  function simulate(dt){
+    S.age += dt;
+    var st=S.stats;
+    var cleanDrain = DECAY.clean*dt + S.poops.length*POOP_DIRTY*dt;
+    st.full=clamp(st.full-DECAY.full*dt);
+    st.happy=clamp(st.happy-DECAY.happy*dt);
+    st.energy=clamp(st.energy-DECAY.energy*dt);
+    st.clean=clamp(st.clean-cleanDrain);
+
+    // poop
+    for(var i=0;i<S.poops.length;i++) S.poops[i].age+=dt;
+    if(S.poops.length<POOP_MAX){
+      S.poopTimer-=dt;
+      var guard=0;
+      while(S.poopTimer<=0 && S.poops.length<POOP_MAX && guard++<POOP_MAX){
+        spawnPoop(); S.poopTimer+=poopInterval();
+      }
+      if(S.poopTimer<0) S.poopTimer=poopInterval();
+    }
+
+    // sickness
+    var anyZero = st.full<=0||st.happy<=0||st.energy<=0||st.clean<=0;
+    var dirty = poopOverdue();
+    if(anyZero||dirty){ S.sick=true; S.sickT+=dt; }
+    else if(S.sick && st.full>25&&st.happy>25&&st.energy>25&&st.clean>25){ S.sick=false; S.sickT=0; }
+    if(!S.sick) S.sickT=Math.max(0,S.sickT-dt*0.5);
+    if(S.sickT>=NEGLECT_MAX){ runAway(); return; }
+
+    checkEvolve();
+  }
+
+  function checkEvolve(){
+    if(S.stage==='baby' && S.age>=BABY_DUR){
+      var c=S.care;
+      var f = (c.play>=c.feed && c.play>=c.clean) ? 'hoplet' : (c.feed>=c.clean) ? 'chubbin' : 'dewdrop';
+      evolveTo('junior', f);
+    }
+    if(S.stage==='junior' && S.age>=ADULT_AGE){
+      var meaty = S.diet.meat>=S.diet.veggie, a;
+      if(S.form==='hoplet')      a = meaty?'springer':'dartling';
+      else if(S.form==='chubbin')a = meaty?'bullhorn':'toadsage';
+      else                       a = meaty?'canopy':'lotus';
+      evolveTo('adult', a);
+    }
+  }
+
+  var flashT=0;
+  function evolveTo(stage,form){
+    S.stage=stage; S.form=form; flashT=22;
+    blip(660,0.12,'triangle',0.07); setTimeout(function(){ blip(880,0.14,'triangle',0.07); },130);
+    setMessage(FORM_NAMES[form]+'! it evolved'); save();
+  }
+  function runAway(){ setMessage('your frog hopped back to the pond...'); S=fresh(); save(); }
+
+  // ── care actions ──
+  var react=null;          // transient anim state
+  var eating=null;         // { type, biteFrac, biteTimer, bitesLeft }
+  function startEat(type){
+    if(eating) return;
+    eating = { type:type, biteFrac:0, biteTimer:520, bitesLeft:3 };
+    blip(420,0.05);
+  }
+  function bite(){
+    S.stats.full = clamp(S.stats.full + FEED_FULL/3);
+    eating.bitesLeft--; eating.biteFrac = (3-eating.bitesLeft)/3;
+    react = { type:'eat', t:10 };
+    blip(460,0.05);
+    if(eating.bitesLeft<=0){
+      S.diet[eating.type]++; S.care.feed++;
+      // digestion: a poop comes sooner
+      S.poopTimer = Math.min(S.poopTimer, 30 + Math.random()*40);
+      setMessage(eating.type==='meat' ? 'chomp - tasty meat' : 'crunch - fresh greens');
+      eating=null; save();
+    }
+  }
+
+  function act(kind){
+    if(actx && actx.state==='suspended') actx.resume();
+    var s=S.stats;
+    if(kind==='feed'){ showPicker(true); return; }
+    if(kind==='heal'){
+      s.full=clamp(s.full+12); s.happy=clamp(s.happy+12); s.energy=clamp(s.energy+12); s.clean=clamp(s.clean+15);
+      react={type:'clean',t:30}; blip(520,0.1,'sine'); setMessage('feeling a little better'); save(); return;
+    }
+    if(kind==='play'){
+      if(s.energy<8){ react={type:'tired',t:30}; setMessage('too sleepy - rest first'); blip(180,0.12,'sawtooth'); return; }
+      s.happy=clamp(s.happy+26); s.energy=clamp(s.energy-14); s.full=clamp(s.full-8);
+      S.care.play++; react={type:'play',t:50}; blip(620,0.05); setMessage('hop hop! so happy'); save();
+    } else if(kind==='clean'){
+      startWash(); s.clean=clamp(s.clean+34); s.happy=clamp(s.happy+4);
+      S.care.clean++; blip(700,0.05,'sine'); setMessage('splish - scrubbing the screen'); save();
+    } else if(kind==='rest'){
+      s.energy=clamp(s.energy+30); s.happy=clamp(s.happy+2);
+      S.care.rest++; react={type:'rest',t:70}; blip(300,0.12,'sine'); setMessage('zzz... recharged'); save();
+    }
+  }
+
+  function showPicker(on){
+    pickerEl.style.display = on ? 'grid' : 'none';
+    actionsEl.style.display = on ? 'none' : 'grid';
+  }
+
+  var msgT=0;
+  function setMessage(t){ msgEl.textContent=t; msgT=160; }
+
+  document.querySelectorAll('[data-act]').forEach(function(b){
+    b.addEventListener('click',function(){ act(b.getAttribute('data-act')); });
+  });
+  document.querySelectorAll('[data-food]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var f=b.getAttribute('data-food'); showPicker(false);
+      if(f==='cancel') return; startEat(f);
+    });
+  });
+  $('#newBtn').addEventListener('click',function(){
+    if(confirm('Start over with a fresh padpole? Your current frog is lost.')){
+      S=fresh(); save(); showPicker(false); setMessage('a new padpole appears'); }
+  });
+
+  // ── wash animation ──
+  var wash=null; // { x }
+  function startWash(){ wash={ x:0 }; }
+
+  // ── render ──
+  var dpr=1, cw=0, ch=0;
+  function sizeCanvas(){ dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
+    var r=petCanvas.getBoundingClientRect(); cw=r.width; ch=r.height;
+    petCanvas.width=Math.round(cw*dpr); petCanvas.height=Math.round(ch*dpr); }
+  window.addEventListener('resize',sizeCanvas);
+
+  function setBars(){
+    document.querySelectorAll('.stat').forEach(function(el){
+      var k=el.getAttribute('data-k'), v=S.stats[k];
+      el.querySelector('.seg').style.width=v+'%';
+      el.classList.toggle('low', v<=18);
+    });
+    var prog;
+    if(S.stage==='baby') prog=S.age/BABY_DUR;
+    else if(S.stage==='junior') prog=(S.age-BABY_DUR)/(ADULT_AGE-BABY_DUR);
+    else prog=1;
+    growthFill.style.width = Math.max(0,Math.min(100,prog*100))+'%';
+  }
+  function fmtAge(sec){ var m=Math.floor(sec/60); if(m<60) return m+'M';
+    var h=Math.floor(m/60); if(h<24) return h+'H'+(m%60)+'M'; return Math.floor(h/24)+'D'; }
+
+  var HINTS = {
+    padpole:'PADPOLE - what you do most in the first hour sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
+    hoplet:'HOPLET - diet decides the adult:  mostly MEAT -> Springer . mostly VEGGIES -> Dartling',
+    chubbin:'CHUBBIN - diet decides the adult:  mostly MEAT -> Bullhorn . mostly VEGGIES -> Toadsage',
+    dewdrop:'DEWDROP - diet decides the adult:  mostly MEAT -> Canopy . mostly VEGGIES -> Lotus',
+    springer:'SPRINGER - the mighty meat-fed jumper. fully grown.',
+    dartling:'DARTLING - the flashy greens-fed dart frog. fully grown.',
+    bullhorn:'BULLHORN - the booming meat-fed bullfrog. fully grown.',
+    toadsage:'TOADSAGE - the wise greens-fed toad. fully grown.',
+    canopy:'CANOPY - the nimble meat-fed tree frog. fully grown.',
+    lotus:'LOTUS - the serene greens-fed pond mystic. fully grown.'
   };
 
-  var paddle = { x: VW/2, targetX: VW/2 };
-
-  var ball = {
-    x: VW/2, y: PADDLE_Y - BALL_R - 1,
-    vx: 0, vy: 0,
-    speed: 3.4,
-    spin: 0,
-    squash: 0, sqx: 0, sqy: 1,   // squash animation on impact
-    trail: []
-  };
-
-  var particles = [];   // brick break dust
-  var tongue = null;    // { x,y, tx,ty, t } flick toward a caught fly
-
-  // ── Input ──
-  var keys = {};
-  var pointerX = null;  // virtual-x of pointer, if controlling paddle
-
-  // ── Audio (tiny WebAudio blips, muted toggle persists if possible) ──
-  var muted = false;
-  try { muted = localStorage.getItem('nakfrg_breaker_mute') === '1'; } catch (e) {}
-  var actx = null;
-  function audio() {
-    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-    return actx;
-  }
-  function blip(freq, dur, type, vol) {
-    if (muted) return;
-    var a = audio(); if (!a) return;
-    try {
-      var o = a.createOscillator(), g = a.createGain();
-      o.type = type || 'square'; o.frequency.value = freq;
-      g.gain.value = (vol == null ? 0.06 : vol);
-      o.connect(g); g.connect(a.destination);
-      var t = a.currentTime;
-      g.gain.setValueAtTime(g.gain.value, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.06));
-      o.start(t); o.stop(t + (dur || 0.06));
-    } catch (e) {}
-  }
-  function setMute(m) {
-    muted = m;
-    try { localStorage.setItem('nakfrg_breaker_mute', m ? '1' : '0'); } catch (e) {}
+  function render(){
+    stageTag.textContent = S.stage.toUpperCase() + (S.sick?' SICK':'');
+    ageTag.textContent = fmtAge(S.age);
+    nameTag.textContent = FORM_NAMES[S.form];
+    hintEl.textContent = HINTS[S.form]||'';
+    healWrap.style.display = S.sick ? 'block' : 'none';
+    setBars();
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Setup / scaling
-  // ─────────────────────────────────────────────────────────────
-  var scale = 1, dpr = 1;
-  function resize() {
-    dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    scale = Math.min(window.innerWidth / VW, window.innerHeight / VH);
-    // leave a touch of breathing room on very large screens
-    scale = Math.max(1, scale * 0.96);
-    canvas.style.width  = (VW * scale) + 'px';
-    canvas.style.height = (VH * scale) + 'px';
-    canvas.width  = Math.round(VW * scale * dpr);
-    canvas.height = Math.round(VH * scale * dpr);
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  // Map a client coordinate to virtual-x.
-  function toVirtualX(clientX) {
-    var r = canvas.getBoundingClientRect();
-    return ((clientX - r.left) / r.width) * VW;
+  function blitMap(map, ox, oy, unit, eatenFrac){
+    var H=map.length, W=map[0].length;
+    var cut = eatenFrac ? Math.floor(W*(1-eatenFrac)) : W; // bites eat from the right
+    pctx.fillStyle='#fff';
+    for(var y=0;y<H;y++) for(var x=0;x<cut;x++)
+      if(map[y][x]==='#') pctx.fillRect(Math.round(ox+x*unit),Math.round(oy+y*unit),Math.ceil(unit),Math.ceil(unit));
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Level / brick building
-  // ─────────────────────────────────────────────────────────────
-  function fieldWidth() { return VW - WALL*2 - 10; }
-  function fieldX() { return WALL + 5; }
+  function drawSprite(form, offY, sq){
+    var rows=SPR[form], H=rows.length, W=rows[0].length;
+    var unit=Math.max(2,Math.floor((ch*0.62)/H));
+    var sx=unit, sy=unit;
+    if(sq){ sy=unit*sq; sx=unit*(1+(1-sq)*0.6); }
+    var totalW=W*sx, totalH=H*sy, floorY=ch*0.80;
+    var ox=(cw-totalW)/2, oy=floorY-totalH+offY;
+    pctx.fillStyle='#fff';
+    for(var y=0;y<H;y++) for(var x=0;x<W;x++)
+      if(rows[y][x]==='#') pctx.fillRect(Math.round(ox+x*sx),Math.round(oy+y*sy),Math.ceil(sx),Math.ceil(sy));
+    return { ox:ox, oy:oy, w:totalW, h:totalH, unit:unit, floorY:floorY };
+  }
 
-  function buildLevel(n) {
-    var pat = PATTERNS[n % PATTERNS.length];
-    BRICK_W = (fieldWidth() - (COLS - 1) * BRICK_GAP) / COLS;
-    game.bricks = [];
-    game.remaining = 0;
-    for (var r = 0; r < ROWS; r++) {
-      for (var c = 0; c < COLS; c++) {
-        var ch = (pat[r] && pat[r][c]) || '.';
-        if (ch === '#' || ch === 'O') {
-          var bx = fieldX() + c * (BRICK_W + BRICK_GAP);
-          var by = BRICK_TOP + r * (BRICK_H + BRICK_GAP);
-          game.bricks.push({ x: bx, y: by, w: BRICK_W, h: BRICK_H, row: r, alive: true });
-          game.remaining++;
-        }
-      }
+  function drawPoops(box){
+    var floorY=box.floorY, unit=2;
+    var slotX=[ box.ox+box.w+6, box.ox+box.w+24, box.ox+box.w+42, box.ox+box.w+60 ];
+    pctx.fillStyle='#fff';
+    for(var i=0;i<S.poops.length;i++){
+      var p=S.poops[i], bx=slotX[p.slot]||(box.ox+box.w+6);
+      var by=floorY-POOP.length*unit;
+      var overdue = p.age>POOP_SICK_TIME;
+      pctx.globalAlpha = overdue ? (0.5+0.5*Math.abs(Math.sin(animT*0.006))) : 1;
+      blitMap(POOP, bx, by, unit, 0);
+    }
+    pctx.globalAlpha=1;
+  }
+
+  function drawFood(box){
+    if(!eating) return;
+    var map = eating.type==='meat'?MEAT:VEG, unit=3, mapW=map[0].length;
+    var fx = box.ox - mapW*unit - 8, fy = box.floorY-map.length*unit;
+    blitMap(map, fx, fy, unit, eating.biteFrac);
+    // tongue flick toward the food on each bite
+    if(react && react.type==='eat'){
+      pctx.strokeStyle='#fff'; pctx.lineWidth=1;
+      var sy=box.oy+box.h*0.45;
+      pctx.beginPath(); pctx.moveTo(box.ox+2, sy); pctx.lineTo(fx+mapW*unit, fy+map.length*unit*0.4); pctx.stroke();
     }
   }
 
-  function resetBall() {
-    ball.x = paddle.x;
-    ball.y = PADDLE_Y - BALL_R - 1;
-    ball.vx = 0; ball.vy = 0;
-    ball.trail.length = 0;
-    ball.squash = 0;
+  function drawZzz(box){
+    pctx.fillStyle='rgba(255,255,255,0.7)';
+    var bx=box.ox+box.w+2, by=box.oy+8, ph=(animT*0.04)%3;
+    pctx.fillRect(bx, by-ph*3, 3,3);
+    pctx.fillRect(bx+6, by-9-ph*3, 3,3);
+    pctx.fillRect(bx+12, by-18-ph*3, 3,3);
   }
 
-  function launchBall() {
-    var ang = (-Math.PI/2) + (Math.random() * 0.6 - 0.3); // mostly up, slight angle
-    ball.vx = Math.cos(ang) * ball.speed;
-    ball.vy = Math.sin(ang) * ball.speed;
-    game.state = STATE.PLAY;
-    blip(560, 0.05, 'square');
-  }
+  var animT=0, last=performance.now(), simAcc=0;
+  function frame(now){
+    var dtMs=Math.min(120, now-last); last=now; animT+=dtMs;
 
-  function startGame() {
-    game.score = 0;
-    game.lives = 3;
-    game.level = 0;
-    ball.speed = 3.4;
-    buildLevel(game.level);
-    paddle.x = paddle.targetX = VW/2;
-    resetBall();
-    game.state = STATE.READY;
-    flash(8);
-  }
+    simAcc+=dtMs; while(simAcc>=1000){ simulate(1); simAcc-=1000; }
 
-  function nextLevel() {
-    game.level++;
-    ball.speed = Math.min(6.0, 3.4 + game.level * 0.45);
-    buildLevel(game.level);
-    paddle.x = paddle.targetX = VW/2;
-    resetBall();
-    game.state = STATE.READY;
-    game.msgT = 60;
-    flash(10);
-  }
+    // eating
+    if(eating){ eating.biteTimer-=dtMs; if(eating.biteTimer<=0){ eating.biteTimer=520; bite(); } }
+    if(react){ react.t-=dtMs/16; if(react.t<=0) react=null; }
+    if(msgT>0){ msgT-=dtMs/16; if(msgT<=0) msgEl.textContent=''; }
 
-  function flash(frames) { game.flashT = frames; }
+    pctx.setTransform(dpr,0,0,dpr,0,0);
+    pctx.clearRect(0,0,cw,ch); pctx.fillStyle='#000'; pctx.fillRect(0,0,cw,ch);
 
-  // ─────────────────────────────────────────────────────────────
-  //  Effects
-  // ─────────────────────────────────────────────────────────────
-  function spawnDust(x, y, n) {
-    for (var i = 0; i < n; i++) {
-      var a = Math.random() * Math.PI * 2;
-      var s = 0.6 + Math.random() * 1.8;
-      particles.push({
-        x: x, y: y,
-        vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.4,
-        life: 18 + Math.random() * 14, max: 32, size: 1 + (Math.random() < 0.4 ? 1 : 0)
-      });
-    }
-  }
-  function updateParticles() {
-    for (var i = particles.length - 1; i >= 0; i--) {
-      var p = particles[i];
-      p.x += p.vx; p.y += p.vy;
-      p.vy += 0.12; p.vx *= 0.98;
-      if (--p.life <= 0) particles.splice(i, 1);
-    }
-  }
+    // floor line
+    pctx.strokeStyle='rgba(255,255,255,0.5)'; pctx.lineWidth=1;
+    var fy=Math.round(ch*0.80)+0.5;
+    pctx.beginPath(); pctx.moveTo(cw*0.10,fy); pctx.lineTo(cw*0.90,fy); pctx.stroke();
 
-  function impact(nx, ny) {
-    // squash perpendicular to the impact normal
-    ball.squash = 1;
-    if (Math.abs(nx) > Math.abs(ny)) { ball.sqx = 0.65; ball.sqy = 1.3; }
-    else { ball.sqx = 1.3; ball.sqy = 0.65; }
-  }
+    var t=animT/1000, offY=Math.sin(t*2.2)*2, sq=1;
+    var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
+    if(eating){ sq=0.95; offY=Math.sin(t*9)*1.2; }
+    else if(playing){ var ph=(react.t%16)/16; offY=-Math.abs(Math.sin(ph*Math.PI))*14; sq=0.9; }
+    else if(resting){ offY=2; sq=0.86; }
+    else if(S.sick){ offY=Math.sin(t*8)*2; sq=0.95; }
+    else { var c=(animT%3200)/3200;
+      if(c>0.85){ offY-=Math.abs(Math.sin(((c-0.85)/0.15)*Math.PI))*8; sq=0.92; }
+      else if(Math.sin(t*2.2)>0.97) sq=0.9; }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Physics step (fixed 60Hz, sub-stepped to avoid tunnelling)
-  // ─────────────────────────────────────────────────────────────
-  function update() {
-    game.flashT = Math.max(0, game.flashT - 1);
-    game.msgT = Math.max(0, game.msgT - 1);
-    updateParticles();
-    if (tongue) { tongue.t--; if (tongue.t <= 0) tongue = null; }
+    var box=drawSprite(S.form, offY, sq);
+    drawPoops(box);
+    drawFood(box);
+    if(resting||tired) drawZzz(box);
+    if(S.sick){ pctx.fillStyle='#fff'; pctx.fillRect(box.ox+box.w-2, box.oy+4+(Math.sin(t*6)+1)*2, 2,3); }
 
-    // ease squash back to rest
-    if (ball.squash > 0) ball.squash = Math.max(0, ball.squash - 0.12);
-
-    // ── Paddle control ──
-    var target = paddle.targetX;
-    if (pointerX !== null) target = pointerX;
-    if (keys.left)  target -= 7;
-    if (keys.right) target += 7;
-    paddle.targetX = target;
-    var half = PADDLE_W/2 + WALL;
-    paddle.targetX = Math.max(half, Math.min(VW - half, paddle.targetX));
-    paddle.x += (paddle.targetX - paddle.x) * 0.55;
-
-    if (game.state === STATE.READY) {
-      // ball rides the paddle until launch
-      ball.x = paddle.x;
-      ball.y = PADDLE_Y - BALL_R - 1;
-      return;
-    }
-    if (game.state !== STATE.PLAY) return;
-
-    // trail
-    ball.trail.push({ x: ball.x, y: ball.y });
-    if (ball.trail.length > 7) ball.trail.shift();
-    ball.spin += ball.vx * 0.04;
-
-    // sub-step so the ball never skips a brick
-    var sp = Math.hypot(ball.vx, ball.vy);
-    var steps = Math.max(1, Math.ceil(sp / (BALL_R * 0.5)));
-    for (var s = 0; s < steps; s++) {
-      ball.x += ball.vx / steps;
-      ball.y += ball.vy / steps;
-      collideWalls();
-      collidePaddle();
-      if (collideBricks()) break; // one brick per frame keeps it readable
+    // wash sweep
+    if(wash){
+      wash.x += dtMs*0.9; // px per ms across the screen
+      var wx=wash.x;
+      // clear poops the wash has passed
+      var slotX=[ box.ox+box.w+6, box.ox+box.w+24, box.ox+box.w+42, box.ox+box.w+60 ];
+      S.poops = S.poops.filter(function(p){ return (slotX[p.slot]||0) > wx; });
+      // draw wash bar + faint trailing scrub
+      pctx.fillStyle='#fff'; pctx.fillRect(wx, 0, 8, ch);
+      pctx.fillStyle='rgba(255,255,255,0.12)'; pctx.fillRect(0,0,wx,ch);
+      if(wx>cw+8){ wash=null; S.poopTimer=poopInterval(); save(); }
     }
 
-    // fell below the floor → lose a life
-    if (ball.y - BALL_R > VH) loseLife();
+    if(flashT>0){ pctx.fillStyle='rgba(255,255,255,'+(flashT/22*0.6)+')'; pctx.fillRect(0,0,cw,ch); flashT--; }
+
+    setBars();
+    requestAnimationFrame(frame);
   }
 
-  function collideWalls() {
-    if (ball.x - BALL_R < WALL) { ball.x = WALL + BALL_R; ball.vx = Math.abs(ball.vx); impact(1,0); blip(320,0.03,'square',0.04); }
-    else if (ball.x + BALL_R > VW - WALL) { ball.x = VW - WALL - BALL_R; ball.vx = -Math.abs(ball.vx); impact(1,0); blip(320,0.03,'square',0.04); }
-    if (ball.y - BALL_R < HUD_H) { ball.y = HUD_H + BALL_R; ball.vy = Math.abs(ball.vy); impact(0,1); blip(360,0.03,'square',0.04); }
+  // ── offline catch-up ──
+  function catchUp(){
+    var elapsed=Math.max(0,(Date.now()-(S.lastSeen||Date.now()))/1000);
+    if(elapsed<1) return;
+    var capped=Math.min(elapsed,MAX_CATCHUP);
+    simulate(capped);
+    if(elapsed>capped){ S.age+=(elapsed-capped); checkEvolve(); }
+    S.lastSeen=Date.now();
   }
 
-  function collidePaddle() {
-    if (ball.vy <= 0) return;
-    var px = paddle.x - PADDLE_W/2, py = PADDLE_Y;
-    if (ball.x + BALL_R > px && ball.x - BALL_R < px + PADDLE_W &&
-        ball.y + BALL_R > py && ball.y - BALL_R < py + PADDLE_H) {
-      ball.y = py - BALL_R;
-      // deflection angle from where it hit the pad (centre = straight up)
-      var hit = (ball.x - paddle.x) / (PADDLE_W/2);   // -1 .. 1
-      hit = Math.max(-1, Math.min(1, hit));
-      var ang = (-Math.PI/2) + hit * (Math.PI/3);     // up ± 60°
-      var sp = Math.max(ball.speed, Math.hypot(ball.vx, ball.vy));
-      ball.vx = Math.cos(ang) * sp;
-      ball.vy = Math.sin(ang) * sp;
-      impact(0,1);
-      blip(480, 0.05, 'square');
-    }
-  }
+  setInterval(save,5000);
+  document.addEventListener('visibilitychange',function(){ if(document.hidden) save(); else { catchUp(); render(); } });
+  window.addEventListener('beforeunload',save);
 
-  function collideBricks() {
-    for (var i = 0; i < game.bricks.length; i++) {
-      var b = game.bricks[i];
-      if (!b.alive) continue;
-      var nearestX = Math.max(b.x, Math.min(ball.x, b.x + b.w));
-      var nearestY = Math.max(b.y, Math.min(ball.y, b.y + b.h));
-      var dx = ball.x - nearestX, dy = ball.y - nearestY;
-      if (dx*dx + dy*dy <= BALL_R*BALL_R) {
-        // reflect on the shallower-penetration axis
-        if (Math.abs(dx) > Math.abs(dy)) { ball.vx = -ball.vx; impact(1,0); }
-        else { ball.vy = -ball.vy; impact(0,1); }
-        b.alive = false;
-        game.remaining--;
-        game.score += 10 + b.row * 2;
-        spawnDust(b.x + b.w/2, b.y + b.h/2, 7);
-        // tongue flicks out to catch the fly
-        tongue = { x: ball.x, y: ball.y, tx: b.x + b.w/2, ty: b.y + b.h/2, t: 7 };
-        blip(620 + (ROWS - b.row) * 60, 0.05, 'square');
-
-        if (game.remaining <= 0) {
-          game.state = STATE.CLEAR;
-          game.msgT = 70;
-          flash(12);
-          blip(740, 0.12, 'triangle', 0.07);
-          setTimeout(function () {
-            if (game.state === STATE.CLEAR) nextLevel();
-          }, 1100);
-        }
-        return true;
-      }
-    }
-    return false;
-  }
-
-  function loseLife() {
-    game.lives--;
-    spawnDust(ball.x, VH - 10, 12);
-    blip(200, 0.25, 'sawtooth', 0.06);
-    if (game.lives <= 0) {
-      game.state = STATE.OVER;
-      flash(14);
-    } else {
-      resetBall();
-      game.state = STATE.READY;
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  //  Rendering
-  // ─────────────────────────────────────────────────────────────
-  function px(v) { return Math.round(v); }
-
-  function drawFrame() {
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    // outer frame
-    ctx.strokeRect(px(WALL) + 0.5, px(WALL) + 0.5, VW - WALL*2 - 1, VH - WALL*2 - 1);
-    // HUD divider
-    ctx.beginPath();
-    ctx.moveTo(WALL, HUD_H + 0.5);
-    ctx.lineTo(VW - WALL, HUD_H + 0.5);
-    ctx.stroke();
-  }
-
-  function drawHUD() {
-    ctx.fillStyle = '#fff';
-    ctx.textBaseline = 'middle';
-    // score
-    ctx.font = '11px ui-monospace, monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('SCORE ' + pad(game.score, 5), WALL + 6, HUD_H/2 + 1);
-    // level (centre)
-    ctx.textAlign = 'center';
-    ctx.fillText('LV ' + (game.level + 1), VW/2, HUD_H/2 + 1);
-    // lives — little frog heads
-    var lx = VW - WALL - 8;
-    for (var i = 0; i < game.lives; i++) {
-      drawFrogHead(lx - i * 13, HUD_H/2, 0.9);
-    }
-    // mute glyph
-    ctx.textAlign = 'right';
-    ctx.globalAlpha = 0.5;
-    ctx.fillText(muted ? '♪̶' : '♪', VW - WALL - 6, HUD_H/2 + 1);
-    ctx.globalAlpha = 1;
-  }
-
-  function pad(n, w) { n = '' + n; while (n.length < w) n = '0' + n; return n; }
-
-  function drawFrogHead(cx, cy, sc) {
-    // tiny 2-eye frog mark for the lives counter
-    ctx.fillStyle = '#fff';
-    var u = sc;
-    ctx.fillRect(px(cx - 4*u), px(cy - 1*u), 8*u, 5*u); // body
-    ctx.fillRect(px(cx - 4*u), px(cy - 3*u), 2*u, 2*u); // eye L
-    ctx.fillRect(px(cx + 2*u), px(cy - 3*u), 2*u, 2*u); // eye R
-    ctx.fillStyle = '#000';
-    ctx.fillRect(px(cx - 4*u), px(cy - 3*u), 1*u, 1*u);
-    ctx.fillRect(px(cx + 3*u), px(cy - 3*u), 1*u, 1*u);
-  }
-
-  function drawBricks() {
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    for (var i = 0; i < game.bricks.length; i++) {
-      var b = game.bricks[i];
-      if (!b.alive) continue;
-      ctx.strokeRect(px(b.x) + 0.5, px(b.y) + 0.5, px(b.w) - 1, px(b.h) - 1);
-      // a little fly inside each brick — the frog's lunch
-      var fx = b.x + b.w/2, fy = b.y + b.h/2;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(px(fx) - 1, px(fy) - 1, 2, 2);              // body
-      ctx.fillRect(px(fx) - 4, px(fy) - 2, 2, 1);              // wing L
-      ctx.fillRect(px(fx) + 2, px(fy) - 2, 2, 1);              // wing R
-    }
-  }
-
-  function drawPaddle() {
-    var px0 = paddle.x - PADDLE_W/2;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    // lily-pad pill
-    roundedRect(px(px0) + 0.5, px(PADDLE_Y) + 0.5, PADDLE_W - 1, PADDLE_H - 1, 3);
-    ctx.stroke();
-    // pad notch (the lily-pad slit)
-    ctx.beginPath();
-    ctx.moveTo(px(paddle.x) + 0.5, PADDLE_Y + 1);
-    ctx.lineTo(px(paddle.x) + 0.5, PADDLE_Y + PADDLE_H - 1);
-    ctx.stroke();
-  }
-
-  function roundedRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  function drawFrogBall() {
-    // trail
-    for (var i = 0; i < ball.trail.length; i++) {
-      var t = ball.trail[i];
-      ctx.globalAlpha = (i / ball.trail.length) * 0.18;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(px(t.x) - 1, px(t.y) - 1, 2, 2);
-    }
-    ctx.globalAlpha = 1;
-
-    // tongue (catching a fly)
-    if (tongue) {
-      var k = tongue.t / 7;
-      var ex = ball.x + (tongue.tx - ball.x) * (1 - k);
-      var ey = ball.y + (tongue.ty - ball.y) * (1 - k);
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(px(ball.x) + 0.5, px(ball.y) + 0.5);
-      ctx.lineTo(px(ex) + 0.5, px(ey) + 0.5);
-      ctx.stroke();
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(px(ex) - 1, px(ey) - 1, 2, 2);
-    }
-
-    // squashed pixel frog
-    var sx = 1 + (ball.sqx - 1) * ball.squash;
-    var sy = 1 + (ball.sqy - 1) * ball.squash;
-    var unit = (BALL_R * 2) / FROG_W;
-    ctx.save();
-    ctx.translate(ball.x, ball.y);
-    ctx.scale(sx, sy);
-    ctx.fillStyle = '#fff';
-    var ox = -(FROG_W * unit) / 2, oy = -(FROG_H * unit) / 2;
-    for (var r = 0; r < FROG_H; r++) {
-      for (var c = 0; c < FROG_W; c++) {
-        if (FROG[r][c] === '#') {
-          ctx.fillRect(Math.round(ox + c * unit), Math.round(oy + r * unit),
-                       Math.ceil(unit), Math.ceil(unit));
-        }
-      }
-    }
-    ctx.restore();
-  }
-
-  function drawParticles() {
-    ctx.fillStyle = '#fff';
-    for (var i = 0; i < particles.length; i++) {
-      var p = particles[i];
-      ctx.globalAlpha = Math.max(0, p.life / p.max);
-      ctx.fillRect(px(p.x), px(p.y), p.size, p.size);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Big centred title frog used on the start / over screens.
-  function drawBigFrog(cx, cy, unit) {
-    ctx.fillStyle = '#fff';
-    var ox = cx - (FROG_W * unit) / 2, oy = cy - (FROG_H * unit) / 2;
-    for (var r = 0; r < FROG_H; r++) {
-      for (var c = 0; c < FROG_W; c++) {
-        if (FROG[r][c] === '#') ctx.fillRect(px(ox + c*unit), px(oy + r*unit), Math.ceil(unit), Math.ceil(unit));
-      }
-    }
-  }
-
-  function drawOverlay() {
-    ctx.fillStyle = 'rgba(0,0,0,0.72)';
-    ctx.fillRect(WALL, HUD_H, VW - WALL*2, VH - HUD_H - WALL);
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    if (game.state === STATE.TITLE) {
-      drawBigFrog(VW/2, VH*0.34, 7);
-      ctx.font = 'bold 22px ui-monospace, monospace';
-      ctx.fillText('FROG BREAKER', VW/2, VH*0.50);
-      ctx.font = '10px ui-monospace, monospace';
-      ctx.globalAlpha = 0.6;
-      ctx.fillText('nakfrg', VW/2, VH*0.50 + 18);
-      ctx.globalAlpha = blink();
-      ctx.font = '11px ui-monospace, monospace';
-      ctx.fillText('click / tap / space to start', VW/2, VH*0.66);
-      ctx.globalAlpha = 0.4;
-      ctx.font = '9px ui-monospace, monospace';
-      ctx.fillText('move: mouse · touch · ← →', VW/2, VH*0.66 + 18);
-      ctx.globalAlpha = 1;
-    } else if (game.state === STATE.OVER) {
-      ctx.font = 'bold 20px ui-monospace, monospace';
-      ctx.fillText('GAME OVER', VW/2, VH*0.40);
-      ctx.font = '12px ui-monospace, monospace';
-      ctx.fillText('score  ' + game.score, VW/2, VH*0.40 + 26);
-      ctx.globalAlpha = blink();
-      ctx.font = '11px ui-monospace, monospace';
-      ctx.fillText('click / tap / space to retry', VW/2, VH*0.58);
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  function drawMessage() {
-    if (game.msgT <= 0) return;
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = Math.min(1, game.msgT / 30);
-    ctx.font = 'bold 16px ui-monospace, monospace';
-    if (game.state === STATE.CLEAR) ctx.fillText('CLEARED', VW/2, VH*0.42);
-    else ctx.fillText('LEVEL ' + (game.level + 1), VW/2, VH*0.42);
-    ctx.globalAlpha = 1;
-  }
-
-  var blinkT = 0;
-  function blink() { return 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(blinkT * 0.09)); }
-
-  function render() {
-    // clear to black
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
-    ctx.clearRect(0, 0, VW, VH);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, VW, VH);
-
-    drawFrame();
-    drawHUD();
-    drawBricks();
-    drawPaddle();
-    if (game.state === STATE.PLAY || game.state === STATE.READY ||
-        game.state === STATE.CLEAR || game.state === STATE.DEAD) {
-      drawFrogBall();
-    }
-    drawParticles();
-    drawMessage();
-
-    if (game.state === STATE.TITLE || game.state === STATE.OVER) drawOverlay();
-
-    // global flash on big moments
-    if (game.flashT > 0) {
-      ctx.fillStyle = 'rgba(255,255,255,' + (game.flashT / 14 * 0.25) + ')';
-      ctx.fillRect(0, 0, VW, VH);
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  //  Main loop — fixed-step updates, render each frame
-  // ─────────────────────────────────────────────────────────────
-  var last = performance.now(), acc = 0;
-  var STEP = 1000 / 60;
-  function loop(now) {
-    var dt = Math.min(100, now - last); last = now;
-    acc += dt; blinkT++;
-    var guard = 0;
-    while (acc >= STEP && guard++ < 5) { update(); acc -= STEP; }
-    render();
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-
-  // ─────────────────────────────────────────────────────────────
-  //  Input handlers
-  // ─────────────────────────────────────────────────────────────
-  function primaryAction() {
-    // resume audio context on first gesture
-    var a = audio(); if (a && a.state === 'suspended') a.resume();
-    if (game.state === STATE.TITLE) { startGame(); }
-    else if (game.state === STATE.READY) { launchBall(); }
-    else if (game.state === STATE.OVER) { startGame(); }
-  }
-
-  // Pointer (mouse + touch) — move paddle + act.
-  canvas.addEventListener('pointerdown', function (e) {
-    pointerX = toVirtualX(e.clientX);
-    // tapping the mute glyph toggles sound
-    if (e.clientY !== undefined) {
-      var r = canvas.getBoundingClientRect();
-      var vy = ((e.clientY - r.top) / r.height) * VH;
-      var vx = toVirtualX(e.clientX);
-      if (vy < HUD_H && vx > VW - WALL - 20) { setMute(!muted); return; }
-    }
-    primaryAction();
-  });
-  window.addEventListener('pointermove', function (e) {
-    if (e.pointerType === 'mouse' && e.buttons === 0 && game.state === STATE.TITLE) return;
-    pointerX = toVirtualX(e.clientX);
-  });
-  // keep mouse steering even without a button held
-  window.addEventListener('mousemove', function (e) { pointerX = toVirtualX(e.clientX); });
-
-  window.addEventListener('keydown', function (e) {
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { keys.left = true; pointerX = null; }
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') { keys.right = true; pointerX = null; }
-    if (e.code === 'Space') { e.preventDefault(); primaryAction(); }
-    if (e.code === 'KeyM') { setMute(!muted); }
-    if (e.code === 'KeyP' && game.state === STATE.PLAY) { /* simple pause: stop ball motion */ }
-  });
-  window.addEventListener('keyup', function (e) {
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
-  });
-
-  // Don't let the page scroll on touch.
-  document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
-
+  catchUp(); sizeCanvas(); render(); requestAnimationFrame(frame);
 })();
 </script>
 </body>
