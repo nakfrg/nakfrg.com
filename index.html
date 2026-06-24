@@ -39,6 +39,8 @@
     .pixbtn:hover { background:#fff; color:#000; outline:none; }
   }
   .pixbtn:focus { outline:none; }
+  .pixbtn.locked { opacity:0.3; cursor:not-allowed; }
+  .pixbtn.locked:hover { background:#000; color:#fff; }
   .pixbtn:active { transform: translateY(3px);
     box-shadow: 0 -4px 0 0 #fff,0 4px 0 0 #fff,-4px 0 0 0 #fff,4px 0 0 0 #fff,0 0 0 4px #fff; }
   .pixbtn[disabled] { opacity:.28; pointer-events:none; }
@@ -161,7 +163,8 @@
   .logTitle { font-size:7px; letter-spacing:2px; color:var(--dim); margin-bottom:5px; padding-left:2px; }
   #eventLog { height:86px; overflow-y:auto; background:#000; box-shadow:0 0 0 2px var(--faint);
     padding:6px 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size:10px; line-height:1.45; }
+    font-size:10px; line-height:1.45; transition:height 0.15s ease; }
+  #eventLog.fight { height: clamp(180px, 34vh, 340px); }
   .logRow { display:flex; gap:8px; padding:2px 0; color:rgba(255,255,255,0.78); }
   .logRow .logT { color:var(--faint); flex:0 0 auto; }
   .logRow.good .logX { color:#fff; }
@@ -290,6 +293,41 @@
     hoplet:"HOPLET",chubbin:"CHUBBIN",dewdrop:"DEWDROP",
     springer:"SPRINGER",dartling:"DARTLING",bullhorn:"BULLHORN",toadsage:"TOADSAGE",canopy:"CANOPY",lotus:"LOTUS",
     clover:"CLOVER",titan:"TITAN",trickster:"TRICKSTER",oracle:"ORACLE",godfrog:"GODFROG" };
+
+  // each evolved form grants a permanent, themed stat bonus on evolution.
+  // babies grant none (they're the starting body). juniors are modest; adults are stronger & specialised.
+  var FORM_BONUS = {
+    // juniors
+    hoplet:   { str:4, dex:3, end:3 },   // brawler
+    dewdrop:  { int:5, spi:4 },          // mystic
+    chubbin:  { end:5, lck:4 },          // hardy & lucky
+    // adults \u2014 common (one leading stat)
+    bullhorn: { str:16, end:6 },
+    dartling: { dex:16, lck:5 },
+    canopy:   { end:18, spi:5 },
+    toadsage: { int:16, spi:6 },
+    lotus:    { spi:18, int:5 },
+    clover:   { lck:18, dex:5 },
+    // adults \u2014 rare (dual-stat)
+    titan:    { str:18, end:18 },
+    trickster:{ dex:16, lck:16 },
+    oracle:   { int:18, spi:18 },
+    // adult \u2014 apex
+    godfrog:  { str:12, dex:12, end:12, int:12, spi:12, lck:12 },
+    // fallback (balanced)
+    springer: { str:6, dex:6, end:6, int:6, spi:6, lck:6 }
+  };
+  // one-line flavour shown in the status menu, per form
+  var FORM_TRAIT = {
+    padpole:'a fresh tadpole \u2014 everything to prove',
+    sproutling:'a leafy sprout, growing toward the light',
+    pebblet:'a little stone, slow but unbreakable',
+    hoplet:'a scrappy brawler', dewdrop:'a budding mystic', chubbin:'a hardy, lucky lump',
+    bullhorn:'raw muscle', dartling:'pure speed', canopy:'a living wall',
+    toadsage:'a deep thinker', lotus:'serene spirit', clover:'fortune\u2019s favourite',
+    titan:'an unstoppable bruiser', trickster:'a lucky blur', oracle:'a font of magic',
+    godfrog:'the apex \u2014 master of all', springer:'a jack of all trades'
+  };
 
   var ENE_SPR = {
     "slime0":["                ","                ","                ","                ","     ######     ","    ########    ","   ##########   ","  #### ### ###  "," ##### ### #### "," ############## "," ############## ","  ############  ","                "],
@@ -609,6 +647,7 @@
   var PET_ATK_MIN  = 420;        // fastest our attack cadence can get
   var ENE_ATK_BASE = 1150;       // ms between enemy attacks
   var SPELL_TICK_MS = 1600;      // a spell may be cast each "round"
+  var MAX_COMBAT_ACTIONS = 100;  // safety cap: a single fight can't run forever (stalemate -> retreat)
   var INTER_BATTLE_MS = 1100;    // pause between battles in a multi-battle stage
   var CRIT_MULT = 1.5;
   var ENE_CRIT_MULT = 1.7;       // enemies hit a bit harder on a crit
@@ -843,7 +882,7 @@
       var sp=spellById(now[j]);
       logEvent('\u2728 learned a spell: '+(sp?sp.name:now[j])+'!'); blip(900,0.1,'sine');
       // auto-slot into an empty loadout slot so new players see spells work
-      if(S.loadout && S.loadout.length<3 && S.loadout.indexOf(now[j])<0) S.loadout.push(now[j]);
+      if(S.loadout && S.loadout.indexOf(now[j])<0){ var es=S.loadout.indexOf(null); if(es>=0) S.loadout[es]=now[j]; }
     }
   }
 
@@ -947,6 +986,8 @@
   // drop any spell ids that no longer exist (spell list was reworked)
   S.spells = S.spells.filter(function(id){ return !!spellById(id); });
   S.loadout = S.loadout.filter(function(id){ return !!spellById(id); });
+  // loadout is now 3 ordered, positional slots (index 0/1/2 -> cast order 1/2/3); null = empty
+  (function(){ var ld=[null,null,null]; for(var i=0;i<S.loadout.length && i<3;i++) ld[i]=S.loadout[i]; S.loadout=ld; })();
   if (typeof S.seg !== 'number') S.seg = 0;
   if (!S.inventory) S.inventory = [];
   if (!S.equipped) S.equipped = [];
@@ -1097,7 +1138,7 @@
     var e=f.enc[f.encIdx];
     if(e.t==='combat'){
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n);
-      f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=0; f.fx=null; f.burn=null; f.regen=null;
+      f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=0; f.fx=null; f.burn=null; f.regen=null; f.actions=0; f.spellIdx=0;
       f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
       combatLog('\u2694 '+(e.n+1)+'/'+f.combatsTotal+': '+f.enemy.name+(e.boss?'  \u2605 BOSS':''));
     } else {
@@ -1159,27 +1200,25 @@
     else if(sp.type==='shield'){ f.shield=(f.shield||0)+(sp.pow(r)||1); combatLog('\u2728 '+sp.name+' \u2014 shield \u00d7'+f.shield); blip(620,0.07,'sine'); }
     return true;
   }
-  // priority caster: survive first, then deal the most damage. lets a high-mana mage nuke every round.
+  // cast in the player's chosen slot order (1->2->3), skipping unaffordable spells and clearly-wasted
+  // utility (a heal at near-full HP, a regen already ticking, a shield already up) so the order keeps flowing.
   function castNextSpell(){
-    var f=S.fight, ld=S.loadout||[]; if(!ld.length) return;
-    var r=effRpg(), hpFrac=S.stats.health/maxHP();
-    var aff=[]; for(var i=0;i<ld.length;i++){ var sp=spellById(ld[i]); if(sp && (S.mana||0)>=sp.cost) aff.push(sp); }
-    if(!aff.length) return;
-    // 1) emergency: badly hurt -> heal / regen / drain
-    if(hpFrac < 0.40){
-      var heal=null;
-      for(var a=0;a<aff.length;a++){ var t=aff[a].type; if(t==='heal'||t==='regen'){ heal=aff[a]; break; } }
-      if(!heal) for(var a2=0;a2<aff.length;a2++){ if(aff[a2].type==='drain'){ heal=aff[a2]; break; } }
-      if(heal && doCast(heal,f)) return;
+    var f=S.fight, ld=S.loadout||[];
+    var any=false; for(var z=0;z<ld.length;z++) if(ld[z]) any=true; if(!any) return;
+    var hpFrac=S.stats.health/maxHP();
+    for(var n=0;n<ld.length;n++){
+      var idx=((f.spellIdx||0)+n)%ld.length, id=ld[idx];
+      if(!id) continue;
+      var sp=spellById(id); if(!sp) continue;
+      if((S.mana||0) < sp.cost) continue;
+      if(sp.type==='heal'  && hpFrac>=0.92) continue;             // don't waste a heal at full HP
+      if(sp.type==='regen' && (f.regen || hpFrac>=0.92)) continue; // regen already rolling / not needed
+      if(sp.type==='shield'&& (f.shield||0)>0) continue;          // shield already up
+      f.spellIdx=(idx+1)%ld.length;
+      doCast(sp, f);
+      return;
     }
-    // 2) keep a regen rolling when wounded if one is slotted and not active
-    if(hpFrac < 0.75 && !f.regen){ for(var g=0;g<aff.length;g++){ if(aff[g].type==='regen'){ if(doCast(aff[g],f)) return; break; } } }
-    // 3) otherwise the biggest-damage affordable spell
-    var best=null, bestScore=-1;
-    for(var k=0;k<aff.length;k++){ var sc=spellDamageScore(aff[k],r); if(sc>bestScore){ bestScore=sc; best=aff[k]; } }
-    if(best && bestScore>0 && doCast(best,f)) return;
-    // 4) nothing offensive affordable -> cast utility in loadout order
-    doCast(aff[0], f);
+    f.spellIdx=((f.spellIdx||0)+1)%ld.length;   // nothing castable this round
   }
 
   function interludeRegen(){
@@ -1256,6 +1295,7 @@
       combatLog((crit?'\u2726':'\u00b7')+' '+niceName()+' \u2192 '+dmg+(crit?' CRIT':''));
       blip(crit?900:680,0.04,'square');
       if(e.hp<=0){ winBattle(); return; }
+      if(++f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b the fight drags on \u2014 you retreat to recover.'); loseBattle(false); return; }
     }
     // spell (one per round; cycles the loadout; costs mana; small in-combat regen)
     if(S.loadout && S.loadout.length){
@@ -1335,13 +1375,24 @@
   function evolveTo(stage,form,hatched){
     S.stage=stage; S.form=form; flashT=22;
     blip(660,0.12,'triangle',0.07); setTimeout(function(){ blip(880,0.14,'triangle',0.07); },130);
+    // apply this form's permanent stat bonus (skip for the egg->baby hatch)
+    var bonus = (!hatched && FORM_BONUS[form]) ? FORM_BONUS[form] : null, bparts=[];
+    if(bonus){
+      if(!S.formBonus) S.formBonus={};
+      for(var k in bonus){ S.rpg[k]=(S.rpg[k]||0)+bonus[k]; S.formBonus[k]=(S.formBonus[k]||0)+bonus[k]; bparts.push('+'+bonus[k]+' '+RPG_NAME[k]); }
+      S.lastEvoBonus={ form:form, gains:bonus };
+      // evolving is a milestone \u2014 top up to the (now larger) HP/mana pools
+      S.stats.health=maxHP(); S.mana=maxMana();
+      if(typeof checkSpells==='function') checkSpells();   // new stats may unlock spells
+    }
     if(hatched){
       setMessage('crack! the egg hatched into '+FORM_NAMES[form]);
       logEvent('the egg hatched into '+niceName()+'! hello!');
     } else {
       setMessage(FORM_NAMES[form]+'! it evolved');
-      logEvent('\u2605 evolved into '+niceName()+'!');
+      logEvent('\u2605 evolved into '+niceName()+(bparts.length?' \u2014 gained '+bparts.join(', ')+'!':'!'));
     }
+    if(typeof updateControls==='function') updateControls();
     save(); render();
   }
   // ── death ──
@@ -1376,6 +1427,7 @@
     // during a battle, the log section becomes the combat feed (keeps art clear)
     if(S.fight && S.fight.log){
       if(title) title.textContent='BATTLE';
+      logEl.classList.add('fight');
       var f=S.fight, lines=f.log;
       if(!lines.length){ logEl.innerHTML='<div class="logRow logEmpty">\u2694 engaging\u2026</div>'; }
       else {
@@ -1387,6 +1439,7 @@
       return;
     }
     if(title) title.textContent='LOG';
+    logEl.classList.remove('fight');
     if(!S.log||!S.log.length){ logEl.innerHTML='<div class="logRow logEmpty">...all quiet for now...</div>'; return; }
     var h='';
     for(var i=S.log.length-1;i>=0;i--) h+='<div class="logRow"><span class="logT">'+S.log[i].t+'</span>'+escHtml(S.log[i].m)+'</div>';
@@ -1685,23 +1738,33 @@
     openOverlay('SPELLS \u2014 EQUIP UP TO 3','spells');
     if(!S.spells.length){ var e=document.createElement('div'); e.className='ovhint';
       e.textContent='no spells learned yet \u2014 raise INT, SPI, DEX, END or LCK by training to unlock spells.'; ovBody.appendChild(e); }
+    // cast-order strip: shows the 3 ordered slots (tap a spell below to fill the next empty slot)
+    var order=document.createElement('div'); order.className='ovhint'; order.style.margin='0 0 6px';
+    var parts=[]; for(var s=0;s<3;s++){ var id=S.loadout[s]; var sp=id?spellById(id):null; parts.push((s+1)+'. '+(sp?sp.name:'\u2014')); }
+    order.textContent='cast order \u2192  '+parts.join('   ');
+    ovBody.appendChild(order);
     S.spells.forEach(function(id){
       var sp=spellById(id); if(!sp) return;
       var slot=S.loadout.indexOf(id), active=slot>=0;
       var row=document.createElement('div'); row.className='ovrow'+(active?' on':'');
-      row.innerHTML='<div class="ovdot"></div><div class="ovtext"><div class="ovname">'+sp.name+(active?'  \u00b7 slot '+(slot+1):'')+
+      row.innerHTML='<div class="ovdot">'+(active?(slot+1):'')+'</div><div class="ovtext"><div class="ovname">'+sp.name+(active?'  \u00b7 cast '+(slot+1):'')+
         '</div><div class="ovsub">'+(sp.desc||spellTypeName(sp.type))+'  \u00b7  '+sp.cost+' mana</div></div>';
       row.addEventListener('click', function(){ toggleSpell(id); openSpells(); });
       ovBody.appendChild(row);
     });
+    var filled=S.loadout.filter(function(x){return !!x;}).length;
     var hint=document.createElement('div'); hint.className='ovhint';
-    hint.textContent='active '+S.loadout.length+'/3 \u00b7 they cast in order each combat round, costing mana \u00b7 tap to toggle';
+    hint.textContent='active '+filled+'/3 \u00b7 cast in order 1\u21922\u21923 each round \u00b7 tap to add (fills the lowest free slot) or remove';
     ovBody.appendChild(hint);
   }
   function toggleSpell(id){
     var i=S.loadout.indexOf(id);
-    if(i>=0){ S.loadout.splice(i,1); blip(300,0.05,'sine'); }
-    else { if(S.loadout.length>=3){ setMessage('3 spells max \u2014 deactivate one first'); blip(180,0.08,'sawtooth'); return; } S.loadout.push(id); blip(740,0.06,'sine'); }
+    if(i>=0){ S.loadout[i]=null; blip(300,0.05,'sine'); }            // remove -> frees that exact slot
+    else {
+      var slot=S.loadout.indexOf(null);                              // fill the lowest empty slot
+      if(slot<0){ setMessage('3 spells max \u2014 tap an active spell to free a slot'); blip(180,0.08,'sawtooth'); return; }
+      S.loadout[slot]=id; blip(740,0.06,'sine');
+    }
     save();
   }
   function openStatus(){
@@ -1712,7 +1775,15 @@
     function st(l,v){ return '<div class="ovstat"><span>'+l+'</span><b>'+v+'</b></div>'; }
     // attribute with item bonus shown as "120 (+30)"
     function at(l,k){ var b=equipBonus(k), base=S.rpg[k]||0; return st(l, base+(b?' (+'+b+')':(b<0?' ('+b+')':''))); }
-    var h='<div class="ovhdr">attributes</div><div class="ovgrid">';
+    // form + its evolution trait/bonus
+    var fb=S.formBonus||{}, fbParts=[];
+    for(var fk in fb){ if(fb[fk]) fbParts.push('+'+fb[fk]+' '+RPG_NAME[fk]); }
+    var h='<div class="ovhdr">form</div><div class="ovgrid">';
+    h+=st('Form', FORM_NAMES[S.form]||S.form)+st('Stage', (S.stage||'').toUpperCase());
+    h+='</div>';
+    h+='<div class="ovhint" style="margin:4px 0 2px">'+(FORM_TRAIT[S.form]||'')+'</div>';
+    h+='<div class="ovhint" style="margin:0 0 2px">evolution bonus: '+(fbParts.length?fbParts.join(' \u00b7 '):'none yet')+'</div>';
+    h+='<div class="ovhdr">attributes</div><div class="ovgrid">';
     h+=at('STR','str')+at('DEX','dex')+at('END','end')+at('INT','int')+at('SPI','spi')+at('LCK','lck');
     h+='</div><div class="ovhdr">combat</div><div class="ovgrid">';
     h+=st('Attack',petATK())+st('Defense',petDEF());
@@ -1782,6 +1853,9 @@
     if(pickerMode==='none' && actionsEl){
       var btns=actionsEl.querySelectorAll('[data-act]');
       for(var i=0;i<btns.length;i++){ btns[i].classList.remove('active'); btns[i].removeAttribute('disabled'); }
+      // explore is locked during the baby phase \u2014 grey it until the pet evolves
+      var exp=actionsEl.querySelector('[data-act="explore"]');
+      if(exp){ if(S.stage==='baby') exp.classList.add('locked'); else exp.classList.remove('locked'); }
     }
     if(dead) renderEnd();
     if(qte){
