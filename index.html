@@ -1033,12 +1033,18 @@
     { id:'bloodgorge', name:'Bloodgorge',     rarity:'epic', lifesteal:0.25, desc:'heal 25% of all damage you deal' },
     { id:'phoenix',    name:'Phoenix Plume',  rarity:'epic', revive:0.35,    desc:'cheat death once per battle \u2014 revive at 35% HP' },
     // ── legendary (deep bosses only) ──
-    { id:'dragon_fang',name:'Dragon Fang',    rarity:'legendary', combo:0.20, lifesteal:0.15, sunder:0.12, desc:'apex relic: combo + lifesteal + sunder, all at once' }
+    { id:'dragon_fang',name:'Dragon Fang',    rarity:'legendary', combo:0.20, lifesteal:0.15, sunder:0.12, desc:'apex relic: combo + lifesteal + sunder, all at once' },
+    { id:'ailoren',  name:'Blood Shadow Ailoren', rarity:'legendary', combo:0.10, swordQi:0.30,    desc:'+10% combo \u00b7 30% on hit: a Sword Qi arc rips across the ground for 150% damage' },
+    { id:'nashir',   name:'Divine Thunder Nashir', rarity:'legendary', thunderTurn:1,              desc:'every 3 turns: 300% INT lightning, and a ward absorbing 100% INT of damage' },
+    { id:'helos',    name:'Helos Warblade',        rarity:'legendary', combo:0.10, supercrit:0.10, desc:'+10% combo \u00b7 your crits have a 10% chance to SUPERCRIT for 300% damage' },
+    { id:'elres',    name:'Gale Elres Whisperer',  rarity:'legendary', daggerProc:0.50,            desc:'50% on hit to fan daggers (30% atk each), re-rolling at 50/40/30\u2026%' },
+    { id:'stmung',   name:'St Mung Elven Bow',     rarity:'legendary', angelProc:0.10,             desc:'10% on hit: an Ilar angel descends and smites your foe for 500% damage' },
+    { id:'seles',    name:'Thorn Seles Suffering', rarity:'legendary', counterSpear:0.50,          desc:'50% when struck: a light spear drops on the foe for 150% of endurance' }
   ];
   var RARITY_POOL = {
     rare:['combo_claw','serrated','sunder_maul','vamp_fang','thorn_hide','swift_glass'],
     epic:['storm_talon','hemorrhage','executioner','bloodgorge','phoenix'],
-    legendary:['dragon_fang'] };
+    legendary:['dragon_fang','ailoren','nashir','helos','elres','stmung','seles'] };
   var RARITY_COL = { rare:'#8fd0ff', epic:'#d79bff', legendary:'#ffd166' };
   function itemById(id){ for(var i=0;i<ITEMS.length;i++) if(ITEMS[i].id===id) return ITEMS[i]; return null; }
   function equipBonus(stat){ var t=0, eq=S.equipped||[]; for(var i=0;i<eq.length;i++){ var it=itemById(eq[i]); if(it&&it.stats&&it.stats[stat]) t+=it.stats[stat]; } return t; }
@@ -1311,6 +1317,7 @@
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n);
       f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0; f.spellIdx=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0; f.castFx=null;
+      f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0;
       f.shield=Math.round(bfAdd('shieldPer'))||0;   // a stage boon can grant shields each fight
       f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
       combatLog('\u2694 '+(e.n+1)+'/'+f.combatsTotal+': '+f.enemy.name+(f.enemy.biomeBoss?'  \u2605 BOSS':(f.enemy.elite?'  \u25c6 ELITE':'')));
@@ -1440,11 +1447,15 @@
     edmg=Math.max(1, Math.round(edmg*bfMul('foeAtk')));
     var ecrit=Math.random()<e.crit;
     if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
+    if((f.absorb||0)>0){ var soak=Math.min(edmg, f.absorb); edmg-=soak; f.absorb-=soak;   // Divine Thunder ward
+      if(soak>0){ f.shieldFlash=8; if(edmg<=0){ combatLog(niceName()+'\u2019s ward absorbs it!'); blip(560,0.05,'sine'); return; } } }
     S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=special?14:9;
     combatLog((special?'\u2737 ':(ecrit?'\u2726':'\u00b7'))+' '+e.name+' \u2192 '+edmg+(ecrit?' CRIT':''));
     blip(ecrit?170:240,0.05,'sawtooth');
     var refl=equipEffect('reflect')+bfAdd('reflect');
     if(refl>0){ var rd=Math.max(1,Math.round(edmg*refl)); e.hp-=rd; f.flashEne=6; combatLog('\u21BA thorns \u2192 '+rd); if(e.hp<=0){ winBattle(); return; } }
+    var cs=equipEffect('counterSpear');                // Thorn Seles Suffering
+    if(cs>0 && edmg>0 && Math.random()<cs){ var sd=Math.max(1,Math.round(ST('end')*1.5)); e.hp-=sd; f.flashEne=8; setProc(f,'spear'); combatLog('\u2191 light spear \u2192 '+sd); blip(880,0.06,'square'); if(e.hp<=0){ winBattle(); return; } }
     if(S.stats.health<=0){
       var rev=hasReviveItem();
       if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12;
@@ -1467,19 +1478,38 @@
   var DOT_TICK_MS = 650;   // bleed tick cadence
   function hasBleedCrit(){ var eq=S.equipped||[]; for(var i=0;i<eq.length;i++){ var it=itemById(eq[i]); if(it&&it.bleedCrit) return true; } return false; }
   // one player strike. returns true if the fight ended. applies vuln(+50%), execute, lifesteal, then refreshes bleed and rolls sunder.
+  var PROC_MS = 540;
+  function setProc(f, kind, n){ f.proc={ kind:kind, t:PROC_MS, dur:PROC_MS, n:n||1 }; }
+  // legendary item procs that fire after a landed hit (Sword Qi, dagger fan, Ilar angel). mutates e.hp.
+  function applyHitProcs(f, e){
+    var base=Math.max(1, petATK()-e.def), atk=petATK(), sup=false;
+    var sq=equipEffect('swordQi');                    // Blood Shadow Ailoren
+    if(sq>0 && Math.random()<sq){ var qd=Math.max(1,Math.round(base*1.5)); e.hp-=qd; f.flashEne=8; setProc(f,'swordqi'); combatLog('\u29C9 Sword Qi \u2192 '+qd); blip(840,0.05,'square'); }
+    var dp=equipEffect('daggerProc');                 // Gale Elres Whisperer
+    if(dp>0 && Math.random()<dp){ var each=Math.max(1,Math.round(atk*0.30)), n=1, ch=0.50;
+      e.hp-=each; while(ch>0 && n<8 && Math.random()<ch){ n++; e.hp-=each; ch-=0.10; }
+      f.flashEne=6; setProc(f,'dagger',n); combatLog('\u2020 daggers \u00d7'+n+' \u2192 '+(each*n)); blip(760,0.04,'square'); }
+    var ap=equipEffect('angelProc');                  // St Mung Elven Bow
+    if(ap>0 && Math.random()<ap){ var ad=Math.max(1,Math.round(atk*5)); e.hp-=ad; f.flashEne=12; setProc(f,'angel'); combatLog('\u2733 Ilar Angel smites \u2192 '+ad+'!'); blip(1000,0.12,'sine'); }
+  }
   function playerHit(f, e, isCombo){
-    var dmg=Math.max(1, petATK()-e.def), crit=Math.random()<petCritChance();
-    if(crit) dmg=Math.round(dmg*petCritMult());
+    var base=Math.max(1, petATK()-e.def), dmg=base, crit=Math.random()<petCritChance(), supr=false;
+    if(crit){ dmg=Math.round(dmg*petCritMult());
+      var sc=equipEffect('supercrit');                // Helos Warblade
+      if(sc>0 && Math.random()<sc){ supr=true; dmg=Math.max(dmg, Math.round(base*3)); }
+    }
     var vuln=false; if((f.vuln||0)>0){ dmg=Math.round(dmg*1.5); f.vuln--; vuln=true; }
     var exec=equipEffect('execute')+bfAdd('execute'); if(exec>0 && (e.hp/e.maxHp)<0.25){ dmg=Math.round(dmg*(1+exec)); }
     e.hp-=dmg; f.flashEne=9; f.lunge=1;
     var ls=equipEffect('lifesteal')+bfAdd('lifesteal'); if(ls>0){ S.stats.health=Math.min(maxHP(),S.stats.health+Math.round(dmg*ls)); }
-    combatLog((isCombo?'\u21BB':(crit?'\u2726':'\u00b7'))+' '+niceName()+' \u2192 '+dmg+(crit?' CRIT':'')+(vuln?' \u25C8':''));
-    blip(crit?900:680,0.04,'square');
+    combatLog((isCombo?'\u21BB':(supr?'\u2742':(crit?'\u2726':'\u00b7')))+' '+niceName()+' \u2192 '+dmg+(supr?' SUPERCRIT':(crit?' CRIT':''))+(vuln?' \u25C8':''));
+    blip(supr?1180:(crit?900:680),0.04,'square');
     var bl=equipEffect('bleed')+bfAdd('bleed');
     if(bl>0){ var bd=Math.max(1, Math.round(petATK()*bl*((crit&&hasBleedCrit())?2:1))); f.bleed={ dmg:bd, rounds:5 }; }
     var sun=equipEffect('sunder')+bfAdd('sunder');
     if(sun>0 && Math.random()<sun){ f.vuln=3; f.sunderFlash=12; combatLog('\u25C8 SUNDERED! +50% damage for 3 hits'); blip(420,0.08,'sawtooth'); }
+    applyHitProcs(f, e);
+    if(supr) setProc(f,'super');                      // supercrit visual takes priority
     if(e.hp<=0){ winBattle(); return true; }
     if(++f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); return true; }
     return false;
@@ -1487,10 +1517,11 @@
 
   function fightTick(dt){
     var f=S.fight; if(!f) return;
-    if(f.flashPet>0) f.flashPet--; if(f.flashEne>0) f.flashEne--;
+    if(f.flashPet>0) f.flashPet--; if(f.flashEne>0) f.flashEne--; if(f.shieldFlash>0) f.shieldFlash--;
     if(f.lunge>0) f.lunge-=dt/200; if(f.eneLunge>0) f.eneLunge-=dt/200;
     if(f.fx){ f.fx.t-=dt; if(f.fx.t<=0) f.fx=null; }
     if(f.castFx){ f.castFx.t-=dt; if(f.castFx.t<=0) f.castFx=null; }
+    if(f.proc){ f.proc.t-=dt; if(f.proc.t<=0) f.proc=null; }
     f.scroll=(f.scroll||0)+dt;   // backdrop clock
     // approach: pet hops in, backdrop scrolls, enemy walks on from the right
     if(f.state==='approach'){
@@ -1542,6 +1573,17 @@
     if(e.biomeBoss){
       f.specialTick=(f.specialTick||0)+dt;
       if(f.specialTick>=3600){ f.specialTick=0; bossSpecial(f); if(f.state!=='fight') return; }
+    }
+    // Divine Thunder Nashir: every ~3 turns, smite + raise a ward
+    var tt=equipEffect('thunderTurn');
+    if(tt>0){
+      f.thunderTick=(f.thunderTick||0)+dt;
+      if(f.thunderTick>=4800){ f.thunderTick-=4800;
+        var td=Math.max(1, Math.round(ST('int')*3*tt)); e.hp-=td; f.flashEne=12; setProc(f,'thunder');
+        f.absorb=(f.absorb||0)+Math.round(ST('int')*tt); f.shieldFlash=8;
+        combatLog('\u26A1 Divine Thunder \u2192 '+td+'  (ward +'+Math.round(ST('int')*tt)+')'); blip(150,0.18,'sawtooth',0.07);
+        if(e.hp<=0){ winBattle(); return; }
+      }
     }
     // enemy normal attack
     f.eneTick+=dt;
@@ -2498,6 +2540,55 @@
     pctx.restore();
   }
 
+  // legendary item proc visuals (monochrome). p = 0..1 progress.
+  function drawProcFx(f, petX, eneX, gy){
+    var c=f.proc; if(!c) return; var p=1-Math.max(0,c.t)/c.dur, cy=gy-20;
+    pctx.save(); pctx.fillStyle='#fff'; pctx.strokeStyle='#fff';
+    if(c.kind==='swordqi'){
+      // a crescent energy wave rips across the ground toward the foe
+      var qx=petX+10+(eneX-(petX+10))*Math.min(1,p/0.85);
+      pctx.lineWidth=3; pctx.globalAlpha=p<0.85?1:(1-(p-0.85)/0.15);
+      pctx.beginPath(); pctx.arc(qx, gy-6, 15, -2.0, -0.3); pctx.stroke();
+      pctx.beginPath(); pctx.arc(qx-4, gy-6, 9, -2.0, -0.3); pctx.stroke();
+      for(var s=0;s<4;s++){ var tx=qx-9-s*6; pctx.fillRect(Math.round(tx),Math.round(gy-3),2,2); }
+      pctx.globalAlpha=1; pctx.lineWidth=1;
+    } else if(c.kind==='dagger'){
+      var nn=Math.min(6,c.n||1);
+      for(var d=0;d<nn;d++){ var lp=(p-d*0.09)/0.6; if(lp<0||lp>1) continue;
+        var dx=petX+12+(eneX-petX-12)*lp, dy=cy-9+d*4;
+        pctx.fillRect(Math.round(dx-1),Math.round(dy-1),3,3); pctx.fillRect(Math.round(dx-6),Math.round(dy),4,1); }
+    } else if(c.kind==='angel'){
+      var ax=eneX, ay=cy-46;
+      if(p<0.5){ var hp=p/0.5; pctx.globalAlpha=hp; pctx.lineWidth=2;
+        pctx.beginPath(); pctx.arc(ax, ay, 10, 0, 6.28); pctx.stroke();
+        for(var w=0;w<8;w++){ var wa=w/8*6.28; pctx.fillRect(Math.round(ax+Math.cos(wa)*15),Math.round(ay+Math.sin(wa)*8),2,2); }
+        pctx.globalAlpha=1; pctx.lineWidth=1;
+      } else { var sp=(p-0.5)/0.5, by=ay+(cy-ay)*Math.min(1,sp/0.5); pctx.globalAlpha=1-sp*0.3;
+        pctx.fillRect(Math.round(ax-3), Math.round(ay), 6, Math.round(by-ay));
+        if(sp>0.5){ var bp=(sp-0.5)/0.5; pctx.globalAlpha=1-bp; for(var r=0;r<12;r++){ var ra=r/12*6.28, rd=bp*28; pctx.fillRect(Math.round(eneX+Math.cos(ra)*rd),Math.round(cy+Math.sin(ra)*rd*0.8),3,3); } }
+        pctx.globalAlpha=1; }
+    } else if(c.kind==='spear'){
+      // a spear of light forms above and drops onto the foe
+      var top=cy-52, sy=top+(cy-top)*Math.min(1,p/0.6);
+      pctx.globalAlpha=p<0.72?1:(1-(p-0.72)/0.28);
+      pctx.fillRect(Math.round(eneX-1), Math.round(top), 2, Math.max(0,Math.round(sy-top)));
+      pctx.beginPath(); pctx.moveTo(eneX, sy+7); pctx.lineTo(eneX-4, sy-2); pctx.lineTo(eneX+4, sy-2); pctx.closePath(); pctx.fill();
+      if(p>0.6){ var ip=(p-0.6)/0.4; pctx.globalAlpha=1-ip; for(var k=0;k<8;k++){ var ka=k/8*6.28, kd=ip*18; pctx.fillRect(Math.round(eneX+Math.cos(ka)*kd),Math.round(cy+Math.sin(ka)*kd),2,2); } }
+      pctx.globalAlpha=1;
+    } else if(c.kind==='thunder'){
+      if(p<0.5){ var py=0, lx=eneX; pctx.globalAlpha=Math.floor(animT/40)%2?1:0.45;
+        for(var seg=0;seg<7;seg++){ var ny=py+cy/7, jx=lx+((seg%2)?5:-5); pctx.fillRect(Math.round(jx),Math.round(py),2,Math.round(ny-py)); py=ny; lx=jx; }
+        pctx.globalAlpha=1;
+      } else { var tp=(p-0.5)/0.5; pctx.globalAlpha=1-tp; for(var b=0;b<10;b++){ var ba=b/10*6.28, bd=tp*24; pctx.fillRect(Math.round(eneX+Math.cos(ba)*bd),Math.round(cy+Math.sin(ba)*bd),2,2); } pctx.globalAlpha=1; }
+    } else if(c.kind==='super'){
+      var R=8+p*28; pctx.globalAlpha=1-p; pctx.lineWidth=2;
+      pctx.beginPath(); pctx.arc(eneX, cy, R, 0, 6.28); pctx.stroke();
+      for(var x=0;x<10;x++){ var xa=x/10*6.28; pctx.fillRect(Math.round(eneX+Math.cos(xa)*R),Math.round(cy+Math.sin(xa)*R),3,3); }
+      pctx.globalAlpha=1; pctx.lineWidth=1;
+    }
+    pctx.restore();
+  }
+
   function drawFight(){
     var f=S.fight; if(!f) return;
     var scroll = (f.travelX||0)*0.5 + (f.scroll||0)*0.015;
@@ -2547,6 +2638,9 @@
     if(enter>0.02 && !blinkE) drawCreature(eneRows, eneX, -bob-(eneFlash?3:0), eScale, true);
     drawFx(f, pX, eneX, gy);
     drawCastFx(f, pX, eneX, gy);
+    drawProcFx(f, pX, eneX, gy);
+    if(f.shieldFlash>0){ pctx.save(); pctx.strokeStyle='#fff'; pctx.globalAlpha=Math.min(1,f.shieldFlash/8)*0.8; pctx.lineWidth=2;
+      pctx.beginPath(); pctx.arc(pX, gy-20, 22, 0, 6.28); pctx.stroke(); pctx.globalAlpha=1; pctx.lineWidth=1; pctx.restore(); }
     pctx.restore();
     // header
     pctx.fillStyle='#fff'; pctx.textAlign='center'; pctx.font='8px "Pixel",monospace';
