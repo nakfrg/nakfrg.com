@@ -684,7 +684,7 @@
 
   // enemy stats scale with difficulty tier (biome*6 + stage) plus a small within-stage ramp.
   // tuned so early biomes still take several hits and an under-levelled pet walls (must train more).
-  var ENEMY_HP0=170, ENEMY_HP_GROW=1.074, ENEMY_ATK0=17, ENEMY_ATK_GROW=1.083, ENEMY_DEF0=3, ENEMY_DEF_GROW=1.055;
+  var ENEMY_HP0=92, ENEMY_HP_GROW=1.091, ENEMY_ATK0=7, ENEMY_ATK_GROW=1.103, ENEMY_DEF0=3, ENEMY_DEF_GROW=1.055;
   function enemyAt(biome, stage, battle){
     var nb=battlesFor(stage), di=stageIndex(biome,stage), lvl=di + battle*0.10;
     var arche=ARCHE[(biome*7 + stage*3 + battle*5) % ARCHE.length];
@@ -907,7 +907,7 @@
     var style = EGG_STYLES[(Math.random()*EGG_STYLES.length)|0];
     return { v:2, stage:'egg', form:'egg_'+style, eggStyle:style,
       stats:{ health:68, energy:100 }, mana:20, rpg:freshRpg(),
-      age:0, cycles:0, seg:0, mode:'idle', modeAct:null, spells:[], loadout:[], inventory:[], equipped:[], stageProg:0, ended:null,
+      age:0, cycles:0, seg:0, sinceExplore:0, goblet:false, mode:'idle', modeAct:null, spells:[], loadout:[], inventory:[], equipped:[], stageProg:0, ended:null,
       mods:[], fight:null,
       sick:false, sickT:0, dead:false, deadCause:'', critical:null, log:[],
       lastSeen:Date.now(), born:Date.now() };
@@ -932,6 +932,7 @@
   // loadout is now 3 ordered, positional slots (index 0/1/2 -> cast order 1/2/3); null = empty
   (function(){ var ld=[null,null,null]; for(var i=0;i<S.loadout.length && i<3;i++) ld[i]=S.loadout[i]; S.loadout=ld; })();
   if (typeof S.seg !== 'number') S.seg = 0;
+  if (typeof S.sinceExplore !== 'number') S.sinceExplore = 0;
   if (!S.inventory) S.inventory = [];
   if (!S.equipped) S.equipped = [];
   // migrate old linear progress -> stageProg (cap to total)
@@ -1027,15 +1028,41 @@
     save(); render(); updateControls();
   }
   // one training drill: costs energy + 1 segment, applies instantly
+  // ── restlessness: train/rest without exploring and the pet loses focus. resets only on explore. ──
+  // 42 stages = 42+ guaranteed resets, so normal play never sees it; only grinders do.
+  var TRAIN_FREE = 9;         // free train/rest sessions before efficiency starts dropping
+  var RESTLESS = [
+    "{n} yearns to go on an adventure.",
+    "{n} is getting restless \u2014 the drills feel stale.",
+    "{n} stares wistfully toward the horizon.",
+    "{n} has trained too long; its heart wants the wild.",
+    "{n} dreams of distant biomes instead of reps.",
+    "{n} fidgets \u2014 it needs a real challenge.",
+    "{n}'s muscles ache for true battle, not practice.",
+    "{n} sighs mid-rep. it wants adventure.",
+    "{n} keeps glancing at the unexplored.",
+    "{n} is itching to explore \u2014 training just isn't sticking."
+  ];
+  function trainEfficiency(){
+    if(S.stage==='baby') return 1;   // baby is a free prep stage \u2014 babies can't explore to reset, so no penalty
+    var n=S.sinceExplore||0;
+    if(n<=TRAIN_FREE) return 1;
+    return Math.max(0.2, 1 - (n-TRAIN_FREE)*0.13);   // ramps down ~13%/session, floor 20%
+  }
   function trainOnce(drillId){
     if(S.dead||S.stage==='egg'||S.fight) return;
     var a=findAct(TRAIN, drillId); if(!a){ return; }
     if((S.stats.energy||0) < a.eCost){ setMessage(niceName()+' is too tired \u2014 rest for energy first.'); blip(180,0.08,'sawtooth'); return; }
     S.stats.energy = clamp((S.stats.energy||0) - a.eCost);
-    var gain = a.gain + (S.goblet?1:0);   // the Cavern goblet restores training to its old strength
-    bumpStat(a.stat, gain); if(a.sec) bumpStat(a.sec, 1);
+    if(S.stage!=='baby') S.sinceExplore = (S.sinceExplore||0) + 1;
+    var eff = trainEfficiency();
+    var base = a.gain + (S.goblet?1:0);   // the Cavern goblet restores training to its old strength
+    var gain = Math.max(1, Math.round(base*eff));
+    bumpStat(a.stat, gain); if(a.sec && eff>=0.6) bumpStat(a.sec, 1);
     react={type:'act', anim:a.anim, t:155}; flashT=Math.max(flashT,8); blip(660,0.05,'triangle');
-    logEvent(niceName()+' trained '+a.label.toUpperCase()+deltaStr([[RPG_NAME[a.stat], gain]]));
+    var tail = eff<1 ? '  \u00b7 restless ('+Math.round(eff*100)+'%)' : '';
+    logEvent(niceName()+' trained '+a.label.toUpperCase()+deltaStr([[RPG_NAME[a.stat], gain]])+tail);
+    if(eff<1){ setMessage(fillName(RESTLESS[(Math.random()*RESTLESS.length)|0])); blip(300,0.06,'sine'); }
     if(a.risk && Math.random()<a.risk){
       var dmg=6+Math.floor(Math.random()*8);
       logEvent('\u26A0 '+fillName(MISHAPS[(Math.random()*MISHAPS.length)|0])+deltaStr([['HP',-dmg]]));
@@ -1053,6 +1080,7 @@
     else { var bh=st.health; st.health=Math.min(maxHP(), st.health + Math.round(restHeal()*2.6));
       setMessage(niceName()+' rests and heals.'); logEvent(niceName()+' rested to heal (+'+(st.health-bh)+' HP).'); blip(440,0.07,'sine'); }
     react={type:'rest',t:150}; flashT=Math.max(flashT,6);
+    if(S.stage!=='baby') S.sinceExplore = (S.sinceExplore||0) + 1;
     spendSegment();
   }
   // legacy no-ops kept so older references don't break
@@ -1071,6 +1099,8 @@
     closeOverlay(); pickerMode='none';
     // exploring costs cycle segments equal to the biome number (Plains=1 ... Citadel=7)
     var cost=exploreCost(biome);
+    if((S.sinceExplore||0) > TRAIN_FREE) logEvent('\u2728 the adventure renews '+niceName()+"'s focus \u2014 training is sharp again.");
+    S.sinceExplore = 0;   // a real outing refreshes the pet; training efficiency resets
     logEvent('\u2694 set out for '+BIOMES[biome]+' (\u2212'+cost+' segment'+(cost>1?'s':'')+').');
     spendExploreCost(cost);
     if(S.dead){ render(); updateControls(); return; }   // could age out on the trek
@@ -1719,6 +1749,8 @@
     h+='</div>';
     h+='<div class="ovhint" style="margin:4px 0 2px">'+(FORM_TRAIT[S.form]||'')+'</div>';
     h+='<div class="ovhint" style="margin:0 0 2px">evolution bonus: '+(fbParts.length?fbParts.join(' \u00b7 '):'none yet')+'</div>';
+    var eff=Math.round(trainEfficiency()*100);
+    h+='<div class="ovhint" style="margin:0 0 2px">training focus: '+(eff>=100?'sharp (100%)':(eff+'% \u2014 restless, go explore to refresh'))+'</div>';
     h+='<div class="ovhdr">attributes</div><div class="ovgrid">';
     h+=at('STR','str')+at('DEX','dex')+at('END','end')+at('INT','int')+at('SPI','spi')+at('LCK','lck');
     h+='</div><div class="ovhdr">combat</div><div class="ovgrid">';
@@ -2432,6 +2464,11 @@
       for(var ss=0;ss<3;ss++){ var sa=t*2+ss*2.1, sx=gcx+Math.cos(sa)*13, sy=gby+6+Math.sin(sa)*9; pctx.fillRect(Math.round(sx),Math.round(sy-2),1,5); pctx.fillRect(Math.round(sx-2),Math.round(sy),5,1); }
     }
     if(S.sick){ pctx.fillStyle='#fff'; pctx.fillRect(box.ox+box.w-2, box.oy+4+(Math.sin(t*6)+1)*2, 2,3); }
+
+    if((S.sinceExplore||0)>TRAIN_FREE && S.stage!=='egg' && !S.dead){
+      pctx.fillStyle='rgba(255,255,255,'+(0.55+0.2*Math.abs(Math.sin(t*3)))+')'; pctx.textAlign='center'; pctx.font='7px "Pixel",monospace';
+      pctx.fillText('\u2726 yearns for adventure', cw*0.5, 10); pctx.textAlign='left';
+    }
 
     if(flashT>0){ pctx.fillStyle='rgba(255,255,255,'+(flashT/22*0.6)+')'; pctx.fillRect(0,0,cw,ch); flashT--; }
 
