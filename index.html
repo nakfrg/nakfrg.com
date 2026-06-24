@@ -79,8 +79,10 @@
 
   #cycleRow { display:flex; align-items:center; gap:8px; margin:6px 0 2px; }
   #cycleRow .lab { width:54px; font-size:7px; letter-spacing:1px; color:var(--dim); }
-  #cycleTrack { flex:1; height:6px; position:relative; box-shadow:0 0 0 2px var(--faint); background:#000; }
-  #cycleFill { position:absolute; inset:0; width:0%; background:var(--dim); }
+  #cycleSegs { flex:1; display:flex; gap:4px; }
+  #cycleSegs .cseg { flex:1; height:9px; box-shadow:0 0 0 2px var(--faint); background:#000; }
+  #cycleSegs .cseg.on { background:#fff; box-shadow:0 0 0 2px #fff; }
+  #cycleAge { font-size:7px; letter-spacing:1px; color:var(--dim); white-space:nowrap; }
   #cycleRow.paused .lab { color:#fff; }
 
   #actions { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin: 10px 0 16px; }
@@ -204,7 +206,11 @@
 
     <div id="cycleRow">
       <span class="lab pix">CYCLE</span>
-      <div id="cycleTrack"><div id="cycleFill"></div></div>
+      <div id="cycleSegs">
+        <span class="cseg"></span><span class="cseg"></span><span class="cseg"></span>
+        <span class="cseg"></span><span class="cseg"></span><span class="cseg"></span>
+      </div>
+      <span id="cycleAge" class="pix"></span>
     </div>
 
     <div id="actions">
@@ -687,42 +693,101 @@
   var ARCHE = ['slime','bug','bird','beast','fish','golem','wisp','dragon'];
   var ARCHE_NAME = { slime:'Slime', bug:'Beetle', bird:'Lark', beast:'Pup', fish:'Eel', golem:'Golem', wisp:'Wisp', dragon:'Drake' };
   var BIOME_ADJ = ['Field','Bramble','Marsh','Cave','Storm','Ash','Void'];
-  // battles per stage (by stage index within a biome). stage 6 = a 5-fight gauntlet.
-  function battlesFor(stage){ return [1,1,2,3,4,5][stage]; }
+  // each stage is a gauntlet of COMBAT encounters; count grows +5 per stage: 10,15,20,25,30,35.
+  // positive/negative events are interspersed between them (see buildEncounters).
+  function battlesFor(stage){ return [10,15,20,25,30,35][stage]; }
   function stageIndex(biome,stage){ return biome*N_STAGES + stage; }
   function isFinalEncounter(biome,stage,battle){ return biome===N_BIOMES-1 && stage===N_STAGES-1 && battle===battlesFor(stage)-1; }
 
-  // enemy stats scale with a difficulty tier (biome*6 + stage) + within-stage battle.
+  // enemy stats scale with difficulty tier (biome*6 + stage) plus a small within-stage ramp.
+  // tuned so early biomes still take several hits and an under-levelled pet walls (must train more).
+  var ENEMY_HP0=90, ENEMY_HP_GROW=1.066, ENEMY_ATK0=10, ENEMY_ATK_GROW=1.090, ENEMY_DEF0=2, ENEMY_DEF_GROW=1.050;
   function enemyAt(biome, stage, battle){
-    var nb=battlesFor(stage), di=stageIndex(biome,stage), lvl=di + battle*0.45;
+    var nb=battlesFor(stage), di=stageIndex(biome,stage), lvl=di + battle*0.10;
     var arche=ARCHE[(biome*7 + stage*3 + battle*5) % ARCHE.length];
     var sprite=arche + Math.min(3, Math.floor(biome/2));
     var boss=(stage===N_STAGES-1) && (battle===nb-1);
-    var hp =Math.round(16 * Math.pow(1.135, lvl));
-    var atk=Math.round(5  * Math.pow(1.082, lvl));
-    var def=Math.round(2  * Math.pow(1.072, lvl));
+    var hp =Math.round(ENEMY_HP0  * Math.pow(ENEMY_HP_GROW,  lvl));
+    var atk=Math.round(ENEMY_ATK0 * Math.pow(ENEMY_ATK_GROW, lvl));
+    var def=Math.round(ENEMY_DEF0 * Math.pow(ENEMY_DEF_GROW, lvl));
     var crit=Math.min(0.35, 0.02 + lvl*0.006);
-    if(boss){ hp=Math.round(hp*1.5); atk=Math.round(atk*1.12); crit+=0.05; }
+    if(boss){ hp=Math.round(hp*3.2); atk=Math.round(atk*1.25); crit+=0.05; }
     var name=BIOME_ADJ[biome]+' '+ARCHE_NAME[arche];
-    if(isFinalEncounter(biome,stage,battle)){ hp=4200; atk=210; def=104; crit=0.18; name='ABYSSAL TYRANT'; boss=true; }
+    if(isFinalEncounter(biome,stage,battle)){ hp=6000; atk=410; def=80; crit=0.15; name='ABYSSAL TYRANT'; boss=true; }
     return { hp:hp, maxHp:hp, atk:atk, def:def, crit:crit, name:name, sprite:sprite, boss:boss, lvl:lvl };
   }
   function biomeUnlocked(b){ return stageIndex(b,0) <= (S.stageProg||0); }
   function stageUnlocked(b,s){ return stageIndex(b,s) <= (S.stageProg||0); }
 
-  // ── pet derived combat stats (include equipped-item bonuses via ST) ──
-  function maxHP(){ return 60 + ST('end')*8; }
+  // ── encounter list for a stage: combat gauntlet with positive/negative events woven in ──
+  // at least one positive per ~4-5 combats; an occasional negative. boss = last combat of stage 6.
+  function buildEncounters(biome, stage){
+    var combats=battlesFor(stage), bossStage=(stage===N_STAGES-1), arr=[], c=0, sincePos=0, sinceNeg=0;
+    while(c<combats){
+      if(sincePos>=4){ arr.push({t:'pos'}); sincePos=0; continue; }       // positive every 4 combats
+      if(sinceNeg>=7){ arr.push({t:'neg'}); sinceNeg=0; continue; }       // negative every 7 combats
+      arr.push({t:'combat', n:c, boss:(bossStage && c===combats-1)});
+      c++; sincePos++; sinceNeg++;
+    }
+    return arr;
+  }
+
+  // ── temporary, stage-only buffs (roguelike). live on S.fight.buffs; discarded when the stage ends ──
+  function freshBuffs(){ return { atk:1, hp:1, def:1, crit:0, dodge:0, mana:1, haste:0 }; }
+  function bfMul(k){ var f=S.fight; return (f&&f.buffs&&f.buffs[k]!=null)?f.buffs[k]:1; }
+  function bfAdd(k){ var f=S.fight; return (f&&f.buffs&&f.buffs[k]!=null)?f.buffs[k]:0; }
+  function healPet(frac){ S.stats.health=Math.min(maxHP(), S.stats.health+Math.round(maxHP()*frac)); }
+  function hurtPetFrac(frac){ S.stats.health=Math.max(1, Math.round(S.stats.health*(1-frac))); }
+
+  // positive encounters — many offer a choice between two stage-only boons
+  var POS_EVENTS = [
+    { title:'Ancient Whetstone', text:'A whetstone hums with old power. You sharpen up.',
+      choices:[ {label:'+12% Attack',     run:function(f){f.buffs.atk*=1.12;}},
+                {label:'+12% Crit chance', run:function(f){f.buffs.crit+=0.12;}} ] },
+    { title:'Hearty Feast', text:'A warm meal sits steaming on a stump. You dig in.',
+      choices:[ {label:'Heal 60% HP',  run:function(f){healPet(0.6);}},
+                {label:'+20% Max HP',  run:function(f){f.buffs.hp*=1.2; healPet(0.2);}} ] },
+    { title:'Lucky Clover Patch', text:'A patch of four-leaf clovers. Fortune favours you.',
+      choices:[ {label:'+10% Crit chance', run:function(f){f.buffs.crit+=0.10;}},
+                {label:'+10% Dodge',       run:function(f){f.buffs.dodge+=0.10;}} ] },
+    { title:'War Totem', text:'A totem radiates a martial aura. You bask in it.',
+      choices:[ {label:'+10% Attack',  run:function(f){f.buffs.atk*=1.10;}},
+                {label:'+18% Defense', run:function(f){f.buffs.def*=1.18;}} ] },
+    { title:'Mana Spring', text:'A spring of glowing water bubbles up.',
+      choices:[ {label:'Refill Mana',    run:function(f){S.mana=maxMana();}},
+                {label:'+25% Max Mana',  run:function(f){f.buffs.mana*=1.25; S.mana=Math.min(maxMana(),S.mana+20);}} ] },
+    { title:'Adrenaline Rush', text:'Your heart pounds. Everything quickens.',
+      choices:[ {label:'+15% Attack speed', run:function(f){f.buffs.haste+=0.15;}},
+                {label:'Heal 35% + small mana', run:function(f){healPet(0.35); S.mana=Math.min(maxMana(),(S.mana||0)+15);}} ] },
+    // simple auto heals (no choice)
+    { title:'Healing Spring', text:'Cool water mends your wounds.', auto:function(f){healPet(0.5);} },
+    { title:'Friendly Sprite', text:'A tiny sprite patches you up and zips away.', auto:function(f){healPet(0.4); S.mana=Math.min(maxMana(),(S.mana||0)+20);} }
+  ];
+  // negative encounters — funny, with a small bite (stage-only)
+  var NEG_EVENTS = [
+    { title:'Banana Peel', text:'Someone left a banana peel. You find it. The hard way.', run:function(f){hurtPetFrac(0.12);} },
+    { title:'Cursed Idol', text:'You poke the glowing idol. It pokes back. Rude.', run:function(f){f.buffs.atk*=0.90;} },
+    { title:'Gremlin Toll', text:'A gremlin demands a toll. You have no coins, so it takes interest.', run:function(f){S.mana=Math.round((S.mana||0)*0.8); hurtPetFrac(0.06);} },
+    { title:'Suspicious Mushroom', text:'You eat a suspicious mushroom. Bold choice. Regrettable.', run:function(f){hurtPetFrac(0.10);} },
+    { title:'Quicksand', text:'The ground betrays you. You flail. Majestically.', run:function(f){f.buffs.dodge=Math.max(0,f.buffs.dodge-0.05); hurtPetFrac(0.05);} },
+    { title:'Gloom Cloud', text:'A gloom settles in. Your sword feels heavier than your hopes.', run:function(f){f.buffs.atk*=0.92;} },
+    { title:'Pickpocket Imp', text:'An imp high-fives you, then vanishes. So does some of your mana.', run:function(f){S.mana=Math.round((S.mana||0)*0.6);} }
+  ];
+  function pickEvent(pool, seed){ return pool[Math.floor(Math.random()*pool.length)]; }
+
+  // ── pet derived combat stats (equipped items via ST, stage-buffs via bf*) ──
+  function maxHP(){ return Math.round((60 + ST('end')*8) * bfMul('hp')); }
   function hpRegen(){ return 1 + Math.floor(ST('end')*0.12); }      // passive HP per cycle (END)
   function energyRegen(){ return 1 + Math.floor(ST('spi')*0.10); }  // passive energy per cycle (SPI)
-  function petATK(){ return ST('str') + Math.floor(ST('dex')/4); }
-  function petDEF(){ return Math.floor(ST('end')/2) + Math.floor(ST('dex')/6); }
-  function petCritChance(){ return Math.min(0.75, ST('lck')*0.008 + equipEffect('crit')); }   // LUCK + items
-  function petCritMult(){ return Math.min(5, 1.5 + ST('dex')*0.01 + equipEffect('critMult')); } // DEX + items
-  function petDodge(){ return Math.min(0.5, ST('lck')*0.005 + equipEffect('dodge')); }          // LUCK + items (cap 50%)
-  // attack cadence: more DEX -> faster swings; haste items speed it further
-  function petAtkInterval(){ return Math.max(280, Math.round((PET_ATK_BASE - ST('dex')*3) * (1-equipEffect('haste')))); }
+  function petATK(){ return Math.round((ST('str') + Math.floor(ST('dex')/4)) * bfMul('atk')); }
+  function petDEF(){ return Math.round((Math.floor(ST('end')/4) + Math.floor(ST('dex')/8)) * bfMul('def')); }
+  function petCritChance(){ return Math.min(0.85, ST('lck')*0.008 + equipEffect('crit') + bfAdd('crit')); }
+  function petCritMult(){ return Math.min(5, 1.5 + ST('dex')*0.01 + equipEffect('critMult')); }
+  function petDodge(){ return Math.min(0.6, ST('lck')*0.005 + equipEffect('dodge') + bfAdd('dodge')); }
+  // attack cadence: more DEX -> faster swings; haste items + buffs speed it further
+  function petAtkInterval(){ return Math.max(260, Math.round((PET_ATK_BASE - ST('dex')*3) * (1-equipEffect('haste')-bfAdd('haste')))); }
   // mana grows with INT + SPI
-  function maxMana(){ return 20 + ST('int')*2 + ST('spi')*2; }
+  function maxMana(){ return Math.round((20 + ST('int')*2 + ST('spi')*2) * bfMul('mana')); }
   function manaRegenTick(){ return 3 + Math.floor((ST('int')+ST('spi'))*0.18); }   // per cycle
   function manaRegenRound(){ return 1 + Math.floor((ST('int')+ST('spi'))*0.05); }  // per combat round
   // rest: heal HP (END) or recover energy (SPI); the chosen stat sets amount + speed
@@ -814,8 +879,9 @@
   }
 
   // ── lifespan / pacing ──
-  var MAX_AGE = 200;            // old age claims the pet at this age (combat pauses the clock)
-  var AGE_JUNIOR = 16, AGE_ADULT = 36;   // baby->junior, junior->adult (in age)
+  var SEGMENTS = 6;             // a cycle = 6 spent segments = 1 year of life
+  var MAX_AGE = 55;            // old age claims the pet after this many cycles (training is finite)
+  var AGE_JUNIOR = 4, AGE_ADULT = 10;   // baby->junior, junior->adult (in cycles/years)
 
 
 
@@ -826,7 +892,7 @@
   var msgEl=$('#msg'), hintEl=$('#hint');
   var questRow=$('#questRow'), questBiome=$('#questBiome'), questProg=$('#questProg'), questAge=$('#questAge');
   var actionsEl=$('#actions'), subPicker=$('#subPicker'), rpgRow=$('#rpgRow');
-  var cycleFill=$('#cycleFill'), cycleRowEl=$('#cycleRow');
+  var cycleSegsEl=$('#cycleSegs'), cycleAgeEl=$('#cycleAge'), cycleRowEl=$('#cycleRow');
   var busyRow=$('#busyRow'), busyLabel=$('#busyLabel'), busyCancel=$('#busyCancel');
   var endScreen=$('#endScreen'), endTitle=$('#endTitle'), endStats=$('#endStats');
   var qteRow=$('#qteRow'), qteMsg=$('#qteMsg'), qteBtns=$('#qteBtns'), qteTime=$('#qteTime');
@@ -840,7 +906,7 @@
     var style = EGG_STYLES[(Math.random()*EGG_STYLES.length)|0];
     return { v:2, stage:'egg', form:'egg_'+style, eggStyle:style,
       stats:{ health:68, energy:100 }, mana:20, rpg:freshRpg(),
-      age:0, cycles:0, mode:'idle', modeAct:null, spells:[], loadout:[], inventory:[], equipped:[], stageProg:0, ended:null,
+      age:0, cycles:0, seg:0, mode:'idle', modeAct:null, spells:[], loadout:[], inventory:[], equipped:[], stageProg:0, ended:null,
       mods:[], fight:null,
       sick:false, sickT:0, dead:false, deadCause:'', critical:null, log:[],
       lastSeen:Date.now(), born:Date.now() };
@@ -859,6 +925,7 @@
   if (typeof S.modeAct === 'undefined') S.modeAct = null;
   if (!S.spells) S.spells = [];
   if (!S.loadout) S.loadout = [];
+  if (typeof S.seg !== 'number') S.seg = 0;
   if (!S.inventory) S.inventory = [];
   if (!S.equipped) S.equipped = [];
   // migrate old linear progress -> stageProg (cap to total)
@@ -925,88 +992,109 @@
     if(S.stats.health<=0) die(cause||'its wounds');
   }
 
-  // ── AGE TICK: the steady game clock. PAUSED during combat (S.fight). ──
-  function ageTick(){
-    if(S.dead||S.stage==='egg'||S.fight) return;
+  // ── SEGMENT ECONOMY: deterministic, no auto-clock. each action spends 1 of 6 segments. ──
+  // when the 6th segment is spent the cycle completes: passive regen + 1 year of age + maybe an event.
+  function spendSegment(note){
+    S.seg=(S.seg||0)+1;
+    if(S.seg>=SEGMENTS){ S.seg=0; completeCycle(); }
+    else { save(); render(); updateControls(); }
+  }
+  function completeCycle(){
+    if(S.dead||S.stage==='egg') return;
     var st=S.stats, mod=sumMods();
-    st.health = Math.min(maxHP(), Math.max(0, st.health + hpRegen() + (mod.health||0)));
-    st.energy = clamp((st.energy||0) + energyRegen() + (mod.energy||0));
-    S.mana = Math.min(maxMana(), (S.mana||0) + manaRegenTick() + (mod.mana||0));
+    st.health = Math.min(maxHP(), Math.max(0, st.health + hpRegen()*3 + (mod.health||0)));
+    st.energy = clamp((st.energy||0) + energyRegen()*4 + (mod.energy||0));
+    S.mana    = Math.min(maxMana(), (S.mana||0) + manaRegenTick()*2 + (mod.mana||0));
     tickMods();
     S.age++;
+    logEvent('\u23F3 a year passes \u2014 '+niceName()+' is now '+S.age+' (+rest).');
     if(S.age>=MAX_AGE){ endGame('age'); return; }
     checkEvolve();
     if(S.dead) return;
-    if(Math.random()<0.45) fireCycleEvent();   // ambient events
-    save();
+    if(Math.random()<0.35) fireCycleEvent();   // occasional ambient happening
+    save(); render(); updateControls();
   }
-
-  // ── ACTION: the active task. runs on its own timer (actDur); the button shows progress.
-  //    on completion it applies one rep of its effect and repeats.
-  var actAcc=0;
-  function setMode(mode, actId){
-    S.mode=mode; S.modeAct=actId||null; actAcc=0; closeSub(); save(); updateControls();
-  }
-  function actDur(){
-    var m=S.mode;
-    if(m==='rest') return restDur(S.modeAct==='energy' ? 'spi' : 'end');
-    if((m==='train'||m==='play') && S.modeAct){
-      var a=findAct(m==='train'?TRAIN:PLAY, S.modeAct), base=ACT_DUR[m]||4000;
-      if(a) return Math.max(ACT_MIN_MS, base - (S.rpg[a.stat]||0)*ACT_STEP_MS);
-    }
-    return ACT_DUR[m]||4000;
-  }
-  function doAction(){     // one completed rep of the current action
+  // one training drill: costs energy + 1 segment, applies instantly
+  function trainOnce(drillId){
     if(S.dead||S.stage==='egg'||S.fight) return;
-    var st=S.stats, m=S.mode;
-    if(m==='rest'){
-      if(S.modeAct==='energy'){
-        var be=st.energy||0; st.energy=clamp(be+restEnergyGain());
-        react={type:'rest',t:24}; blip(380,0.06,'sine');
-        if(st.energy>be) flashT=Math.max(flashT,6);
-        if(st.energy>=100){ S.mode='idle'; setMessage(niceName()+' is fully rested.'); }
-      } else {
-        var before=st.health;
-        st.health=Math.min(maxHP(), st.health+restHeal());
-        react={type:'rest',t:24}; blip(440,0.06,'sine');
-        if(st.health>before) flashT=Math.max(flashT,6);
-        if(st.health>=maxHP()){ S.mode='idle'; setMessage(niceName()+' is fully healed.'); }
-      }
+    var a=findAct(TRAIN, drillId); if(!a){ return; }
+    if((S.stats.energy||0) < a.eCost){ setMessage(niceName()+' is too tired \u2014 rest for energy first.'); blip(180,0.08,'sawtooth'); return; }
+    S.stats.energy = clamp((S.stats.energy||0) - a.eCost);
+    bumpStat(a.stat, a.gain); if(a.sec) bumpStat(a.sec, 1);
+    react={type:'act', anim:a.anim, t:26}; flashT=Math.max(flashT,8); blip(660,0.05,'triangle');
+    logEvent(niceName()+' trained '+a.label.toUpperCase()+deltaStr([[RPG_NAME[a.stat], a.gain]]));
+    if(a.risk && Math.random()<a.risk){
+      var dmg=6+Math.floor(Math.random()*8);
+      logEvent('\u26A0 '+fillName(MISHAPS[(Math.random()*MISHAPS.length)|0])+deltaStr([['HP',-dmg]]));
+      applyHpDamage(dmg,'a training mishap'); blip(200,0.12,'sawtooth');
     }
-    else if(m==='train' || m==='play'){
-      var pool=m==='train'?TRAIN:PLAY, a=findAct(pool,S.modeAct);
-      if(!a){ S.mode='idle'; return; }
-      if((st.energy||0) < a.eCost){ S.mode='idle'; setMessage(niceName()+' is too tired \u2014 rest to recover energy.'); logEvent(niceName()+' ran out of energy.'); updateControls(); return; }
-      st.energy=clamp((st.energy||0)-a.eCost);
-      bumpStat(a.stat,a.gain); if(a.sec) bumpStat(a.sec,1);
-      react={type:'act', anim:a.anim, t:26}; flashT=Math.max(flashT,8); blip(660,0.05,'triangle');
-      if(a.risk && Math.random()<a.risk){
-        var dmg=6+Math.floor(Math.random()*8);
-        logEvent('\u26A0 '+fillName(MISHAPS[(Math.random()*MISHAPS.length)|0])+deltaStr([['HP',-dmg]]));
-        applyHpDamage(dmg,'a training mishap'); blip(200,0.12,'sawtooth');
-      }
-      checkSpells();
-    }
-    if(!S.dead) save();
+    checkSpells();
+    if(!S.dead) spendSegment();
   }
+  // one rest: costs 1 segment, recovers a chunk of HP or energy instantly
+  function restOnce(kind){
+    if(S.dead||S.stage==='egg'||S.fight) return;
+    var st=S.stats;
+    if(kind==='energy'){ var be=st.energy||0; st.energy=clamp(be + restEnergyGain()*3);
+      setMessage(niceName()+' rests and recovers energy.'); logEvent(niceName()+' rested for energy (+'+(st.energy-be)+').'); blip(380,0.07,'sine'); }
+    else { var bh=st.health; st.health=Math.min(maxHP(), st.health + Math.round(restHeal()*2.6));
+      setMessage(niceName()+' rests and heals.'); logEvent(niceName()+' rested to heal (+'+(st.health-bh)+' HP).'); blip(440,0.07,'sine'); }
+    react={type:'rest',t:24}; flashT=Math.max(flashT,6);
+    spendSegment();
+  }
+  // legacy no-ops kept so older references don't break
+  var actAcc=0;
+  function setMode(){ }
+  function actDur(){ return 1; }
+  function doAction(){ }
 
   // ── STAGE COMBAT (tick-based; plays out on screen; cycle is paused while fighting) ──
   function combatLog(line){ var f=S.fight; if(!f) return; f.log.push(line); if(f.log.length>40) f.log.shift(); }
 
-  var APPROACH_MS = 1500;   // travel-in / enemy-walk-on time before a battle starts
+  var APPROACH_MS = 1400;   // travel-in / enemy-walk-on time before a battle starts
   function startStage(biome, stage){
     if(S.dead||S.stage==='egg'||S.fight) return;
     if(!stageUnlocked(biome,stage)){ setMessage('that stage is locked'); return; }
-    subMode=null; if(subPicker) subPicker.innerHTML='';
-    var bt=battlesFor(stage);
-    S.fight={ biome:biome, stage:stage, battleIdx:0, battlesTotal:bt,
-      enemy:enemyAt(biome,stage,0), petTick:0, eneTick:600, spellTick:850, spellIdx:0,
-      shield:0, log:[], flashPet:0, flashEne:0, lunge:0, revived:false,
+    var enc=buildEncounters(biome,stage), combats=battlesFor(stage);
+    S.fight={ biome:biome, stage:stage, enc:enc, encIdx:-1, combatNo:0, combatsTotal:combats,
+      enemy:null, buffs:freshBuffs(), event:null,
+      petTick:0, eneTick:600, spellTick:850, spellIdx:0, specialTick:0, fx:null,
+      shield:0, log:[], flashPet:0, flashEne:0, lunge:0, eneLunge:0, revived:false,
       state:'approach', approachT:APPROACH_MS, eneEnter:0, scroll:0, travelX:0, stateT:0, died:false };
-    S.mode='idle'; S.modeAct=null; actAcc=0;
-    logEvent('\u2694 entered '+BIOMES[biome]+' \u2014 Stage '+(stage+1)+' ('+bt+(bt>1?' battles':' battle')+').');
-    combatLog('\u2694 1/'+bt+': '+S.fight.enemy.name);
+    S.mode='idle'; S.modeAct=null;
+    logEvent('\u2694 entered '+BIOMES[biome]+' \u2014 Stage '+(stage+1)+' ('+combats+' foes \u00b7 events along the way).');
+    goNext();
     blip(520,0.1,'square'); updateControls(); render(); save();
+  }
+  // advance to the next encounter in the gauntlet (combat or event)
+  function goNext(){
+    var f=S.fight; if(!f) return;
+    f.encIdx++;
+    if(f.encIdx>=f.enc.length){ f.state='won'; f.stateT=1600; return; }
+    var e=f.enc[f.encIdx];
+    if(e.t==='combat'){
+      f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n);
+      f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=0; f.fx=null;
+      f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
+      combatLog('\u2694 '+(e.n+1)+'/'+f.combatsTotal+': '+f.enemy.name+(e.boss?'  \u2605 BOSS':''));
+    } else {
+      setupEvent(e.t);
+    }
+  }
+  function setupEvent(kind){
+    var f=S.fight, pool = kind==='pos'?POS_EVENTS:NEG_EVENTS, ev=pickEvent(pool);
+    f.event={ kind:kind, title:ev.title, text:ev.text, choices:ev.choices||null };
+    if(ev.choices){ f.state='event'; openEventChoice(); blip(640,0.08,'sine'); }
+    else { (ev.auto||ev.run)(f); f.state='eventbanner'; f.stateT=1900;
+      combatLog((kind==='pos'?'\u2726 ':'\u2620 ')+ev.title+' \u2014 '+ev.text);
+      blip(kind==='pos'?820:200,0.1,kind==='pos'?'sine':'sawtooth'); }
+  }
+  function chooseEvent(i){
+    var f=S.fight; if(!f||!f.event||!f.event.choices) return;
+    var ch=f.event.choices[i]; if(!ch) return;
+    ch.run(f); combatLog('\u2726 '+f.event.title+' \u2014 '+ch.label);
+    logEvent('\u2726 '+f.event.title+': '+ch.label+' (this run)');
+    blip(900,0.1,'sine'); closeOverlay(); f.event=null; goNext(); updateControls(); render();
   }
 
   function castNextSpell(){
@@ -1031,15 +1119,7 @@
     var f=S.fight, e=f.enemy; e.hp=0; f.flashEne=12;
     combatLog('\u2620 '+e.name+' defeated!'); blip(900,0.08,'sine');
     rollDrop(e, f.biome);
-    if(f.battleIdx >= f.battlesTotal-1){ f.state='won'; f.stateT=1500; }
-    else { f.state='interlude'; f.stateT=INTER_BATTLE_MS; }
-  }
-  function nextBattle(){
-    var f=S.fight; f.battleIdx++;
-    f.enemy=enemyAt(f.biome,f.stage,f.battleIdx);
-    f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false;
-    f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;   // travel to the next foe
-    combatLog('\u2694 '+(f.battleIdx+1)+'/'+f.battlesTotal+': '+f.enemy.name);
+    f.state='interlude'; f.stateT=INTER_BATTLE_MS;   // interlude -> goNext() advances the gauntlet
   }
   function loseBattle(died){ var f=S.fight; f.state='lost'; f.stateT=1300; f.died=died; }
 
@@ -1066,7 +1146,7 @@
   // pick a boss special by biome for flavour
   function bossSpecial(f){
     var b=f.biome, types = b===6?['laser','nova']:b===4?['meteor','quake']:b===3?['quake','meteor']:b===5?['nova','laser']:b===2?['nova']:['meteor','laser'];
-    if(isFinalEncounter(f.biome,f.stage,f.battleIdx)) types=['meteor','laser','nova','quake'];
+    if(isFinalEncounter(f.biome,f.stage,f.combatNo)) types=['meteor','laser','nova','quake'];
     var t=types[(f.specialN||0)%types.length]; f.specialN=(f.specialN||0)+1;
     var names={laser:'fires a searing beam!',meteor:'calls down a METEOR!',quake:'splits the ground!',nova:'erupts in a nova!'};
     combatLog('\u2737 '+f.enemy.name+' '+names[t]); blip(120,0.22,'sawtooth',0.08);
@@ -1087,8 +1167,10 @@
       return;
     }
     if(f.state==='won' || f.state==='lost'){ f.stateT-=dt; if(f.stateT<=0) endFight(); return; }
-    if(f.state==='interlude'){ f.stateT-=dt; if(f.stateT<=0) nextBattle(); return; }
-    var e=f.enemy;
+    if(f.state==='interlude'){ f.stateT-=dt; if(f.stateT<=0) goNext(); return; }
+    if(f.state==='eventbanner'){ f.stateT-=dt; if(f.stateT<=0){ f.event=null; goNext(); } return; }
+    if(f.state==='event'){ return; }   // waiting for the player's choice (overlay open)
+    var e=f.enemy; if(!e) return;
     // our attack (cadence scales with DEX; crit chance=LUCK, crit dmg=DEX)
     f.petTick+=dt;
     if(f.petTick>=petAtkInterval()){
@@ -1124,10 +1206,10 @@
   function endFight(){
     var f=S.fight; if(!f) return;
     if(f.state==='won'){
-      var isFinal=isFinalEncounter(f.biome,f.stage,f.battlesTotal-1);
+      var isFinal=isFinalEncounter(f.biome,f.stage,f.combatsTotal-1);
       var frontier=(stageIndex(f.biome,f.stage)===(S.stageProg||0));
       var di=stageIndex(f.biome,f.stage), base=2+Math.floor(di/6), mult=frontier?1:0.5;
-      var picks=2+(f.stage>=4?1:0), gained={};
+      var picks=2+Math.floor(f.stage/2), gained={};   // longer stages reward a touch more
       for(var i=0;i<picks;i++){ var k=RPG_KEYS[(Math.random()*RPG_KEYS.length)|0], amt=Math.max(1,Math.round(base*mult)); bumpStat(k,amt); gained[k]=(gained[k]||0)+amt; }
       var gt=[]; for(var gk in gained) gt.push([RPG_NAME[gk],gained[gk]]);
       logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1)+deltaStr(gt));
@@ -1377,22 +1459,18 @@
     if(S.stage==='egg'){ setMessage("it's still an egg \u2014 give it time to hatch"); return; }
     if(actx && actx.state==='suspended') actx.resume();
     var s=S.stats;
-    // 1) tapping the ACTIVE sustained action's own button stops it
-    if(S.mode!=='idle' && kind===S.mode){ setMode('idle'); setMessage(niceName()+' stopped.'); return; }
-    // 2) tapping a panel's button while that panel is open closes it (back to the pet)
+    // tapping a panel's button while that panel is open closes it (back to the pet)
     var openK = overlayEl.classList.contains('open') ? ovKind : null;
     var closes = (kind==='explore' && (openK==='biomes'||openK==='stages')) ||
                  (kind==='train' && openK==='train') || (kind==='rest' && openK==='rest') ||
                  (kind==='spells' && openK==='spells') || (kind==='status' && openK==='status') ||
                  (kind==='inventory' && openK==='inventory');
     if(closes){ closeOverlay(); return; }
-    // 3) lock: can't start a different sustained action while one is running
-    if(S.mode && S.mode!=='idle' && (kind==='rest'||kind==='train')){
-      setMessage('tap '+(S.mode==='rest'?'Rest':'Train')+' again to stop first'); return;
+    if(kind==='train' || kind==='rest'){
+      if((S.seg||0)>=SEGMENTS){ return; }   // shouldn't happen (cycle auto-completes at 6)
+      if(kind==='rest'){ openRest(); return; }
+      openSub('train'); return;
     }
-    // 4) open the relevant panel / action
-    if(kind==='rest'){ openRest(); return; }
-    if(kind==='train'){ openSub('train'); return; }
     if(kind==='explore'){
       if(S.stage==='baby'){ setMessage('too young to explore \u2014 grow up first'); return; }
       openBiomes(); return;
@@ -1460,24 +1538,21 @@
     row.innerHTML='<div class="ovdot"></div><div class="ovtext"><div class="ovname">'+label+'</div><div class="ovsub">'+sub+'</div></div>';
     row.addEventListener('click', onclick); return row;
   }
-  function openSub(mode){   // train picker, shown in the in-screen overlay
-    var pool = mode==='train'?TRAIN:PLAY;
-    openOverlay(mode==='train'?'TRAIN \u2014 PICK A DRILL':'PLAY','train');
-    pool.forEach(function(a){
-      ovBody.appendChild(ovActionRow(a.label, 'raises '+RPG_NAME[a.stat], function(){
-        setMode(mode, a.id); closeOverlay();
-        setMessage((mode==='train'?'training: ':'playing: ')+a.label);
-        logEvent(niceName()+' is now '+(mode==='train'?'training ':'playing ')+a.label.toUpperCase()+'.');
+  function openSub(mode){   // train picker (in-screen overlay); each drill is instant + costs 1 segment
+    openOverlay('TRAIN \u2014 PICK A DRILL  ('+(S.seg||0)+'/'+SEGMENTS+')','train');
+    TRAIN.forEach(function(a){
+      ovBody.appendChild(ovActionRow(a.label+'  +'+a.gain+' '+RPG_NAME[a.stat], 'costs '+a.eCost+' energy \u00b7 1 segment', function(){
+        trainOnce(a.id); closeOverlay();
       }));
     });
-    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='pick a drill \u00b7 tap Train again to stop'; ovBody.appendChild(hint);
+    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='each drill spends 1 segment \u00b7 6 segments = 1 year'; ovBody.appendChild(hint);
   }
   function closeSub(){ subMode=null; if(subPicker) subPicker.innerHTML=''; }
   function openRest(){
-    openOverlay('REST','rest');
-    ovBody.appendChild(ovActionRow('Heal HP','recover health (END)', function(){ setMode('rest','heal'); closeOverlay(); setMessage(niceName()+' rests to heal.'); logEvent(niceName()+' is healing up (END).'); }));
-    ovBody.appendChild(ovActionRow('Recover Energy','restore energy (SPI)', function(){ setMode('rest','energy'); closeOverlay(); setMessage(niceName()+' rests for energy.'); logEvent(niceName()+' is recovering energy (SPI).'); }));
-    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='tap Rest again to stop'; ovBody.appendChild(hint);
+    openOverlay('REST  ('+(S.seg||0)+'/'+SEGMENTS+')','rest');
+    ovBody.appendChild(ovActionRow('Heal HP','recover health (END) \u00b7 1 segment', function(){ restOnce('heal'); closeOverlay(); }));
+    ovBody.appendChild(ovActionRow('Recover Energy','restore energy (SPI) \u00b7 1 segment', function(){ restOnce('energy'); closeOverlay(); }));
+    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='resting spends 1 segment for an instant chunk'; ovBody.appendChild(hint);
   }
   function frontierBiome(){ return Math.min(N_BIOMES-1, Math.floor((S.stageProg||0)/N_STAGES)); }
 
@@ -1485,7 +1560,7 @@
   var overlayEl=$('#overlay'), ovTitle=$('#ovTitle'), ovBody=$('#ovBody'), ovClose=$('#ovClose');
   var ovKind=null;   // which menu is open: 'biomes'|'stages'|'spells'|'status'|'inventory'
   function closeOverlay(){ overlayEl.classList.remove('open'); ovKind=null; }
-  function openOverlay(title, kind){ ovTitle.textContent=title; ovBody.innerHTML=''; overlayEl.classList.add('open'); if(kind!==undefined) ovKind=kind; }
+  function openOverlay(title, kind){ ovTitle.textContent=title; ovBody.innerHTML=''; overlayEl.classList.add('open'); if(ovClose) ovClose.style.display=''; if(kind!==undefined) ovKind=kind; }
   ovClose.addEventListener('click', closeOverlay);
 
   function openBiomes(){
@@ -1514,6 +1589,18 @@
     var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='tap a stage to enter \u00b7 close to pick another biome'; ovBody.appendChild(hint);
   }
   function spellTypeName(t){ return {dmg:'direct damage',risky:'big damage \u2014 hurts you',heal:'heal HP',shield:'absorb 1 hit'}[t]||t; }
+  function openEventChoice(){
+    var f=S.fight; if(!f||!f.event||!f.event.choices) return;
+    openOverlay((f.event.kind==='neg'?'\u2620 ':'\u2726 ')+f.event.title.toUpperCase(),'event');
+    if(ovClose) ovClose.style.display='none';   // must choose
+    var intro=document.createElement('div'); intro.className='ovhint'; intro.style.marginTop='0'; intro.style.marginBottom='6px';
+    intro.textContent=f.event.text; ovBody.appendChild(intro);
+    f.event.choices.forEach(function(ch, i){
+      ovBody.appendChild(ovActionRow(ch.label, 'this stage only', function(){ chooseEvent(i); }));
+    });
+    var note=document.createElement('div'); note.className='ovhint'; note.textContent='boons last only for this stage run'; ovBody.appendChild(note);
+  }
+
   function openSpells(){
     openOverlay('SPELLS \u2014 EQUIP UP TO 3','spells');
     if(!S.spells.length){ var e=document.createElement('div'); e.className='ovhint';
@@ -1598,44 +1685,25 @@
     save();
   }
 
-  // decides which control block is visible for the current state
-  var MODE_LABEL = { rest:'RESTING', train:'TRAINING', play:'PLAYING', idle:'' };
-  var SHOW_DISP = { actions:'grid', subPicker:'flex', busyRow:'flex', qteRow:'block', alertWrap:'block', endScreen:'block', questRow:'flex' };
+  var SHOW_DISP = { actions:'grid', subPicker:'flex', qteRow:'block', alertWrap:'block', endScreen:'block', questRow:'flex' };
   function updateControls(){
     function on(el,v){ if(!el) return; el.style.display = v ? (SHOW_DISP[el.id]||'block') : 'none'; }
     var qte = S.critical && S.critical.kind==='qte';
     var sick = !qte && (S.sick || (S.critical && S.critical.kind==='sick'));
     var dead=S.dead, egg=S.stage==='egg', fight=!!S.fight;
-    var activeMode = !egg && !dead && S.mode && S.mode!=='idle';
     on(endScreen, dead);
     on(questRow, !egg && !dead);
     on(qteRow, qte && !dead && !egg && !fight);
-    on(actionsEl, !dead && !egg && !subMode && !qte && !fight);
-    on(subPicker, !!subMode && !dead && !egg && !qte && !fight);
+    on(actionsEl, !dead && !egg && !qte && !fight);
+    on(subPicker, false);
     on(alertWrap, sick && !dead && !egg && !qte && !fight);
-    if(subMode && !qte && !fight) subPicker.style.display='flex';
-    // active action button highlight + label + LOCK others while a sustained action runs
-    var DEF_LABEL = { rest:'Rest', train:'Train', play:'Play', explore:'Explore', spells:'Spells', status:'Status' };
-    var ACTION_BTN = { rest:1, train:1, play:1 };   // sustained actions lock each other; explore/menus never lock
+    var DEF_LABEL = { rest:'Rest', train:'Train', explore:'Explore', spells:'Spells', status:'Status', inventory:'Items' };
     if(actionsEl){
       var btns=actionsEl.querySelectorAll('[data-act]');
       for(var i=0;i<btns.length;i++){
         var a=btns[i].getAttribute('data-act');
-        var act2 = (S.mode==='train'&&a==='train')||(S.mode==='play'&&a==='play')||(S.mode===a);
-        var isOn = !!act2 && activeMode;
-        btns[i].classList.toggle('active', isOn);
-        // lock the OTHER sustained-action buttons while one runs (active one stays tappable to STOP)
-        var lock = activeMode && ACTION_BTN[a] && !isOn;
-        if(lock) btns[i].setAttribute('disabled','disabled'); else btns[i].removeAttribute('disabled');
-        var bl=btns[i].querySelector('.bl');
-        if(bl){
-          var txt=DEF_LABEL[a]||a;
-          if(isOn && (a==='train'||a==='play') && S.modeAct){
-            var aa=findAct(a==='train'?TRAIN:PLAY,S.modeAct); if(aa) txt=aa.label;
-          }
-          if(isOn && a==='rest') txt = S.modeAct==='energy' ? 'Energy' : 'Heal';
-          bl.textContent=txt;
-        }
+        btns[i].classList.remove('active'); btns[i].removeAttribute('disabled');
+        var bl=btns[i].querySelector('.bl'); if(bl) bl.textContent=DEF_LABEL[a]||a;
       }
     }
     if(dead) renderEnd();
@@ -1722,23 +1790,15 @@
     });
     // live-refresh the open Status menu so values update while training/in combat
     if(ovKind==='status' && overlayEl.classList.contains('open')) renderStatus();
-    // active action's button fills as a progress bar
-    var activeMode = !S.dead && S.stage!=='egg' && S.mode && S.mode!=='idle' && !S.fight;
-    var ap = activeMode ? Math.max(0,Math.min(100, actAcc/actDur()*100)) : 0;
     if(actionsEl){
       var abtns=actionsEl.querySelectorAll('[data-act]');
-      for(var bi=0;bi<abtns.length;bi++){
-        var ba=abtns[bi].getAttribute('data-act');
-        var isActive = activeMode && ((S.mode==='train'&&ba==='train')||(S.mode==='play'&&ba==='play')||(S.mode===ba));
-        var pr=abtns[bi].querySelector('.prog');
-        if(pr) pr.style.width = isActive ? ap+'%' : '0%';
-      }
+      for(var bi=0;bi<abtns.length;bi++){ var pr=abtns[bi].querySelector('.prog'); if(pr) pr.style.width='0%'; }
     }
-    // cycle bar = passage of game time. paused during combat.
-    if(cycleFill){
-      var paused = S.fight || S.dead || S.stage==='egg';
-      var cp = paused ? cycleFill._lastPct||0 : Math.max(0,Math.min(100, ageAcc/AGE_TICK_MS*100));
-      cycleFill._lastPct = cp; cycleFill.style.width = cp+'%';
+    // cycle = 6 segments spent this year. lit segments = spent.
+    if(cycleSegsEl){
+      var segs=cycleSegsEl.querySelectorAll('.cseg'), used=S.seg||0;
+      for(var ci=0;ci<segs.length;ci++) segs[ci].classList.toggle('on', ci<used);
+      if(cycleAgeEl) cycleAgeEl.textContent = (S.stage==='egg')?'' : 'YR '+(S.age||0)+'/'+MAX_AGE;
       if(cycleRowEl) cycleRowEl.classList.toggle('paused', !!S.fight);
     }
     // quest readout
@@ -1927,39 +1987,55 @@
   }
 
   function drawFight(){
-    var f=S.fight; if(!f) return; var e=f.enemy;
-    var approaching = f.state==='approach';
+    var f=S.fight; if(!f) return;
     var scroll = (f.travelX||0)*0.5 + (f.scroll||0)*0.015;
     drawBackdrop(f.biome, scroll);
     var gy=Math.round(ch*0.82);
-    var lunge=Math.max(0,f.lunge||0);                 // pet lunge (forward)
-    var eLunge=Math.max(0,f.eneLunge||0);             // enemy lunge (forward, bounces back)
-    var shake = (f.fx && f.fx.type==='quake') ? Math.sin(animT*0.5)*3 : 0;
-    var enter = approaching ? (1-Math.pow(1-Math.min(1,f.eneEnter||0),2)) : 1;   // easeOut walk-on
-    var petX=cw*0.30 + lunge*22;                       // bigger, snappier lunge
-    var eneX=cw*0.70 - eLunge*26 + (1-enter)*(cw*0.55);// enemy charges left toward pet, then bounces
-    var petFlash=f.flashPet>0, eneFlash=f.flashEne>0;
     var bob=Math.sin(animT*0.02)*2;
+    var petRows=SPR[S.form]||SPR.springer;
+    var petFlash=f.flashPet>0, blinkP=petFlash && (Math.floor(animT/55)%2===0);
+    var petX=cw*0.30 + Math.max(0,f.lunge||0)*22;
+
+    // ── EVENT scenes (positive/negative): show the pet alone + the event text ──
+    if(f.state==='event' || f.state==='eventbanner'){
+      var ev=f.event||{};
+      if(!blinkP) drawCreature(petRows, cw*0.5, bob-(petFlash?3:0), 0.5, false);
+      pctx.fillStyle='#fff'; pctx.textAlign='center';
+      pctx.font='9px "Pixel",monospace';
+      pctx.fillText((ev.kind==='neg'?'\u2620 ':'\u2726 ')+(ev.title||'').toUpperCase(), cw*0.5, 18);
+      pctx.font='7px "Pixel",monospace'; pctx.fillStyle='rgba(255,255,255,0.85)';
+      wrapText(ev.text||'', cw*0.5, 30, cw*0.84, 9);
+      // pet vitals still shown
+      drawBar(cw*0.30, ch-14, cw*0.4, (S.stats.health||0)/maxHP());
+      pctx.textAlign='left'; return;
+    }
+
+    var e=f.enemy; if(!e){ if(!blinkP) drawCreature(petRows, cw*0.5, bob, 0.5, false); return; }
+    var approaching = f.state==='approach';
+    var lunge=Math.max(0,f.lunge||0), eLunge=Math.max(0,f.eneLunge||0);
+    var shake = (f.fx && f.fx.type==='quake') ? Math.sin(animT*0.5)*3 : 0;
+    var enter = approaching ? (1-Math.pow(1-Math.min(1,f.eneEnter||0),2)) : 1;
+    var pX=cw*0.30 + lunge*22;
+    var eneX=cw*0.70 - eLunge*26 + (1-enter)*(cw*0.55);
+    var eneFlash=f.flashEne>0;
     var hop = approaching ? -Math.abs(Math.sin(animT*0.022))*9 : bob;
-    var petRows=SPR[S.form]||SPR.springer, eneRows=ENE_SPR[e.sprite]||ENE_SPR.slime0;
-    var blinkP=petFlash && (Math.floor(animT/55)%2===0), blinkE=eneFlash && (Math.floor(animT/55)%2===0);
-    // creatures ~50% smaller than before; bosses still loom
-    var eScale = isFinalEncounter(f.biome,f.stage,f.battleIdx) ? 1.0 : (e.boss ? 0.82 : 0.5);
+    var eneRows=ENE_SPR[e.sprite]||ENE_SPR.slime0;
+    var blinkE=eneFlash && (Math.floor(animT/55)%2===0);
+    var eScale = isFinalEncounter(f.biome,f.stage,f.combatNo) ? 1.0 : (e.boss ? 0.82 : 0.5);
     pctx.save(); if(shake) pctx.translate(shake,0);
-    if(!blinkP) drawCreature(petRows, petX, hop-(petFlash?3:0), 0.5, false);
+    if(!blinkP) drawCreature(petRows, pX, hop-(petFlash?3:0), 0.5, false);
     if(enter>0.02 && !blinkE) drawCreature(eneRows, eneX, -bob-(eneFlash?3:0), eScale, true);
-    drawFx(f, petX, eneX, gy);
+    drawFx(f, pX, eneX, gy);
     pctx.restore();
     // header
     pctx.fillStyle='#fff'; pctx.textAlign='center'; pctx.font='8px "Pixel",monospace';
-    pctx.fillText('STAGE '+(f.stage+1)+'  \u00b7  '+(f.battleIdx+1)+'/'+f.battlesTotal, cw*0.5, 11);
+    pctx.fillText('STAGE '+(f.stage+1)+'  \u00b7  FOE '+(f.combatNo+1)+'/'+f.combatsTotal, cw*0.5, 11);
     pctx.fillText((e.boss?'\u2605 ':'')+e.name.toUpperCase(), cw*0.5, 22);
     // bars
     drawBar(cw*0.06, 28, cw*0.37, (S.stats.health||0)/maxHP());
     drawBar(cw*0.06, 38, cw*0.37, (S.mana||0)/maxMana(), true);
     if(!approaching) drawBar(cw*0.57, 28, cw*0.37, Math.max(0,e.hp)/e.maxHp);
     if(f.shield>0){ pctx.font='7px "Pixel",monospace'; pctx.fillText('\u25C7 shield x'+f.shield, cw*0.245, 52); }
-    // banners (the running log lives in the LOG section below, not on the art)
     if(approaching){
       pctx.fillStyle='#fff'; pctx.font='9px "Pixel",monospace'; pctx.textAlign='center';
       pctx.fillText(e.boss?'\u2605 A BOSS APPROACHES':'\u2192 traveling\u2026', cw*0.5, ch*0.5);
@@ -1970,6 +2046,13 @@
       pctx.fillText(txt, cw*0.5, ch*0.44+17);
     }
     pctx.textAlign='left';
+  }
+  function wrapText(txt, cx, y, maxW, lh){
+    var words=String(txt).split(' '), line='', yy=y;
+    for(var i=0;i<words.length;i++){ var test=line?line+' '+words[i]:words[i];
+      if(pctx.measureText(test).width>maxW && line){ pctx.fillText(line, cx, yy); line=words[i]; yy+=lh; }
+      else line=test; }
+    if(line) pctx.fillText(line, cx, yy);
   }
 
   function fmtMs(ms){ var s=Math.ceil(ms/1000);
@@ -2073,19 +2156,11 @@
       if(sig!==lastLogSig){ lastLogSig=sig; renderLog(); }
       setBars();
     }
-    // AGE clock (steady) + ACTION timer (per-action). egg ages via simulate above.
+    // OUT OF STAGE: deterministic now \u2014 no auto age clock, no action timers.
+    // age only advances when the player spends segments (train/rest -> completeCycle).
     else if(!S.dead && S.stage!=='egg'){
-      ageAcc+=dtMs;
-      var ag=0;
-      while(ageAcc>=AGE_TICK_MS && ag++<8){ ageAcc-=AGE_TICK_MS; ageTick(); if(S.dead||S.fight) break; }
-      // active action runs on its own timer; the button fills as a progress bar
-      if(!S.dead && !S.fight && S.mode && S.mode!=='idle'){
-        actAcc+=dtMs;
-        var ac=0;
-        while(actAcc>=actDur() && ac++<8){ actAcc-=actDur(); doAction(); if(S.dead||S.mode==='idle'||S.fight) break; }
-      } else { actAcc=0; }
       checkCritical();
-      // live countdowns
+      // live countdowns for sickness reactions
       if(S.critical){
         var rem=Math.max(0,S.critical.deadline-Date.now());
         if(S.critical.kind==='qte'){ if(qteTime) qteTime.textContent='react in '+fmtMs(rem); }
@@ -2189,22 +2264,23 @@
     requestAnimationFrame(frame);
   }
 
-  // ── offline catch-up ──
+  // ── offline catch-up: cycles are deliberate now, so being away does NOT age the pet.
+  //    the egg still incubates in real time; a living pet just recovers a little while away. ──
   function catchUp(){
     if(S.dead) return;
     var elapsed=Math.max(0,(Date.now()-(S.lastSeen||Date.now()))/1000);
-    if(elapsed<1) return;
-    var capped=Math.min(elapsed,MAX_CATCHUP);
+    if(elapsed<1){ S.lastSeen=Date.now(); return; }
     if(S.stage==='egg'){
-      simulate(capped);   // egg keeps incubating while away (and may hatch)
+      simulate(Math.min(elapsed,MAX_CATCHUP));   // egg keeps incubating while away (and may hatch)
     } else {
-      var ticks=Math.floor(capped/CYCLE_SEC), st=S.stats;
-      st.health=Math.min(maxHP(), (st.health||0) + hpRegen()*ticks);     // HP regenerates while away
-      st.energy=clamp((st.energy||0) + energyRegen()*ticks);             // energy too
-      S.mana=Math.min(maxMana(), (S.mana||0) + manaRegenTick()*ticks);
-      S.age=(S.age||0)+ticks;
-      if(S.age>=MAX_AGE){ endGame('age'); return; }
-      simulate(capped);   // sickness accrues (no events fire while away)
+      var mins=Math.min(elapsed,MAX_CATCHUP)/60, st=S.stats;   // ~1 regen pulse per minute away
+      var pulses=Math.floor(mins);
+      if(pulses>0){
+        st.health=Math.min(maxHP(), (st.health||0) + hpRegen()*pulses);
+        st.energy=clamp((st.energy||0) + energyRegen()*pulses);
+        S.mana=Math.min(maxMana(), (S.mana||0) + manaRegenTick()*pulses);
+      }
+      simulate(Math.min(elapsed,MAX_CATCHUP));   // sickness still resolves/accrues while away
       if(S.dead) return;
       checkEvolve();
     }
