@@ -69,8 +69,33 @@
   #growthFill { position:absolute; inset:0; width:0%; background:var(--dim); transition:width .3s steps(8); }
   #cycleFill  { position:absolute; inset:0; width:0%; background:#fff; }
 
-  #actions, #foodPicker { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin: 8px 0 6px; }
-  #foodPicker { display:none; grid-template-columns: 1fr 1fr auto; }
+  #rpgRow { display:flex; flex-wrap:wrap; justify-content:space-between; gap:3px 8px;
+            font-size:8px; letter-spacing:1px; color:var(--dim); margin:6px 0 2px; }
+  #rpgRow span { white-space:nowrap; }
+  #rpgRow b { color:#fff; font-weight:normal; }
+
+  #actions { display:grid; grid-template-columns:repeat(5,1fr); gap:7px; margin: 8px 0 6px; }
+  #actions .pixbtn { padding:9px 3px 11px; font-size:9px;
+    box-shadow: 0 -3px 0 0 #fff,0 3px 0 0 #fff,-3px 0 0 0 #fff,3px 0 0 0 #fff,0 0 0 3px #fff,0 6px 0 0 rgba(255,255,255,0.22); }
+  #actions .pixbtn:active { box-shadow: 0 -3px 0 0 #fff,0 3px 0 0 #fff,-3px 0 0 0 #fff,3px 0 0 0 #fff,0 0 0 3px #fff; }
+
+  #subPicker { display:none; flex-wrap:wrap; gap:8px 7px; margin:8px 0 6px; }
+  #subPicker .pixbtn { flex:1 1 28%; padding:9px 3px 11px; font-size:9px;
+    box-shadow: 0 -3px 0 0 #fff,0 3px 0 0 #fff,-3px 0 0 0 #fff,3px 0 0 0 #fff,0 0 0 3px #fff,0 6px 0 0 rgba(255,255,255,0.22); }
+  #subPicker .pixbtn.cancel { flex-basis:100%; color:var(--dim);
+    box-shadow: 0 -3px 0 0 var(--faint),0 3px 0 0 var(--faint),-3px 0 0 0 var(--faint),3px 0 0 0 var(--faint),0 0 0 3px var(--faint); }
+
+  #busyRow { display:none; align-items:center; gap:8px; margin:10px 0 8px; }
+  #busyRow #busyLabel { font-size:8px; letter-spacing:1px; color:#fff; white-space:nowrap; min-width:78px; }
+  #busyTrack { flex:1; height:11px; position:relative; box-shadow:0 0 0 2px #fff; background:#000; }
+  #busyFill { position:absolute; inset:0; width:0%; background:#fff; }
+
+  #qteRow { display:none; text-align:center; margin:8px 0 6px; }
+  #qteMsg { font-size:9px; letter-spacing:1px; color:#fff; margin-bottom:9px; text-transform:uppercase;
+            animation: blinkfill .5s steps(2) infinite; }
+  #qteRow #qteBtn { width:100%; font-size:14px; padding:16px 12px 18px; }
+  #qteTime { font-size:9px; letter-spacing:1px; color:#fff; margin-top:9px; }
+
   #alertWrap { margin:8px 0 2px; display:none; text-align:center; }
   #alertWrap .pixbtn { width:100%; }
   #alertMsg { font-size:9px; letter-spacing:1px; color:#fff; margin-bottom:8px; min-height:11px; text-transform:uppercase; }
@@ -127,6 +152,8 @@
       <div class="stat" data-k="health"><span class="lab pix">HEALTH</span><div class="track"><div class="seg"></div></div></div>
     </div>
 
+    <div id="rpgRow" class="pix"></div>
+
     <div id="growthRow">
       <span class="lab pix">GROWTH</span>
       <div id="growthTrack"><div id="growthFill"></div></div>
@@ -140,14 +167,23 @@
     <div id="actions">
       <button class="pixbtn" data-act="feed">Feed</button>
       <button class="pixbtn" data-act="play">Play</button>
+      <button class="pixbtn" data-act="train">Train</button>
       <button class="pixbtn" data-act="clean">Clean</button>
       <button class="pixbtn" data-act="rest">Rest</button>
     </div>
 
-    <div id="foodPicker">
-      <button class="pixbtn" data-food="meat">Meat</button>
-      <button class="pixbtn" data-food="veggie">Veg</button>
-      <button class="pixbtn" data-food="cancel">X</button>
+    <div id="subPicker"></div>
+
+    <div id="busyRow">
+      <span id="busyLabel" class="pix"></span>
+      <div id="busyTrack"><div id="busyFill"></div></div>
+      <button class="linkbtn" id="busyCancel">&#10005; stop</button>
+    </div>
+
+    <div id="qteRow">
+      <div id="qteMsg" class="pix"></div>
+      <button class="pixbtn alert" id="qteBtn">!</button>
+      <div id="qteTime" class="pix"></div>
     </div>
 
     <div id="alertWrap">
@@ -189,12 +225,18 @@
     egg_mossy:["      ####      ","    ########    ","   ##########   ","  ############  ","  ## # # # ###  "," ############## "," ## # # # # ### "," ############## "," ## # # # # ### ","  ############  ","  ## # # # ###  ","   ##########   ","    ########    "],
     egg_stony:["      ####      ","    ########    ","   #### #####   ","  #####  #####  ","  ####  ######  "," ######  ###### "," #####  ####### "," ######  ###### "," #####  ####### ","  #####  #####  ","  ##### ######  ","   #### #####   ","    ########    "],
     sproutling:["     #    #     ","    ##    ##    ","   ###    ###   ","    ###  ###    ","      ####      ","    ########    ","   ##########   ","  ### #### ###  ","  ## #    # ##  ","  ##  ####  ##  ","   ##########   ","     ##  ##     ","    ##    ###   "],
-    pebblet:["                ","     ######     ","   ##########   ","  ############  "," ###  ####  ### "," ##  #    #  ## "," ##  #    #  ## "," ##   ####   ## "," ############## "," ############## ","  ############  ","  ##  ##  ##  # ","                "]
+    pebblet:["                ","     ######     ","   ##########   ","  ############  "," ###  ####  ### "," ##  #    #  ## "," ##  #    #  ## "," ##   ####   ## "," ############## "," ############## ","  ############  ","  ##  ##  ##  # ","                "],
+    clover:["    #  ##  #    ","   ###  ###     ","  ## #  # ##    ","   ###  ###     ","     ####       ","   ########     ","  ##########    "," ### #### ###   "," ## #    # ##   "," ##  ####  ##   ","  ##########    ","   ##    ##     ","  ##      ##    "],
+    titan:["   ##      ##   ","  ####    ####  "," ###############","###  ####  ###  ","##  ##  ##  ##  ","## ###### ## ## ","############### ","## ######## ##  ","##  ######  ##  ","### ###### ###  "," ############   "," ###      ###   ","####      ####  "],
+    trickster:["  #        #    ","  ##      ##    ","  ###    ###    ","   ########     ","  ##########    "," ### #### ###   "," #  ######  #   "," ## # ## # ##   "," #  ######  #   ","  ##########    ","   ##    ##     ","  ##      ##    "," ##        ##   "],
+    oracle:["    #  ##  #    ","     ####       ","    ##  ##      ","   ###  ###     ","   ## ## ##     ","  ###    ###    ","  ##  ##  ##    ","  ## #  # ##    ","  ##  ##  ##    ","   ## ## ##     ","    ######      ","    ##  ##      ","   ###  ###     "],
+    godfrog:["  #  #  #  #    ","  # ## ## #     ","   ######       ","  ## ## ## #    "," ###########    ","## ##  ## ##    ","##  ####  ##    ","## ###### ##    ","##  ####  ##    "," ##########     ","  ## ## ##      "," ###    ###     ","###      ###    "]
   };
   var FORM_NAMES = { egg_dewy:"DEWY EGG",egg_mossy:"MOSSY EGG",egg_stony:"STONY EGG",
     padpole:"PADPOLE",sproutling:"SPROUTLING",pebblet:"PEBBLET",
     hoplet:"HOPLET",chubbin:"CHUBBIN",dewdrop:"DEWDROP",
-    springer:"SPRINGER",dartling:"DARTLING",bullhorn:"BULLHORN",toadsage:"TOADSAGE",canopy:"CANOPY",lotus:"LOTUS" };
+    springer:"SPRINGER",dartling:"DARTLING",bullhorn:"BULLHORN",toadsage:"TOADSAGE",canopy:"CANOPY",lotus:"LOTUS",
+    clover:"CLOVER",titan:"TITAN",trickster:"TRICKSTER",oracle:"ORACLE",godfrog:"GODFROG" };
 
   // food + poop pixel art
   // big bone-in steak: round knuckle bone juts out the left, meaty body on the right
@@ -460,23 +502,92 @@
   var CHRONIC_SICK_DEATH = 1800;         // sim-seconds (~30 min) of unhealed neglect-sickness -> death
   var LOG_MAX = 40;
 
+  // ── RPG stats + activities ──
+  var RPG_KEYS = ['str','dex','end','int','spi','lck'];
+  var RPG_NAME = { str:'STR', dex:'DEX', end:'END', int:'INT', spi:'SPI', lck:'LCK' };
+  // TRAIN: big stat gains, costs energy + happiness(health), and some take time (in event-bar cycles).
+  //   bars: 0 = quick (~1.2s flourish), >=1 = locks the pet for that many 30s event bars.
+  var TRAIN = [
+    { id:'lift',     label:'Lift',   stat:'str', gain:4, eCost:16, hCost:8,  bars:1, anim:'lift'    },
+    { id:'sprint',   label:'Sprint', stat:'dex', gain:4, eCost:16, hCost:8,  bars:1, anim:'dash'    },
+    { id:'endure',   label:'Endure', stat:'end', gain:6, eCost:20, hCost:10, bars:2, anim:'endure'  },
+    { id:'study',    label:'Study',  stat:'int', gain:6, eCost:14, hCost:12, bars:2, anim:'study'   },
+    { id:'meditate', label:'Medit.', stat:'spi', gain:9, eCost:18, hCost:14, bars:3, anim:'meditate'},
+    { id:'forage',   label:'Forage', stat:'lck', gain:4, eCost:14, hCost:8,  bars:1, anim:'forage'  }
+  ];
+  // PLAY: small stat gains but RAISE happiness(health); quick flourishes.
+  var PLAY = [
+    { id:'wrestle', label:'Wrestle', stat:'str', gain:1, hGain:14, eCost:8, anim:'wrestle' },
+    { id:'tag',     label:'Tag',     stat:'dex', gain:1, hGain:16, eCost:9, anim:'tag'     },
+    { id:'fetch',   label:'Fetch',   stat:'end', gain:1, hGain:14, eCost:8, anim:'fetch'   },
+    { id:'puzzle',  label:'Puzzle',  stat:'int', gain:1, hGain:12, eCost:5, anim:'puzzle'  },
+    { id:'sing',    label:'Sing',    stat:'spi', gain:1, hGain:15, eCost:6, anim:'sing'    },
+    { id:'explore', label:'Explore', stat:'lck', gain:1, hGain:13, eCost:7, anim:'explore' }
+  ];
+  function findAct(pool,id){ for(var i=0;i<pool.length;i++) if(pool[i].id===id) return pool[i]; return null; }
+
+  // ── stat-driven evolution ──
+  // At each growth (time-based), the pet's rpg stats decide the next form.
+  // Each form lists minimum stats (req). Rare forms need specific high builds and are
+  // checked first; if several match a tier, one is chosen at random. A fallback covers
+  // any spread that meets nothing.
+  var JUNIORS = [   // baby -> junior, by which stat-group leads
+    { form:'hoplet',  group:'phys' },   // STR+DEX+END
+    { form:'dewdrop', group:'mind' },   // INT+SPI
+    { form:'chubbin', group:'wild' }    // LCK / balanced
+  ];
+  var ADULTS = [
+    // apex: the pinnacle - every stat high (checked before everything)
+    { form:'godfrog',   apex:true, req:{ str:22, dex:22, end:22, int:22, spi:22, lck:22 } },
+    // rare: need two strong stats - checked before commons
+    { form:'titan',     rare:true, req:{ str:18, end:18 } },
+    { form:'trickster', rare:true, req:{ dex:18, lck:16 } },
+    { form:'oracle',    rare:true, req:{ int:18, spi:18 } },
+    // common: one leading stat, broad coverage
+    { form:'bullhorn',  req:{ str:10 } },
+    { form:'dartling',  req:{ dex:10 } },
+    { form:'canopy',    req:{ end:10 } },
+    { form:'toadsage',  req:{ int:10 } },
+    { form:'lotus',     req:{ spi:10 } },
+    { form:'clover',    req:{ lck:10 } }
+  ];
+  var ADULT_FALLBACK = 'springer';   // balanced / no clear build
+  function meetsReq(req){ var r=S.rpg; for(var k in req) if((r[k]||0) < req[k]) return false; return true; }
+  function pickAdult(){
+    var apex=[], rare=[], common=[];
+    for(var i=0;i<ADULTS.length;i++){ var a=ADULTS[i];
+      if(meetsReq(a.req)){ if(a.apex) apex.push(a.form); else if(a.rare) rare.push(a.form); else common.push(a.form); } }
+    var pool = apex.length ? apex : (rare.length ? rare : (common.length ? common : [ADULT_FALLBACK]));
+    return pool[(Math.random()*pool.length)|0];
+  }
+  function pickJunior(){
+    var r=S.rpg;
+    var phys=(r.str||0)+(r.dex||0)+(r.end||0), mind=(r.int||0)+(r.spi||0), wild=(r.lck||0)*2.2;
+    if(wild>=phys && wild>=mind) return 'chubbin';
+    return (phys>=mind) ? 'hoplet' : 'dewdrop';
+  }
+
+
   // ── DOM ──
   var $ = function(s){ return document.querySelector(s); };
   var petCanvas=$('#pet'), pctx=petCanvas.getContext('2d');
   var stageTag=$('#stageTag'), ageTag=$('#ageTag'), nameTag=$('#nameTag');
   var growthFill=$('#growthFill'), cycleFill=$('#cycleFill'), msgEl=$('#msg'), hintEl=$('#hint');
-  var actionsEl=$('#actions'), pickerEl=$('#foodPicker');
+  var actionsEl=$('#actions'), subPicker=$('#subPicker'), rpgRow=$('#rpgRow');
+  var busyRow=$('#busyRow'), busyLabel=$('#busyLabel'), busyFill=$('#busyFill'), busyCancel=$('#busyCancel');
+  var qteRow=$('#qteRow'), qteMsg=$('#qteMsg'), qteBtn=$('#qteBtn'), qteTime=$('#qteTime');
   var alertWrap=$('#alertWrap'), alertBtn=$('#alertBtn'), alertMsg=$('#alertMsg'), alertTime=$('#alertTime');
   var logEl=$('#eventLog');
   function species(){ return DECAY_BY_SPECIES[S.eggStyle] ? S.eggStyle : 'dewy'; }
 
   // ── state ──
+  function freshRpg(){ return { str:1, dex:1, end:1, int:1, spi:1, lck:1 }; }
   function fresh(){
     var style = EGG_STYLES[(Math.random()*EGG_STYLES.length)|0];
     return { v:2, stage:'egg', form:'egg_'+style, eggStyle:style,
-      stats:{ full:70, energy:70, health:70 },
+      stats:{ full:70, energy:70, health:70 }, rpg:freshRpg(),
       age:0, care:{ feed:0, play:0, clean:0, rest:0 }, diet:{ meat:0, veggie:0 },
-      poops:[], poopTimer: poopInterval(), mods:[],
+      poops:[], poopTimer: poopInterval(), mods:[], busy:null,
       sick:false, sickT:0, dead:false, deadCause:'', critical:null, log:[],
       lastSeen:Date.now(), born:Date.now() };
   }
@@ -488,6 +599,9 @@
   if (typeof S.critical === 'undefined') S.critical = null;
   if (!S.eggStyle){ S.eggStyle='dewy'; if(S.stage==='egg') S.form='egg_dewy'; }
   if (!S.mods) S.mods = [];
+  if (typeof S.busy === 'undefined') S.busy = null;
+  if (!S.rpg) S.rpg = freshRpg();
+  else { var _r=freshRpg(); for(var _k in _r) if(S.rpg[_k]==null) S.rpg[_k]=_r[_k]; }
   if (S.stats){
     if (S.stats.health==null)
       S.stats.health = (S.stats.happy!=null||S.stats.clean!=null) ? Math.round(((S.stats.happy!=null?S.stats.happy:70)+(S.stats.clean!=null?S.stats.clean:70))/2) : 70;
@@ -594,16 +708,10 @@
       return;
     }
     if(S.stage==='baby' && S.age>=BABY_DUR){
-      var c=S.care;
-      var f = (c.play>=c.feed && c.play>=c.clean) ? 'hoplet' : (c.feed>=c.clean) ? 'chubbin' : 'dewdrop';
-      evolveTo('junior', f);
+      evolveTo('junior', pickJunior());
     }
     if(S.stage==='junior' && S.age>=ADULT_AGE){
-      var meaty = S.diet.meat>=S.diet.veggie, a;
-      if(S.form==='hoplet')      a = meaty?'springer':'dartling';
-      else if(S.form==='chubbin')a = meaty?'bullhorn':'toadsage';
-      else                       a = meaty?'canopy':'lotus';
-      evolveTo('adult', a);
+      evolveTo('adult', pickAdult());
     }
   }
 
@@ -623,8 +731,8 @@
   // ── death ──
   function die(cause){
     if(S.dead) return;
-    S.dead=true; S.deadCause=cause||'unknown causes'; S.critical=null; S.sick=false;
-    showPicker(false);
+    S.dead=true; S.deadCause=cause||'unknown causes'; S.critical=null; S.sick=false; S.busy=null;
+    closeSub();
     setMessage(niceName()+' has died');
     logEvent('\u2020 '+niceName()+' has died \u2014 '+S.deadCause+'.');
     blip(200,0.3,'sawtooth',0.07); setTimeout(function(){ blip(110,0.5,'sawtooth',0.07); },260);
@@ -655,17 +763,13 @@
   // ── alert / critical UI ──
   function updateAlert(){
     if(!alertWrap) return;
-    if(S.dead){ alertWrap.style.display='none'; alertWrap.classList.remove('crit'); return; }
-    if(S.critical){
-      alertWrap.style.display='block'; alertWrap.classList.add('crit');
-      if(S.critical.kind==='sick'){ alertMsg.textContent='SICK \u2014 give medicine, fast!'; alertBtn.textContent='\u2695 give medicine'; }
-      else { alertMsg.textContent=(S.critical.flash||'QUICK!'); alertBtn.textContent='\u25B6 '+S.critical.btn; }
-    } else if(S.sick){
-      alertWrap.style.display='block'; alertWrap.classList.remove('crit');
-      alertMsg.textContent='feeling unwell'; alertBtn.textContent='\u2695 heal'; alertTime.textContent='';
-    } else {
-      alertWrap.style.display='none'; alertWrap.classList.remove('crit'); alertTime.textContent='';
-    }
+    if(S.sick || (S.critical && S.critical.kind==='sick')){
+      alertWrap.classList.add('crit');
+      alertMsg.textContent = (S.critical && S.critical.kind==='sick') ? 'SICK \u2014 give medicine, fast!' : 'feeling unwell';
+      alertBtn.textContent = '\u2695 give medicine';
+      if(!(S.critical && S.critical.kind==='sick')) alertTime.textContent='';
+    } else { alertWrap.classList.remove('crit'); alertTime.textContent=''; }
+    updateControls();
   }
 
   function resolveCritical(){
@@ -731,7 +835,7 @@
   // one event fires at the end of every 30s cycle
   function fireCycleEvent(){
     if(S.dead||S.stage==='egg') return;
-    var busy = eating||wash||S.critical;
+    var busy = eating||wash||S.busy||S.critical;
     var r=Math.random();
     if(!busy && S.age>60 && r<0.07){ startSickEvent(); return; }
     if(!busy && S.age>60 && r<0.13){ startQTE(); return; }
@@ -769,9 +873,12 @@
   function act(kind){
     if(S.dead) return;
     if(S.stage==='egg'){ setMessage("it's still an egg \u2014 give it time to hatch"); return; }
+    if(S.busy){ return; }   // locked into a timed activity
     if(actx && actx.state==='suspended') actx.resume();
     var s=S.stats;
-    if(kind==='feed'){ showPicker(true); return; }
+    if(kind==='feed'){ openSub('food'); return; }
+    if(kind==='play'){ openSub('play'); return; }
+    if(kind==='train'){ openSub('train'); return; }
     if(kind==='heal'){
       if(S.critical && S.critical.kind==='sick'){ resolveCritical(); return; }
       s.full=clamp(s.full+12); s.energy=clamp(s.energy+12); s.health=clamp(s.health+16);
@@ -779,13 +886,7 @@
       react={type:'clean',t:30}; blip(520,0.1,'sine'); setMessage('feeling a little better');
       logEvent(niceName()+' took some medicine.'); updateAlert(); save(); return;
     }
-    if(kind==='play'){
-      if(s.energy<8){ react={type:'tired',t:30}; setMessage('too sleepy - rest first');
-        logEvent(niceName()+' is too sleepy to play - needs a rest.'); blip(180,0.12,'sawtooth'); return; }
-      s.health=clamp(s.health+24); s.energy=clamp(s.energy-14); s.full=clamp(s.full-8);
-      S.care.play++; react={type:'play',t:50}; blip(620,0.05); setMessage('hop hop! so happy');
-      logEvent('you played with '+niceName()+'. Hop hop!'); save();
-    } else if(kind==='clean'){
+    if(kind==='clean'){
       startWash(); s.health=clamp(s.health+16);
       S.care.clean++; blip(700,0.05,'sine'); setMessage('splish - scrubbing the screen');
       logEvent('you cleaned up after '+niceName()+'.'); save();
@@ -796,9 +897,86 @@
     }
   }
 
-  function showPicker(on){
-    pickerEl.style.display = on ? 'grid' : 'none';
-    actionsEl.style.display = on ? 'none' : 'grid';
+  // ── train / play activities ──
+  function bumpStat(stat,amt){ S.rpg[stat]=Math.min(999,(S.rpg[stat]||0)+amt); }
+
+  function doPlay(id){
+    var a=findAct(PLAY,id); if(!a) return;
+    var s=S.stats;
+    if(s.energy<a.eCost){ setMessage('too sleepy - rest first');
+      logEvent(niceName()+' is too tired to '+a.label.toLowerCase()+' right now.'); blip(180,0.12,'sawtooth'); return; }
+    s.energy=clamp(s.energy-a.eCost); s.health=clamp(s.health+a.hGain);
+    bumpStat(a.stat,a.gain); S.care.play++;
+    react={type:'act', anim:a.anim, t:64};   // quick flourish
+    blip(620,0.05); setMessage('played: '+a.label+'  (+'+a.gain+' '+RPG_NAME[a.stat]+')');
+    logEvent('you and '+niceName()+' did '+a.label.toUpperCase()+'. +'+a.gain+' '+RPG_NAME[a.stat]+', happier!');
+    save();
+  }
+
+  function startTrain(id){
+    var a=findAct(TRAIN,id); if(!a) return;
+    var s=S.stats;
+    if(s.energy<a.eCost+5){ setMessage('too sleepy to train - rest first');
+      logEvent(niceName()+' is too worn out to train. needs rest.'); blip(180,0.12,'sawtooth'); return; }
+    if(a.bars<=0){ finishTrain(a); return; }
+    S.busy={ id:a.id, anim:a.anim, t:0, dur:a.bars*CYCLE_MS, bars:a.bars };
+    blip(500,0.08,'triangle'); setMessage('training: '+a.label+' \u2026');
+    logEvent(niceName()+' began '+a.label.toUpperCase()+' training ('+a.bars+' event-bar'+(a.bars>1?'s':'')+').');
+    save(); updateControls();
+  }
+  function finishTrain(a){
+    var s=S.stats;
+    s.energy=clamp(s.energy-a.eCost); s.health=clamp(s.health-a.hCost);
+    bumpStat(a.stat,a.gain);
+    react={type:'act', anim:a.anim, t:64}; flashT=14;
+    blip(680,0.1,'triangle'); setTimeout(function(){ blip(880,0.1,'triangle'); },110);
+    setMessage('trained: '+a.label+'  (+'+a.gain+' '+RPG_NAME[a.stat]+')');
+    logEvent('\u2605 '+niceName()+' trained '+a.label.toUpperCase()+': +'+a.gain+' '+RPG_NAME[a.stat]+' (tiring).');
+    S.busy=null; save(); updateControls();
+  }
+  function cancelBusy(){
+    if(!S.busy) return;
+    logEvent(niceName()+' stopped training early. no gains.');
+    S.busy=null; setMessage('training stopped'); save(); updateControls();
+  }
+
+  // ── control area: actions / submenu / busy / qte / sick ──
+  var subMode=null;   // 'food' | 'play' | 'train' | null
+  function makeBtn(label,cls,onclick){
+    var b=document.createElement('button'); b.className='pixbtn'+(cls?' '+cls:''); b.textContent=label;
+    b.addEventListener('click',onclick); return b;
+  }
+  function openSub(mode){
+    subMode=mode; subPicker.innerHTML='';
+    if(mode==='food'){
+      subPicker.appendChild(makeBtn('Meat','',function(){ closeSub(); startEat('meat'); }));
+      subPicker.appendChild(makeBtn('Veg','',function(){ closeSub(); startEat('veggie'); }));
+    } else if(mode==='play'){
+      PLAY.forEach(function(a){ subPicker.appendChild(makeBtn(a.label,'',function(){ closeSub(); doPlay(a.id); })); });
+    } else if(mode==='train'){
+      TRAIN.forEach(function(a){ subPicker.appendChild(makeBtn(a.label+(a.bars?' '+a.bars+'\u25AE':''),'',function(){ closeSub(); startTrain(a.id); })); });
+    }
+    subPicker.appendChild(makeBtn('\u2715 back','cancel',function(){ closeSub(); }));
+    updateControls();
+  }
+  function closeSub(){ subMode=null; subPicker.innerHTML=''; updateControls(); }
+
+  // decides which control block is visible for the current state
+  function updateControls(){
+    function on(el,v){ if(el) el.style.display = v?'':'none'; }
+    var qte = S.critical && S.critical.kind==='qte';
+    var sick = !qte && (S.sick || (S.critical && S.critical.kind==='sick'));
+    var dead=S.dead, egg=S.stage==='egg';
+    on(qteRow, qte && !dead && !egg);
+    on(actionsEl, !qte && !dead && !egg && !subMode && !S.busy);
+    on(subPicker, !!subMode && !dead && !egg && !S.busy && !qte);
+    on(busyRow, !!S.busy && !dead && !egg && !qte);
+    on(alertWrap, sick && !dead && !egg && !S.busy);
+    if(subMode) subPicker.style.display='flex';
+    if(qte){
+      qteMsg.textContent=fillName(S.critical.flash||'danger!');
+      qteBtn.textContent='TAP: '+S.critical.btn;
+    }
   }
 
   var msgT=0;
@@ -807,11 +985,11 @@
   document.querySelectorAll('[data-act]').forEach(function(b){
     b.addEventListener('click',function(){ act(b.getAttribute('data-act')); });
   });
-  document.querySelectorAll('[data-food]').forEach(function(b){
-    b.addEventListener('click',function(){
-      var f=b.getAttribute('data-food'); showPicker(false);
-      if(f==='cancel') return; startEat(f);
-    });
+  busyCancel.addEventListener('click',cancelBusy);
+  qteBtn.addEventListener('click',function(){
+    if(S.dead) return;
+    if(actx && actx.state==='suspended') actx.resume();
+    if(S.critical && S.critical.kind==='qte') resolveCritical();
   });
   alertBtn.addEventListener('click',function(){
     if(S.dead) return;
@@ -821,7 +999,7 @@
   });
   var newBtn=$('#newBtn'), newBtnLabel=newBtn.innerHTML, newConfirmT=0;
   function hatchFresh(){
-    S=fresh(); resetEventTimers(); save(); showPicker(false);
+    S=fresh(); resetEventTimers(); save(); closeSub();
     setMessage('a fresh egg appears'); logEvent('a new egg was laid. shhh, it is incubating...');
     newBtn.innerHTML=newBtnLabel; newBtn.classList.remove('confirm'); newConfirmT=0;
     updateAlert(); render();
@@ -864,6 +1042,17 @@
     growthFill.style.width = Math.max(0,Math.min(100,prog*100))+'%';
     var cp = (S.dead||S.stage==='egg') ? 0 : Math.max(0,Math.min(100, cycleAcc/CYCLE_MS*100));
     if(cycleFill) cycleFill.style.width = cp+'%';
+    if(busyFill){
+      var bp = S.busy ? Math.max(0,Math.min(100, S.busy.t/S.busy.dur*100)) : 0;
+      busyFill.style.width = bp+'%';
+    }
+  }
+  function renderRpg(){
+    if(!rpgRow) return;
+    if(S.stage==='egg' || S.dead){ rpgRow.innerHTML=''; return; }
+    var r=S.rpg, h='';
+    for(var i=0;i<RPG_KEYS.length;i++){ var k=RPG_KEYS[i]; h+='<span>'+RPG_NAME[k]+' <b>'+(r[k]||0)+'</b></span>'; }
+    rpgRow.innerHTML=h;
   }
   function fmtAge(sec){ var m=Math.floor(sec/60); if(m<60) return m+'M';
     var h=Math.floor(m/60); if(h<24) return h+'H'+(m%60)+'M'; return Math.floor(h/24)+'D'; }
@@ -873,22 +1062,18 @@
       stageTag.textContent='GONE';
       ageTag.textContent=fmtAge(S.age);
       nameTag.textContent='RIP '+niceName();
-      actionsEl.style.display='none'; pickerEl.style.display='none';
-      updateAlert(); setBars(); renderLog(); return;
+      updateControls(); setBars(); renderRpg(); renderLog(); return;
     }
-    actionsEl.style.display='grid';
     if(S.stage==='egg'){
       stageTag.textContent='EGG';
       ageTag.textContent=fmtAge(S.age);
       nameTag.textContent=FORM_NAMES[S.form];
-      actionsEl.style.display='none'; pickerEl.style.display='none';
-      alertWrap.style.display='none'; alertWrap.classList.remove('crit');
-      setBars(); renderLog(); return;
+      updateControls(); setBars(); renderRpg(); renderLog(); return;
     }
     stageTag.textContent = S.stage.toUpperCase() + (S.sick?' SICK':'');
     ageTag.textContent = fmtAge(S.age);
     nameTag.textContent = FORM_NAMES[S.form];
-    updateAlert(); setBars(); renderLog();
+    updateAlert(); updateControls(); setBars(); renderRpg(); renderLog();
   }
 
   function blitMap(map, ox, oy, unit, eatenFrac){
@@ -918,6 +1103,16 @@
   // poops sit spread along the floor, two on each side of the (centered) pet
   function poopSlotX(){ return [ cw*0.13, cw*0.30, cw*0.70, cw*0.87 ]; }
 
+  // a wavy "smell" squiggle rising from (baseX, baseY)
+  function drawSmell(baseX, baseY, height, amp, phase, alpha){
+    pctx.fillStyle='#fff';
+    for(var y=0; y<height; y+=3){
+      var prog=y/height;
+      pctx.globalAlpha = alpha*(1-prog*0.7);
+      var wob=Math.sin((y*0.5) + phase + animT*0.006)*amp*(0.4+prog);
+      pctx.fillRect(Math.round(baseX+wob), Math.round(baseY-y), 2,2);
+    }
+  }
   function drawPoops(box){
     var floorY=box.floorY, unit=2, sx=poopSlotX();
     var pw=POOP[0].length*unit;
@@ -925,13 +1120,19 @@
       var p=S.poops[i], cx=(sx[p.slot]!=null?sx[p.slot]:sx[0]);
       var bx=Math.round(cx-pw/2), by=floorY-POOP.length*unit;
       var overdue = p.age>POOP_SICK_TIME;
-      pctx.globalAlpha = overdue ? (0.45+0.55*Math.abs(Math.sin(animT*0.006))) : 1;
+      // smell lines radiating up - always visible, wilder when overdue
+      var topY=by-2, amp=overdue?3:2, alpha=overdue?0.5:0.32, hgt=overdue?20:13;
+      drawSmell(cx-4, topY, hgt, amp, p.slot*1.7,      alpha);
+      drawSmell(cx,   topY+2, hgt+3, amp, p.slot*1.7+2, alpha);
+      drawSmell(cx+4, topY, hgt, amp, p.slot*1.7+4,    alpha);
+      // the poop itself
+      pctx.globalAlpha = overdue ? (0.5+0.5*Math.abs(Math.sin(animT*0.006))) : 1;
       blitMap(POOP, bx, by, unit, 0);
-      if(overdue){ // rising stink to show it's gone bad
+      if(overdue){ // extra bad-stink puffs
         pctx.globalAlpha=0.55;
         var ph=(animT*0.05)%7;
-        pctx.fillRect(Math.round(cx-3), Math.round(by-6-ph), 2,2);
-        pctx.fillRect(Math.round(cx+3), Math.round(by-11-ph), 2,2);
+        pctx.fillRect(Math.round(cx-6), Math.round(by-8-ph), 2,2);
+        pctx.fillRect(Math.round(cx+6), Math.round(by-13-ph), 2,2);
       }
     }
     pctx.globalAlpha=1;
@@ -969,6 +1170,79 @@
     pctx.fillRect(bx+12, by-18-ph*3, 3,3);
   }
 
+  // ── activity animations (train + play) ──
+  function activityMotion(anim,t){
+    var o={ offY:Math.sin(t*2.2)*2, sq:1, shakeX:0 };
+    switch(anim){
+      case 'lift':     o.offY=-Math.abs(Math.sin(t*5))*10; o.sq=0.84+Math.abs(Math.sin(t*5))*0.16; break;
+      case 'dash':     o.shakeX=Math.sin(t*22)*6; o.offY=-Math.abs(Math.sin(t*11))*3; o.sq=0.95; break;
+      case 'endure':   o.offY=4+Math.sin(t*30)*1.3; o.sq=0.8; break;
+      case 'study':    o.offY=Math.sin(t*1.6)*1.5; break;
+      case 'meditate': o.offY=-7+Math.sin(t*2)*2; o.sq=0.97; break;
+      case 'forage':   o.offY=-Math.abs(Math.sin(t*4))*6; break;
+      case 'wrestle':  o.shakeX=Math.sin(t*16)*4; o.offY=Math.sin(t*8)*2; o.sq=0.93; break;
+      case 'tag':      o.shakeX=Math.sin(t*14)*5; o.offY=-Math.abs(Math.sin(t*7))*5; break;
+      case 'fetch':    o.shakeX=Math.sin(t*6)*8; o.offY=-Math.abs(Math.sin(t*6))*5; break;
+      case 'puzzle':   o.offY=Math.sin(t*2.6)*2; break;
+      case 'sing':     o.offY=Math.sin(t*4)*3; o.sq=0.96; break;
+      case 'explore':  o.offY=Math.sin(t*3)*2; o.shakeX=Math.sin(t*1.5)*3; break;
+    }
+    return o;
+  }
+  function px(x,y,w,h){ pctx.fillRect(Math.round(x),Math.round(y),w||2,h||2); }
+  function drawNote(x,y){ pctx.fillStyle='#fff'; px(x,y,2,5); px(x-2,y+4,4,2); }
+  function drawActivity(anim,box,t){
+    pctx.save();
+    var cx=box.ox+box.w/2, top=box.oy, rgt=box.ox+box.w, lft=box.ox;
+    pctx.fillStyle='#fff';
+    var p=(animT*0.05)%10;
+    switch(anim){
+      case 'lift':
+        pctx.globalAlpha=0.9; // effort marks beside head
+        px(lft-6, top+4+Math.sin(t*5)*2, 2,2); px(lft-9, top+1+Math.sin(t*5)*2, 2,2);
+        px(rgt+4, top+4-Math.sin(t*5)*2, 2,2); px(rgt+7, top+1-Math.sin(t*5)*2, 2,2);
+        break;
+      case 'dash': case 'tag': case 'fetch':
+        pctx.globalAlpha=0.5; // speed streaks behind
+        for(var i=0;i<4;i++){ var sx=(walkDir<0?rgt+2+i*5:lft-4-i*5); px(sx, box.oy+box.h*0.3+i*4, 4,2); }
+        break;
+      case 'endure': // sweat drops
+        pctx.globalAlpha=0.85;
+        px(rgt-1, top+6+p, 2,3); px(lft+2, top+10+((p+4)%10), 2,3);
+        break;
+      case 'study': case 'puzzle': // thought dots + ?
+        pctx.globalAlpha=0.9;
+        px(rgt+2, top-2, 2,2); px(rgt+5, top-6, 3,3);
+        pctx.fillRect(rgt+7, top-15, 4,2); pctx.fillRect(rgt+9, top-13, 2,4); pctx.fillRect(rgt+9, top-7, 2,2);
+        break;
+      case 'meditate': // pulsing aura ring + spirit dots
+        pctx.globalAlpha=0.35+0.25*Math.abs(Math.sin(t*2));
+        pctx.lineWidth=2; pctx.strokeStyle='#fff';
+        var rad=box.w*0.7+Math.sin(t*2)*4;
+        pctx.beginPath(); pctx.arc(cx, box.oy+box.h*0.5, rad, 0, Math.PI*2); pctx.stroke();
+        pctx.globalAlpha=0.8;
+        for(var k=0;k<3;k++){ var a=t*1.2+k*2.1; px(cx+Math.cos(a)*rad, box.oy+box.h*0.5+Math.sin(a)*rad, 3,3); }
+        break;
+      case 'forage': case 'explore': // search sparkles near ground
+        pctx.globalAlpha=0.85;
+        var sxp=(walkDir<0?lft-6:rgt+4);
+        px(sxp, box.floorY-6, 2,2); px(sxp+(walkDir<0?-3:3), box.floorY-11, 3,3);
+        pctx.globalAlpha=0.5; px(sxp+(walkDir<0?-6:6), box.floorY-4-((p)%6), 2,2);
+        break;
+      case 'sing': // music notes floating up
+        drawNote(rgt+3, top-2-((animT*0.03)%14));
+        drawNote(rgt+9, top+2-((animT*0.03+7)%14));
+        break;
+      case 'wrestle': // impact bursts
+        pctx.globalAlpha=0.8;
+        var bx=(walkDir<0?lft-5:rgt+3);
+        px(bx, box.oy+box.h*0.4, 2,2); px(bx+(walkDir<0?-3:3), box.oy+box.h*0.4-3, 2,2);
+        px(bx+(walkDir<0?-3:3), box.oy+box.h*0.4+3, 2,2);
+        break;
+    }
+    pctx.globalAlpha=1; pctx.restore();
+  }
+
   var animT=0, last=performance.now(), simAcc=0;
   // pet roaming state (cosmetic, not persisted)
   var walkX=null, walkDir=1, hopTimer=0, hopping=false, hopPhase=0, trudgePause=0;
@@ -981,11 +1255,19 @@
     if(!S.dead && S.stage!=='egg'){
       cycleAcc+=dtMs;
       while(cycleAcc>=CYCLE_MS){ cycleAcc-=CYCLE_MS; runCycle(); }
+      // timed training progress
+      if(S.busy){
+        S.busy.t+=dtMs;
+        var ba=findAct(TRAIN,S.busy.id);
+        if(busyLabel) busyLabel.textContent=(ba?ba.label.toUpperCase():'TRAIN')+'  '+fmtMs(Math.max(0,S.busy.dur-S.busy.t));
+        if(S.busy.t>=S.busy.dur && ba) finishTrain(ba);
+      }
       checkCritical();
-      // live countdown text on the alert
+      // live countdowns
       if(S.critical){
         var rem=Math.max(0,S.critical.deadline-Date.now());
-        alertTime.textContent=(S.critical.kind==='sick'?'medicine in ':'react in ')+fmtMs(rem);
+        if(S.critical.kind==='qte'){ if(qteTime) qteTime.textContent='react in '+fmtMs(rem); }
+        else { alertTime.textContent='medicine in '+fmtMs(rem); }
       } else if(S.sick){ alertTime.textContent='give it some medicine'; }
     }
 
@@ -1028,10 +1310,14 @@
     if(walkX==null) walkX=cw/2;
     walkX=Math.min(right,Math.max(left,walkX));
 
-    var offY=Math.sin(t*2.2)*2, sq=1;
+    var offY=Math.sin(t*2.2)*2, sq=1, shakeX=0;
     var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
+    var curAnim = S.busy ? S.busy.anim : (react && react.type==='act' ? react.anim : null);
 
-    if(eating){ sq=0.95; offY=Math.sin(t*9)*1.2; }            // stand still & eat
+    if(curAnim){                                  // training / playing flourish, in place
+      var m=activityMotion(curAnim,t); offY=m.offY; sq=m.sq; shakeX=m.shakeX;
+    }
+    else if(eating){ sq=0.95; offY=Math.sin(t*9)*1.2; }       // stand still & eat
     else if(playing){ var ph=(react.t%16)/16; offY=-Math.abs(Math.sin(ph*Math.PI))*12; sq=0.9; }
     else if(resting){ offY=2; sq=0.86; }                      // stand still & rest
     else if(S.sick){ offY=Math.sin(t*8)*2; sq=0.95; }         // shiver in place
@@ -1055,7 +1341,10 @@
       else if(walkX>=right){ walkX=right; walkDir=-1; }
     }
 
+    pctx.save(); pctx.translate(shakeX,0);
     var box=drawSprite(S.form, offY, sq, walkX, walkDir<0);
+    if(curAnim) drawActivity(curAnim, box, t);
+    pctx.restore();
     drawPoops(box);
     drawFood(box);
     if(resting||tired) drawZzz(box);
