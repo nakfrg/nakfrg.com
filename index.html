@@ -143,6 +143,7 @@
   #qteMsg { font-size:9px; letter-spacing:1px; color:#fff; margin-bottom:9px; text-transform:uppercase;
             animation: blinkfill .5s steps(2) infinite; }
   #qteBtns { display:flex; gap:9px; }
+  #qteTime { font-size:11px; letter-spacing:1px; color:#fff; margin-top:9px; min-height:12px; }
   #qteBtns .pixbtn { flex:1; font-size:13px; padding:15px 8px 17px; }
   #qteTime { font-size:9px; letter-spacing:1px; color:#fff; margin-top:9px; }
 
@@ -489,114 +490,55 @@
   ];
 
   // 2) minor random events that nudge stats (good / bad / chaotic)
+  // auto cycle events — each does something real (energy / HP / mana / a stat point). no pure flavour.
   var STAT_EVENTS = [
-    { msg:"{n} found a fat juicy fly!", full:15, happy:5 },
-    { msg:"{n} caught a tasty moth midair.", full:12, happy:8 },
-    { msg:"A warm sunbeam appeared. Cozy!", energy:12, happy:8 },
-    { msg:"{n} took a refreshing dip.", clean:18, happy:6 },
-    { msg:"{n} had a wonderful dream.", energy:15, happy:10 },
-    { msg:"A gentle rain washed {n} clean.", clean:20 },
-    { msg:"{n} did a great workout.", energy:8, happy:8, full:-6 },
-    { msg:"{n} discovered a berry stash.", full:18, happy:6 },
-    { msg:"A friendly bird sang to {n}.", happy:14 },
-    { msg:"{n} found a perfect lily pad to lounge on.", energy:10, happy:8 },
-    { msg:"{n} ate a crunchy beetle. Yum.", full:14 },
-    { msg:"{n} got a surprise belly rub.", happy:16 },
-    { msg:"{n} won a staring contest with a toad.", happy:12 },
-    { msg:"{n} found a cool mud spa.", clean:10, happy:10 },
-    { msg:"{n} snagged a dragonfly. Feast!", full:16, happy:6 },
-    { msg:"Cool breeze. {n} feels refreshed.", energy:10, clean:6 },
-    { msg:"{n} napped in a flower. Adorable and rested.", energy:16 },
-    { msg:"{n} found loose change. Rich (in flies) now.", happy:10 },
-    { msg:"{n} aced a tiny puzzle. Smart frog!", happy:12, energy:-4 },
-    { msg:"{n} got fan mail from a tadpole.", happy:15 },
-    { msg:"{n} ate a questionable berry.", full:-6, clean:-8, happy:-6 },
-    { msg:"{n} slipped in the mud.", clean:-14, happy:-6 },
-    { msg:"{n} stubbed a toe on a rock.", happy:-10, energy:-4 },
-    { msg:"A rude gnat buzzed {n} all afternoon.", happy:-12 },
-    { msg:"{n} had a nightmare about herons.", energy:-12, happy:-8 },
-    { msg:"{n} sat in something gross.", clean:-18 },
-    { msg:"{n} chased its tail and got dizzy.", energy:-12, happy:-4 },
-    { msg:"{n} lost a staring contest. Humiliating.", happy:-12 },
-    { msg:"{n} got rained on. Grumpy and damp.", happy:-8, energy:-6 },
-    { msg:"{n} overate and feels sluggish.", energy:-10, happy:-4 },
-    { msg:"{n} bit a sour bug. Yuck.", full:-8, happy:-6 },
-    { msg:"{n} tripped over its own foot.", happy:-8, energy:-6 },
-    { msg:"Mosquitoes feasted on {n}.", happy:-10, clean:-6 },
-    { msg:"{n} stayed up late doom-scrolling.", energy:-16 },
-    { msg:"{n} got stage fright mid-ribbit.", happy:-10 },
-    { msg:"{n} rolled in a dust patch.", clean:-16 },
-    { msg:"{n} got the hiccups for an hour.", energy:-8, happy:-6 },
-    { msg:"A loud noise startled {n}.", happy:-10, energy:-6 },
-    { msg:"{n} forgot to eat. Tummy rumbles.", full:-12 },
-    { msg:"{n} sulked about nothing in particular.", happy:-12 },
-    { msg:"{n} found mystery jam. Worth it? Unclear.", full:10, clean:-10 },
-    { msg:"{n} traded energy for pure joy.", energy:-10, happy:16 },
-    { msg:"{n} ate too fast. Full but hiccuping.", full:16, happy:-6 },
-    { msg:"{n} cannonballed into the pond.", clean:16, energy:-8 },
-    { msg:"{n} pulled an all-nighter inventing things.", happy:12, energy:-16 },
-    { msg:"{n} fought a leaf. The leaf won.", happy:-8, energy:-6 },
-    { msg:"{n} found spicy food. Regret and delight.", full:12, clean:-6, happy:4 },
-    { msg:"{n} did extreme lounging. Pro level.", energy:14, full:-6 },
-    { msg:"{n} licked something it shouldn't. Tingly!", energy:10, happy:-6 },
-    { msg:"{n} found a tiny hat. Confidence +100.", happy:18 }
+    { msg:"{n} found a fat juicy fly! a good meal.", energy:16 },
+    { msg:"{n} napped in a sunbeam and woke refreshed.", energy:20 },
+    { msg:"{n} sipped from a clear spring.", energy:10, health:14 },
+    { msg:"{n} found a glowing mana-bloom.", mana:18 },
+    { msg:"{n} did some light stretching. limber!", stat:{dex:1}, energy:-6 },
+    { msg:"{n} puzzled over a riddle stone. clever frog!", stat:{int:1} },
+    { msg:"{n} meditated by the water. centered.", mana:12, stat:{spi:1} },
+    { msg:"{n} hauled a heavy log for fun.", stat:{str:1}, energy:-8 },
+    { msg:"{n} found a four-leaf clover.", stat:{lck:1} },
+    { msg:"{n} feasted on a beetle swarm.", energy:18, health:8 },
+    { msg:"{n} rested in a cozy burrow.", health:18 },
+    { msg:"a passing sprite topped up {n}'s mana.", mana:22 },
+    { msg:"{n} overdid the acrobatics and pulled a muscle.", health:-12, energy:-6 },
+    { msg:"{n} ate a questionable berry. ugh.", health:-10 },
+    { msg:"a cold snap left {n} shivering and drained.", energy:-16 },
+    { msg:"mosquitoes feasted on {n} all night.", health:-8, energy:-6 },
+    { msg:"{n} tripped chasing a moth.", health:-7 },
+    { msg:"{n} stayed up too late and burned mana fretting.", mana:-14, energy:-8 },
+    { msg:"a gnat swarm pestered {n} ragged.", energy:-12 },
+    { msg:"{n} slipped on a mossy rock.", health:-9, energy:-4 }
   ];
 
-  // 3) sudden illness - give medicine before the timer runs out or {n} dies
-  var SICK_EVENTS = [
-    { msg:"{n} caught the bog flu!", cause:"the bog flu" },
-    { msg:"{n} ate a bad fly and feels awful.", cause:"a very bad fly" },
-    { msg:"{n} has the swamp sniffles.", cause:"the swamp sniffles" },
-    { msg:"{n} turned a worrying shade of green.", cause:"mystery green-itis" },
-    { msg:"{n}'s tummy is doing backflips.", cause:"a rebellious tummy" },
-    { msg:"{n} caught a chill in the night.", cause:"a nasty chill" },
-    { msg:"{n} drank pond scum. Big mistake.", cause:"pond-scum poisoning" },
-    { msg:"{n} broke out in spots! That's new and bad.", cause:"the spotty plague" },
-    { msg:"{n} is running a fever. Hop to it!", cause:"a swamp fever" },
-    { msg:"{n} sneezed itself dizzy.", cause:"the sneezles" },
-    { msg:"{n} ate a glow-mushroom. Glows AND aches.", cause:"glow-mushroom flu" },
-    { msg:"{n} has a frog-throat. Can't ribbit.", cause:"froggy-throat" },
-    { msg:"{n} caught something off a passing toad.", cause:"toad-borne crud" },
-    { msg:"{n} feels green around the gills. Literally.", cause:"the green-gills" },
-    { msg:"{n} is queasy after eating a beetle wrong.", cause:"beetle belly" },
-    { msg:"{n} has the wobbles. Medicine, stat!", cause:"the wobbles" }
-  ];
+  // (sick/medicine events removed \u2014 no real-time decay timer anymore)
 
-  // 4) quick-time events. opts = 1 or 2 tappable choices; `to` = what happens if you're too slow.
-  //    result fields: win(small heal+good) | hp | full | energy | stat:{k:d} | die:cause | good | bad | log
+  // quick-time + decision events. opts = 1-2 tappable choices; `to` = outcome if you're too slow.
+  // result fields: win(small heal) | hp | energy | mana | stat:{k:d} | good | bad | log.  (no instant death.)
   var QTE_EVENTS = [
-    // ── tap-or-die dangers (fast!) ──
-    { msg:"A HERON swoops down!", time:4200, opts:[{b:"DODGE", r:{win:1, log:"{n} juked the heron like a champ!"}}], to:{die:"a hungry heron"} },
-    { msg:"A snake strikes at {n}!", time:4200, opts:[{b:"HOP", r:{win:1, log:"{n} hopped clear of the fangs!"}}], to:{die:"a sneaky snake"} },
-    { msg:"{n} is choking on a beetle!", time:4500, opts:[{b:"COUGH", r:{win:1, log:"{n} coughed it right up!"}}], to:{die:"a stuck beetle"} },
-    { msg:"A hawk dives at {n}!", time:4000, opts:[{b:"HIDE", r:{win:1, log:"{n} hid just in time!"}}], to:{die:"a diving hawk"} },
-    { msg:"{n} stopped breathing in its sleep!", time:4800, opts:[{b:"WAKE", r:{win:1, log:"{n} woke with a gasp!"}}], to:{die:"forgetting to breathe"} },
-    { msg:"{n} wanders toward a busy road!", time:4200, opts:[{b:"STOP", r:{good:1, log:"{n} stopped at the very edge."}}], to:{die:"a passing truck"} },
-    // ── fail = injury / stat loss (survivable) ──
-    { msg:"A wasp dive-bombs {n}!", time:4500, opts:[{b:"SWAT", r:{good:1, log:"{n} swatted it away clean."}}], to:{bad:1, log:"{n} got stung!", hp:-12} },
-    { msg:"Thorny brambles ahead!", time:5000, opts:[{b:"VAULT", r:{good:1, log:"{n} cleared them gracefully."}}], to:{bad:1, log:"{n} got scratched up.", hp:-8, stat:{dex:-1}} },
-    { msg:"A bully toad shoves {n}!", time:4800, opts:[{b:"BRACE", r:{good:1, log:"{n} stood its ground."}}], to:{bad:1, log:"{n} got knocked flat.", hp:-6, energy:-10} },
-    { msg:"Slippery mossy rock!", time:5000, opts:[{b:"BALANCE", r:{good:1, log:"{n} balanced like a pro."}}], to:{bad:1, log:"{n} slipped and bruised.", hp:-7} },
-    { msg:"A gust threatens to sweep {n} off!", time:4600, opts:[{b:"DIG IN", r:{good:1, log:"{n} dug in and held on."}}], to:{bad:1, log:"{n} got tumbled around.", hp:-5, energy:-8} },
-    // ── pure positives (tap = bonus, miss = nothing) ──
-    { msg:"A shiny beetle buzzes by!", time:5500, opts:[{b:"CATCH", r:{good:1, log:"{n} caught a delicious beetle!", full:16}}], to:{log:"the beetle got away."} },
-    { msg:"A four-leaf clover!", time:5500, opts:[{b:"GRAB", r:{good:1, log:"{n} found a lucky clover!", stat:{lck:2}}}], to:{log:"{n} missed the clover."} },
-    { msg:"A warm sunbeam breaks through!", time:6000, opts:[{b:"BASK", r:{good:1, log:"{n} soaked up the warmth.", energy:18}}], to:{log:"the cloud rolled back over."} },
-    { msg:"A wise old frog offers a lesson!", time:6000, opts:[{b:"LISTEN", r:{good:1, log:"{n} learned a thing or two.", stat:{int:2}}}], to:{log:"the elder hopped away."} },
-    // ── two options: right vs wrong ──
-    { msg:"Bright meadow, or dark hollow?", time:6000, opts:[{b:"MEADOW", r:{good:1, log:"{n} found a sunny picnic!", full:14}}, {b:"HOLLOW", r:{bad:1, log:"something in the dark spooks {n}!", hp:-8, energy:-8}}], to:{bad:1, log:"{n} froze and missed both.", hp:-3} },
-    { msg:"Red berry, or blue berry?", time:6000, opts:[{b:"RED", r:{bad:1, log:"sour and toxic! bleh.", hp:-10}}, {b:"BLUE", r:{good:1, log:"sweet and nourishing!", full:16}}], to:{log:"{n} couldn't decide; ate neither."} },
-    { msg:"A frog wants to ARM-WRESTLE or RIDDLE!", time:6000, opts:[{b:"WRESTLE", r:{good:1, log:"{n} won the arm-wrestle!", stat:{str:2}}}, {b:"RIDDLE", r:{bad:1, log:"{n} flubbed the riddle.", stat:{int:-1}}}], to:{log:"the frog left, unimpressed."} },
-    { msg:"Strange door: PUSH or PULL?", time:6000, opts:[{b:"PUSH", r:{good:1, log:"a treat tumbles out!", full:12, hp:6}}, {b:"PULL", r:{bad:1, log:"a bucket of cold water!", energy:-12}}], to:{log:"the door simply vanished."} },
-    // ── funny: both bad ──
-    { msg:"Two suspicious mushrooms. Pick one.", time:5500, opts:[{b:"LEFT", r:{bad:1, log:"poisonous. of course.", hp:-9}}, {b:"RIGHT", r:{bad:1, log:"ALSO poisonous. wow.", hp:-9}}], to:{bad:1, log:"{n} sniffed both and sneezed.", hp:-5} },
-    { msg:"Itch! Scratch LEFT or RIGHT?", time:5500, opts:[{b:"LEFT", r:{bad:1, log:"wrong spot, still itchy.", energy:-6}}, {b:"RIGHT", r:{bad:1, log:"also wrong. agony.", energy:-6}}], to:{log:"the itch mysteriously stopped."} },
-    // ── funny: both good ──
-    { msg:"Two kind frogs offer snacks!", time:6000, opts:[{b:"FROG A", r:{good:1, log:"a tasty fly!", full:12}}, {b:"FROG B", r:{good:1, log:"an even tastier fly!", full:14}}], to:{good:1, log:"both left snacks anyway!", full:10}} ,
-    { msg:"Belly rub, or chin scratch?", time:6000, opts:[{b:"BELLY", r:{good:1, log:"pure bliss.", hp:8}}, {b:"CHIN", r:{good:1, log:"absolute joy.", hp:8}}], to:{good:1, log:"{n} got both. lucky frog.", hp:10}} ,
-    // ── neutral ──
-    { msg:"A leaf drifts by. Watch it?", time:6000, opts:[{b:"WATCH", r:{log:"{n} watched the leaf. serene."}}], to:{log:"the leaf floated off."} },
-    { msg:"A pebble sits there. Poke it?", time:6000, opts:[{b:"POKE", r:{log:"{n} poked the pebble. it's a pebble."}}], to:{log:"{n} left the pebble alone."} }
+    // ── timed reactions: tap in time or take damage / lose energy ──
+    { msg:"A HERON swoops at {n}!", time:5000, opts:[{b:"DODGE", r:{good:1, log:"{n} juked the heron like a champ!"}}], to:{bad:1, log:"the heron raked {n}!", hp:-22} },
+    { msg:"A snake strikes at {n}!", time:5000, opts:[{b:"HOP", r:{good:1, log:"{n} hopped clear of the fangs!"}}], to:{bad:1, log:"the fangs grazed {n}!", hp:-20} },
+    { msg:"{n} is choking on a beetle!", time:5000, opts:[{b:"COUGH", r:{good:1, log:"{n} coughed it right up!"}}], to:{bad:1, log:"{n} hacked and wheezed.", hp:-12, energy:-12} },
+    { msg:"A wasp dive-bombs {n}!", time:5000, opts:[{b:"SWAT", r:{good:1, log:"{n} swatted it clean."}}], to:{bad:1, log:"{n} got stung!", hp:-14} },
+    { msg:"Rockslide! Scramble clear!", time:5000, opts:[{b:"SCRAMBLE", r:{good:1, log:"{n} scrambled to safety!"}}], to:{bad:1, log:"a rock clipped {n}.", hp:-18, energy:-8} },
+    { msg:"A bully toad shoves {n}!", time:5000, opts:[{b:"BRACE", r:{good:1, log:"{n} stood its ground."}}], to:{bad:1, log:"{n} got knocked flat.", hp:-8, energy:-12} },
+    { msg:"A gust threatens to sweep {n} off a ledge!", time:5000, opts:[{b:"DIG IN", r:{good:1, log:"{n} dug in and held on."}}], to:{bad:1, log:"{n} got tumbled around.", hp:-10, energy:-10} },
+    // ── timed reward: tap in time for a bonus, miss = nothing ──
+    { msg:"A shiny beetle buzzes past!", time:5500, opts:[{b:"CATCH", r:{good:1, log:"{n} caught a delicious beetle!", energy:18}}], to:{log:"the beetle got away."} },
+    { msg:"A wisp of pure mana drifts by!", time:5500, opts:[{b:"ABSORB", r:{good:1, log:"{n} drank in the mana!", mana:24}}], to:{log:"the wisp faded."} },
+    // ── decisions: weigh two outcomes (this is where the strategy is) ──
+    { msg:"A shrine offers POWER or WISDOM.", time:6500, opts:[{b:"POWER", r:{good:1, log:"strength floods {n}!", stat:{str:2}}}, {b:"WISDOM", r:{good:1, log:"insight fills {n}!", stat:{int:2}}}], to:{log:"the shrine went dark."} },
+    { msg:"Train HARD now, or REST up?", time:6500, opts:[{b:"TRAIN", r:{good:1, log:"{n} pushed hard \u2014 stronger, but spent.", stat:{end:2}, energy:-18}}, {b:"REST", r:{good:1, log:"{n} recovered nicely.", energy:20, hp:10}}], to:{log:"{n} dithered and did neither."} },
+    { msg:"A risky elixir: DRINK or POUR OUT?", time:6500, opts:[{b:"DRINK", r:{good:1, log:"it surges through {n}!", stat:{spi:2, int:1}, hp:-12}}, {b:"POUR", r:{log:"{n} played it safe."}}], to:{bad:1, log:"it spilled on {n} \u2014 ouch.", hp:-8} },
+    { msg:"A merchant: trade ENERGY for a LUCKY charm?", time:6500, opts:[{b:"TRADE", r:{good:1, log:"{n} feels luckier!", stat:{lck:2}, energy:-20}}, {b:"DECLINE", r:{log:"{n} kept its energy."}}], to:{log:"the merchant moved on."} },
+    { msg:"Cross the RAPIDS or take the LONG WAY?", time:6500, opts:[{b:"RAPIDS", r:{good:1, log:"{n} braved it \u2014 quicker but bruised.", stat:{dex:2}, hp:-14}}, {b:"LONG WAY", r:{good:1, log:"safe and sound, if slow.", energy:-10}}], to:{bad:1, log:"{n} hesitated mid-stream!", hp:-10} },
+    { msg:"Mysterious mushrooms: RED or BLUE?", time:6000, opts:[{b:"RED", r:{bad:1, log:"sour and toxic! bleh.", hp:-14}}, {b:"BLUE", r:{good:1, log:"sweet and nourishing!", energy:16, hp:8}}], to:{log:"{n} ate neither."} },
+    { msg:"A frog elder: ARM-WRESTLE or RIDDLE?", time:6500, opts:[{b:"WRESTLE", r:{good:1, log:"{n} won the bout!", stat:{str:2}}}, {b:"RIDDLE", r:{good:1, log:"{n} solved it!", stat:{int:2}}}], to:{bad:1, log:"the elder left, unimpressed.", energy:-6} },
+    { msg:"A glowing font: bathe in LIGHT or SHADOW?", time:6500, opts:[{b:"LIGHT", r:{good:1, log:"{n} is healed and warmed.", hp:30}}, {b:"SHADOW", r:{good:1, log:"dark power refills {n}'s mana.", mana:30}}], to:{log:"the font dimmed."} }
   ];
 
   // 5) lingering effects - shift stat decay or regen for a few cycles
@@ -665,12 +607,12 @@
   // The cycle gets FASTER as the activity's governing stat grows (down to CYCLE_MIN).
   // risk = chance per rep a mishap event damages HP. sec = small bonus to a 2nd stat.
   var TRAIN = [
-    { id:'lift',     label:'Lift',   stat:'str', sec:'end', gain:3, eCost:9,  risk:0.10, anim:'lift'     },
-    { id:'sprint',   label:'Sprint', stat:'dex', sec:'lck', gain:3, eCost:9,  risk:0.08, anim:'dash'     },
-    { id:'endure',   label:'Endure', stat:'end', sec:'str', gain:3, eCost:10, risk:0.10, anim:'endure'   },
-    { id:'study',    label:'Study',  stat:'int', sec:'spi', gain:3, eCost:7,  risk:0,    anim:'study'     },
-    { id:'meditate', label:'Medit.', stat:'spi', sec:'int', gain:3, eCost:7,  risk:0,    anim:'meditate'  },
-    { id:'forage',   label:'Forage', stat:'lck', sec:'end', gain:3, eCost:8,  risk:0.06, anim:'forage'   }
+    { id:'lift',     label:'Lift',   stat:'str', sec:'end', gain:2, eCost:15, risk:0.10, anim:'lift'     },
+    { id:'sprint',   label:'Sprint', stat:'dex', sec:'lck', gain:2, eCost:15, risk:0.08, anim:'dash'     },
+    { id:'endure',   label:'Endure', stat:'end', sec:'str', gain:2, eCost:16, risk:0.10, anim:'endure'   },
+    { id:'study',    label:'Study',  stat:'int', sec:'spi', gain:2, eCost:12, risk:0,    anim:'study'     },
+    { id:'meditate', label:'Medit.', stat:'spi', sec:'int', gain:2, eCost:12, risk:0,    anim:'meditate'  },
+    { id:'forage',   label:'Forage', stat:'lck', sec:'end', gain:2, eCost:13, risk:0.06, anim:'forage'   }
   ];
   var PLAY = [
     { id:'wrestle', label:'Wrestle', stat:'str', gain:2, eCost:5, risk:0.06, anim:'wrestle' },
@@ -742,7 +684,7 @@
 
   // enemy stats scale with difficulty tier (biome*6 + stage) plus a small within-stage ramp.
   // tuned so early biomes still take several hits and an under-levelled pet walls (must train more).
-  var ENEMY_HP0=90, ENEMY_HP_GROW=1.066, ENEMY_ATK0=10, ENEMY_ATK_GROW=1.090, ENEMY_DEF0=2, ENEMY_DEF_GROW=1.050;
+  var ENEMY_HP0=170, ENEMY_HP_GROW=1.074, ENEMY_ATK0=17, ENEMY_ATK_GROW=1.083, ENEMY_DEF0=3, ENEMY_DEF_GROW=1.055;
   function enemyAt(biome, stage, battle){
     var nb=battlesFor(stage), di=stageIndex(biome,stage), lvl=di + battle*0.10;
     var arche=ARCHE[(biome*7 + stage*3 + battle*5) % ARCHE.length];
@@ -758,6 +700,7 @@
     return { hp:hp, maxHp:hp, atk:atk, def:def, crit:crit, name:name, sprite:sprite, boss:boss, lvl:lvl };
   }
   function biomeUnlocked(b){ return stageIndex(b,0) <= (S.stageProg||0); }
+  function exploreCost(b){ return b+1; }   // segments spent per stage attempt (Plains=1 ... Citadel=7)
   function stageUnlocked(b,s){ return stageIndex(b,s) <= (S.stageProg||0); }
 
   // ── encounter list for a stage: combat gauntlet with positive/negative events woven in ──
@@ -844,7 +787,7 @@
   function manaRegenRound(){ return 1 + Math.floor(ST('spi')*0.10 + ST('int')*0.05); }   // per combat round \u2014 SPI sustains casting
   // rest: heal HP (END) or recover energy (SPI); the chosen stat sets amount + speed
   function restHeal(){ return 8 + Math.round(ST('end')*0.8); }
-  function restEnergyGain(){ return 12 + Math.round(ST('spi')*0.7); }
+  function restEnergyGain(){ return 9 + Math.round(ST('spi')*0.9); }   // low base; SPI makes resting far more efficient
   function restDur(stat){ return Math.max(ACT_MIN_MS, ACT_DUR.rest - (S.rpg[stat||'end']||0)*ACT_STEP_MS); }
 
   // ── spells: learned at stat thresholds. Activate up to 3; they cast in order in combat. ──
@@ -1033,10 +976,6 @@
     if(S.dead) return;
     if(S.stage==='egg'){ S.age += dt; checkEvolve(); return; } // egg incubates in real time
     var st=S.stats;
-    // chronic illness (from random sick events) can still kill if left untreated
-    var critSick = S.critical && S.critical.kind==='sick';
-    if(critSick || S.sick){ S.sickT+=dt; } else { S.sickT=Math.max(0,S.sickT-dt*0.6); }
-    if(S.sickT>=CHRONIC_SICK_DEATH){ die('an untreated illness'); return; }
     if(st.health<=0){ die('its wounds'); return; }
     checkCritical();
     if(S.dead) return;
@@ -1062,7 +1001,17 @@
     if(S.seg>=SEGMENTS){ S.seg=0; completeCycle(); }
     else { save(); render(); updateControls(); }
   }
-  function completeCycle(){
+  // exploring costs segments (= biome number). spend them quietly (age/regen but no random cycle event mid-trek)
+  function spendExploreCost(n){
+    for(var i=0;i<n;i++){
+      if(S.dead) return false;
+      S.seg=(S.seg||0)+1;
+      if(S.seg>=SEGMENTS){ S.seg=0; completeCycle(true); }
+      if(S.dead) return false;
+    }
+    save(); return true;
+  }
+  function completeCycle(quiet){
     if(S.dead||S.stage==='egg') return;
     var st=S.stats, mod=sumMods();
     st.health = Math.min(maxHP(), Math.max(0, st.health + hpRegen()*3 + (mod.health||0)));
@@ -1074,7 +1023,7 @@
     if(S.age>=MAX_AGE){ endGame('age'); return; }
     checkEvolve();
     if(S.dead) return;
-    if(Math.random()<0.35) fireCycleEvent();   // occasional ambient happening
+    if(!quiet && Math.random()<0.5) fireCycleEvent();   // occasional ambient happening
     save(); render(); updateControls();
   }
   // one training drill: costs energy + 1 segment, applies instantly
@@ -1083,9 +1032,10 @@
     var a=findAct(TRAIN, drillId); if(!a){ return; }
     if((S.stats.energy||0) < a.eCost){ setMessage(niceName()+' is too tired \u2014 rest for energy first.'); blip(180,0.08,'sawtooth'); return; }
     S.stats.energy = clamp((S.stats.energy||0) - a.eCost);
-    bumpStat(a.stat, a.gain); if(a.sec) bumpStat(a.sec, 1);
+    var gain = a.gain + (S.goblet?1:0);   // the Cavern goblet restores training to its old strength
+    bumpStat(a.stat, gain); if(a.sec) bumpStat(a.sec, 1);
     react={type:'act', anim:a.anim, t:155}; flashT=Math.max(flashT,8); blip(660,0.05,'triangle');
-    logEvent(niceName()+' trained '+a.label.toUpperCase()+deltaStr([[RPG_NAME[a.stat], a.gain]]));
+    logEvent(niceName()+' trained '+a.label.toUpperCase()+deltaStr([[RPG_NAME[a.stat], gain]]));
     if(a.risk && Math.random()<a.risk){
       var dmg=6+Math.floor(Math.random()*8);
       logEvent('\u26A0 '+fillName(MISHAPS[(Math.random()*MISHAPS.length)|0])+deltaStr([['HP',-dmg]]));
@@ -1098,7 +1048,7 @@
   function restOnce(kind){
     if(S.dead||S.stage==='egg'||S.fight) return;
     var st=S.stats;
-    if(kind==='energy'){ var be=st.energy||0; st.energy=clamp(be + restEnergyGain()*3);
+    if(kind==='energy'){ var be=st.energy||0; st.energy=clamp(be + restEnergyGain()*2);
       setMessage(niceName()+' rests and recovers energy.'); logEvent(niceName()+' rested for energy (+'+(st.energy-be)+').'); blip(380,0.07,'sine'); }
     else { var bh=st.health; st.health=Math.min(maxHP(), st.health + Math.round(restHeal()*2.6));
       setMessage(niceName()+' rests and heals.'); logEvent(niceName()+' rested to heal (+'+(st.health-bh)+' HP).'); blip(440,0.07,'sine'); }
@@ -1119,6 +1069,11 @@
     if(S.dead||S.stage==='egg'||S.fight) return;
     if(!stageUnlocked(biome,stage)){ setMessage('that stage is locked'); return; }
     closeOverlay(); pickerMode='none';
+    // exploring costs cycle segments equal to the biome number (Plains=1 ... Citadel=7)
+    var cost=exploreCost(biome);
+    logEvent('\u2694 set out for '+BIOMES[biome]+' (\u2212'+cost+' segment'+(cost>1?'s':'')+').');
+    spendExploreCost(cost);
+    if(S.dead){ render(); updateControls(); return; }   // could age out on the trek
     var enc=buildEncounters(biome,stage), combats=battlesFor(stage);
     S.fight={ biome:biome, stage:stage, enc:enc, encIdx:-1, combatNo:0, combatsTotal:combats,
       enemy:null, buffs:freshBuffs(), event:null,
@@ -1153,7 +1108,7 @@
       var bHP=S.stats.health, bMana=(S.mana||0), bBuffs=Object.assign({},f.buffs);
       (ev.auto||ev.run)(f);
       var rep=describeEffect(bHP,bMana,bBuffs); f.event.result=rep;
-      f.state='eventbanner'; f.stateT=2200;
+      f.state='eventbanner'; f.stateT=5000;
       combatLog((kind==='pos'?'\u2726 ':'\u2620 ')+ev.title+(rep.length?'  ('+rep.join(', ')+')':''));
       blip(kind==='pos'?820:200,0.1,kind==='pos'?'sine':'sawtooth');
     }
@@ -1168,7 +1123,7 @@
     combatLog('\u2726 '+f.event.title+' \u2014 '+ch.label+(rep.length?'  ('+rep.join(', ')+')':''));
     logEvent('\u2726 '+f.event.title+': '+ch.label+(rep.length?' \u2014 '+rep.join(', '):'')+' (this run)');
     blip(900,0.1,'sine'); closeOverlay();
-    f.state='eventbanner'; f.stateT=1800;   // linger on the result, then advance
+    f.state='eventbanner'; f.stateT=5000;   // linger on the result, then advance
     updateControls(); render();
   }
 
@@ -1184,7 +1139,7 @@
   }
   function doCast(sp, f){
     if((S.mana||0) < sp.cost) return false;
-    S.mana-=sp.cost;
+    S.mana-=sp.cost; f.actions=(f.actions||0)+1;
     var r=effRpg(), e=f.enemy, ls=equipEffect('lifesteal');
     function healSelf(h){ var b=S.stats.health; S.stats.health=Math.min(maxHP(),S.stats.health+Math.round(h)); return S.stats.health-b; }
     function leech(d){ if(ls>0) healSelf(d*ls); }
@@ -1198,6 +1153,7 @@
     else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; combatLog('\u2728 '+sp.name+' +'+got2+' HP'); blip(560,0.08,'sine'); }
     else if(sp.type==='regen'){ f.regen={ amt:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+sp.name+' \u2014 regen '+f.regen.amt+'/rnd \u00d7'+f.regen.rounds); blip(600,0.08,'sine'); }
     else if(sp.type==='shield'){ f.shield=(f.shield||0)+(sp.pow(r)||1); combatLog('\u2728 '+sp.name+' \u2014 shield \u00d7'+f.shield); blip(620,0.07,'sine'); }
+    if(f.state==='fight' && f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); }
     return true;
   }
   // cast in the player's chosen slot order (1->2->3), skipping unaffordable spells and clearly-wasted
@@ -1223,7 +1179,7 @@
 
   function interludeRegen(){
     // catch your breath between foes; SPI drives it (so casters can survive long gauntlets), with a small flat floor
-    var hpGain=Math.floor(ST('spi')*0.9) + Math.floor(maxHP()*0.02);
+    var hpGain=Math.floor(ST('spi')*0.9) + Math.floor(maxHP()*0.012);
     S.stats.health=Math.min(maxHP(), S.stats.health+hpGain);
     S.mana=Math.min(maxMana(), (S.mana||0) + Math.floor(maxMana()*0.10) + manaRegenTick());
   }
@@ -1241,7 +1197,7 @@
     var f=S.fight, e=f.enemy; f.eneLunge=1;
     if(!special && Math.random()<petDodge()){ f.flashPet=4; combatLog('~ '+niceName()+' dodged!'); blip(700,0.04,'sine'); return; }
     if(!special && f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); return; }
-    var edmg=Math.max(1, Math.round((e.atk-petDEF())*mult)), ecrit=Math.random()<e.crit;
+    var edmg=Math.max(Math.round(e.atk*0.38*mult), Math.round((e.atk-petDEF())*mult), 1), ecrit=Math.random()<e.crit;
     if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
     S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=special?14:9;
     combatLog((special?'\u2737 ':(ecrit?'\u2726':'\u00b7'))+' '+e.name+' \u2192 '+edmg+(ecrit?' CRIT':''));
@@ -1295,7 +1251,7 @@
       combatLog((crit?'\u2726':'\u00b7')+' '+niceName()+' \u2192 '+dmg+(crit?' CRIT':''));
       blip(crit?900:680,0.04,'square');
       if(e.hp<=0){ winBattle(); return; }
-      if(++f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b the fight drags on \u2014 you retreat to recover.'); loseBattle(false); return; }
+      if(++f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); return; }
     }
     // spell (one per round; cycles the loadout; costs mana; small in-combat regen)
     if(S.loadout && S.loadout.length){
@@ -1331,6 +1287,13 @@
       var gt=[]; for(var gk in gained) gt.push([RPG_NAME[gk],gained[gk]]);
       logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1)+deltaStr(gt));
       if(frontier) S.stageProg=Math.min(N_TOTAL, (S.stageProg||0)+1);
+      // clearing the Cavern (biome index 3) boss grants the Training Goblet (training gives more from now on)
+      if(!S.goblet && f.biome===3 && f.stage===N_STAGES-1){
+        S.goblet=true; react={type:'goblet', t:260}; flashT=22;
+        setMessage('you found the TRAINING GOBLET!');
+        logEvent('\u2728 found the TRAINING GOBLET \u2014 training now grants more stats!');
+        blip(700,0.12,'triangle'); setTimeout(function(){blip(940,0.12,'triangle');},150); setTimeout(function(){blip(1180,0.18,'triangle');},320);
+      }
       checkSpells();
       S.fight=null; S.mode='idle';
       if(isFinal){ endGame('win'); return; }
@@ -1450,32 +1413,15 @@
   // ── alert / critical UI ──
   function updateAlert(){
     if(!alertWrap) return;
-    if(S.sick || (S.critical && S.critical.kind==='sick')){
-      alertWrap.classList.add('crit');
-      alertMsg.textContent = (S.critical && S.critical.kind==='sick') ? 'SICK \u2014 give medicine, fast!' : 'feeling unwell';
-      alertBtn.textContent = '\u2695 give medicine';
-      if(!(S.critical && S.critical.kind==='sick')) alertTime.textContent='';
-    } else { alertWrap.classList.remove('crit'); alertTime.textContent=''; }
+    alertWrap.classList.remove('crit'); if(alertTime) alertTime.textContent='';
     updateControls();
   }
-
-  function resolveCritical(){   // sick-only now (medicine)
-    if(!S.critical || S.critical.kind!=='sick') return;
-    var c=S.critical, s=S.stats;
-    S.sick=false; S.sickT=0;
-    s.health=hpClamp(s.health+Math.round(maxHP()*0.15));
-    S.mana=Math.min(maxMana(), (S.mana||0)+10);
-    react={type:'clean',t:30};
-    setMessage('phew - the medicine worked'); logEvent('\u2713 '+niceName()+' recovered from '+c.cause+'.');
-    blip(520,0.12,'sine');
-    S.critical=null; updateAlert(); save();
-  }
+  function resolveCritical(){ /* medicine/sick system removed */ }
 
   function checkCritical(){
     if(S.dead||!S.critical) return;
     if(Date.now()>S.critical.deadline){
-      if(S.critical.kind==='sick'){ die(S.critical.cause); }
-      else { var ev=S.critical.ev; S.critical=null; logEvent('\u23F1 too slow!'); applyQteResult(ev.to); updateAlert(); save(); }
+      var ev=S.critical.ev; S.critical=null; logEvent('\u23F1 too slow!'); applyQteResult(ev.to); updateAlert(); save();
     }
   }
 
@@ -1532,6 +1478,7 @@
     if(enD){ s.energy=clamp((s.energy||0)+enD); net+=enD; changes.push(['ENERGY',enD]); }
     if(e.health){ s.health=hpClamp(s.health+e.health); net+=e.health; changes.push(['HP',e.health]); }
     if(e.mana){ S.mana=Math.min(maxMana(),Math.max(0,(S.mana||0)+e.mana)); net+=e.mana; changes.push(['MANA',e.mana]); }
+    if(e.stat){ for(var k in e.stat){ bumpStat(k, e.stat[k]); net+=e.stat[k]; changes.push([RPG_NAME[k]||k.toUpperCase(), e.stat[k]]); } }
     var m=fillName(e.msg); setMessage(m); logEvent(m+deltaStr(changes));
     blip(net>=0?500:200,0.06,'triangle'); save();
   }
@@ -1551,14 +1498,6 @@
     blip(440,0.06,'triangle'); save();
   }
 
-  function startSickEvent(){
-    var e=SICK_EVENTS[(Math.random()*SICK_EVENTS.length)|0];
-    S.sick=true;
-    S.critical={ kind:'sick', cause:e.cause, deadline:Date.now()+SICK_DEADLINE };
-    var m=fillName(e.msg); setMessage(m); logEvent('\u26A0 '+m);
-    blip(160,0.2,'sawtooth',0.07); flashT=22; updateAlert(); save();
-  }
-
   function startQTE(){
     var ev = QTE_EVENTS[(Math.random()*QTE_EVENTS.length)|0];
     var time = ev.time || QTE_DEADLINE;
@@ -1568,16 +1507,13 @@
     flashT=22; renderQteButtons(ev); updateAlert(); save();
   }
 
-  // an ambient event may fire on an age tick
+  // a cycle event. ~30% need player input (a QTE / decision); the rest do something real to stats.
   function fireCycleEvent(){
-    if(S.dead||S.stage==='egg'||S.fight) return;
-    var busy = S.critical;
+    if(S.dead||S.stage==='egg'||S.fight||S.critical) return;
     var r=Math.random();
-    if(!busy && S.age>3 && r<0.07){ startSickEvent(); return; }
-    if(!busy && S.age>3 && r<0.13){ startQTE(); return; }
-    if(r<0.30){ applyModEvent(MOD_EVENTS[(Math.random()*MOD_EVENTS.length)|0]); return; }
-    if(r<0.62){ applyStatEvent(STAT_EVENTS[(Math.random()*STAT_EVENTS.length)|0]); return; }
-    logEvent(fillName(IDLE[(Math.random()*IDLE.length)|0]));   // flavor beat
+    if(r<0.30){ startQTE(); return; }                                                    // 30% \u2014 user input
+    if(r<0.50){ applyModEvent(MOD_EVENTS[(Math.random()*MOD_EVENTS.length)|0]); return; } // 20% \u2014 lingering modifier
+    applyStatEvent(STAT_EVENTS[(Math.random()*STAT_EVENTS.length)|0]);                    // 50% \u2014 immediate stat change
   }
 
   var ageAcc=0;   // ms into the current age tick
@@ -1703,7 +1639,7 @@
       var cleared=Math.max(0, Math.min(N_STAGES, (S.stageProg||0)-b*N_STAGES));
       var row=document.createElement('div'); row.className='ovrow'+(unlocked?'':' lock');
       row.innerHTML='<div class="ovtext"><div class="ovname">'+(b+1)+'. '+BIOMES[b].toUpperCase()+'</div><div class="ovsub">'+
-        (unlocked ? (cleared+'/'+N_STAGES+' stages cleared') : ('locked \u2014 clear '+BIOMES[b-1]))+'</div></div>';
+        (unlocked ? (cleared+'/'+N_STAGES+' cleared \u00b7 costs '+exploreCost(b)+' seg') : ('locked \u2014 clear '+BIOMES[b-1]))+'</div></div>';
       if(unlocked) row.addEventListener('click', function(){ openStages(b); });
       ovBody.appendChild(row);
     })(b); }
@@ -1719,7 +1655,7 @@
       if(unlocked) row.addEventListener('click', function(){ closeOverlay(); startStage(biome,s); });
       ovBody.appendChild(row);
     })(s); }
-    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='tap a stage to enter \u00b7 close to pick another biome'; ovBody.appendChild(hint);
+    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='each attempt costs '+exploreCost(biome)+' cycle segment'+(exploreCost(biome)>1?'s':'')+' \u00b7 tap a stage to enter'; ovBody.appendChild(hint);
   }
   function spellTypeName(t){ return {dmg:'damage',multi:'multi-hit',execute:'execute',drain:'drain',burn:'burn (DoT)',weaken:'weaken foe',risky:'big damage \u2014 hurts you',heal:'heal',regen:'heal over time',shield:'absorb hits'}[t]||t; }
   function openEventChoice(){
@@ -1910,7 +1846,9 @@
   }
   // tap the egg to hatch faster (mash and it shatters)
   petCanvas.addEventListener('pointerdown',function(e){
-    if(S.stage==='egg' && !S.dead){ if(e&&e.preventDefault) e.preventDefault(); eggTap(); }
+    if(S.stage==='egg' && !S.dead){ if(e&&e.preventDefault) e.preventDefault(); eggTap(); return; }
+    // tap to dismiss an in-combat event banner early
+    if(S.fight && S.fight.state==='eventbanner'){ if(e&&e.preventDefault) e.preventDefault(); S.fight.event=null; goNext(); render(); return; }
   });
   // (stop is now done by tapping the active action's own button again)
   alertBtn.addEventListener('click',function(){
@@ -1989,7 +1927,7 @@
       nameTag.textContent='RIP '+niceName();
       updateControls(); setBars(); renderLog(); return;
     }
-    nameTag.textContent = S.fight ? ('VS '+(S.fight.enemy?S.fight.enemy.name:'?')) : FORM_NAMES[S.form];
+    nameTag.textContent = S.fight ? '' : FORM_NAMES[S.form];
     if(S.stage==='egg'){ updateControls(); setBars(); renderLog(); return; }
     updateAlert(); updateControls(); setBars(); renderLog();
   }
@@ -2171,25 +2109,25 @@
     var petFlash=f.flashPet>0, blinkP=petFlash && (Math.floor(animT/55)%2===0);
     var petX=cw*0.30 + Math.max(0,f.lunge||0)*22;
 
-    // ── EVENT scenes (positive/negative): show the pet alone + the event text ──
+    // ── EVENT scenes (positive/negative): bars stay put (top-left), text fills the blank middle ──
     if(f.state==='event' || f.state==='eventbanner'){
       var ev=f.event||{};
-      if(!blinkP) drawCreature(petRows, cw*0.5, bob-(petFlash?3:0), 0.5, false);
-      pctx.fillStyle='#fff'; pctx.textAlign='center';
-      pctx.font='9px "Pixel",monospace';
-      pctx.fillText((ev.kind==='neg'?'\u2620 ':'\u2726 ')+(ev.title||'').toUpperCase(), cw*0.5, 18);
+      if(!blinkP) drawCreature(petRows, cw*0.5, bob-(petFlash?3:0), 0.5, false);   // pet on the ground
+      // vitals exactly where they sit in combat (don't shove them around)
+      pctx.fillStyle='#fff'; pctx.textAlign='center'; pctx.font='8px "Pixel",monospace';
+      pctx.fillText((ev.kind==='neg'?'\u2620 ':'\u2726 ')+'EVENT', cw*0.5, 11);
+      drawBar(cw*0.06, 28, cw*0.37, (S.stats.health||0)/maxHP());
+      drawBar(cw*0.06, 38, cw*0.37, (S.mana||0)/maxMana(), true);
+      // event copy centered in the empty middle band
+      var midY=ch*0.40;
+      pctx.fillStyle='#fff'; pctx.font='10px "Pixel",monospace';
+      pctx.fillText((ev.title||'').toUpperCase(), cw*0.5, midY-16);
       pctx.font='7px "Pixel",monospace'; pctx.fillStyle='rgba(255,255,255,0.85)';
-      wrapText(ev.text||'', cw*0.5, 30, cw*0.84, 9);
-      // chosen option + the concrete result (so you see what actually happened)
-      if(ev.chosenLabel){ pctx.fillStyle='rgba(255,255,255,0.7)'; pctx.font='7px "Pixel",monospace'; pctx.fillText('\u2192 '+ev.chosenLabel, cw*0.5, ch-42); }
-      if(ev.result && ev.result.length){
-        pctx.fillStyle='#fff'; pctx.font='9px "Pixel",monospace';
-        pctx.fillText(ev.result.join('   '), cw*0.5, ch-28);
-      } else if(f.state==='eventbanner'){
-        pctx.fillStyle='rgba(255,255,255,0.6)'; pctx.font='7px "Pixel",monospace';
-        pctx.fillText('(no effect)', cw*0.5, ch-28);
-      }
-      drawBar(cw*0.30, ch-14, cw*0.4, (S.stats.health||0)/maxHP());
+      wrapText(ev.text||'', cw*0.5, midY, cw*0.84, 9);
+      if(ev.chosenLabel){ pctx.fillStyle='rgba(255,255,255,0.7)'; pctx.font='7px "Pixel",monospace'; pctx.fillText('\u2192 '+ev.chosenLabel, cw*0.5, midY+24); }
+      if(ev.result && ev.result.length){ pctx.fillStyle='#fff'; pctx.font='9px "Pixel",monospace'; pctx.fillText(ev.result.join('   '), cw*0.5, midY+38); }
+      else if(f.state==='eventbanner'){ pctx.fillStyle='rgba(255,255,255,0.6)'; pctx.font='7px "Pixel",monospace'; pctx.fillText('(no effect)', cw*0.5, midY+38); }
+      if(f.state==='eventbanner'){ pctx.fillStyle='rgba(255,255,255,0.5)'; pctx.font='7px "Pixel",monospace'; pctx.fillText('tap to continue', cw*0.5, ch-7); }
       pctx.textAlign='left'; return;
     }
 
@@ -2214,6 +2152,11 @@
     pctx.fillStyle='#fff'; pctx.textAlign='center'; pctx.font='8px "Pixel",monospace';
     pctx.fillText('STAGE '+(f.stage+1)+'  \u00b7  FOE '+(f.combatNo+1)+'/'+f.combatsTotal, cw*0.5, 11);
     pctx.fillText((e.boss?'\u2605 ':'')+e.name.toUpperCase(), cw*0.5, 22);
+    // action counter (top-right) \u2014 hit the cap and you lose the fight
+    var ac=f.actions||0; pctx.textAlign='right';
+    pctx.fillStyle = ac>=MAX_COMBAT_ACTIONS-15 ? '#fff' : 'rgba(255,255,255,0.55)';
+    pctx.font='7px "Pixel",monospace'; pctx.fillText('\u26A1'+ac+'/'+MAX_COMBAT_ACTIONS, cw-4, 11);
+    pctx.textAlign='center';
     // bars
     drawBar(cw*0.06, 28, cw*0.37, (S.stats.health||0)/maxHP());
     drawBar(cw*0.06, 38, cw*0.37, (S.mana||0)/maxMana(), true);
@@ -2241,6 +2184,15 @@
   function fmtMs(ms){ var s=Math.ceil(ms/1000);
     if(s>=60){ var m=Math.floor(s/60); return m+':'+('0'+(s%60)).slice(-2); } return s+'s'; }
 
+  function drawGoblet(cx,y){
+    cx=Math.round(cx); y=Math.round(y); pctx.fillStyle='#fff';
+    pctx.fillRect(cx-6,y,12,2);      // bowl rim
+    pctx.fillRect(cx-5,y+2,10,3);    // bowl
+    pctx.fillRect(cx-3,y+5,6,3);     // taper
+    pctx.fillRect(cx-1,y+8,2,4);     // stem
+    pctx.fillRect(cx-4,y+12,8,2);    // base
+    pctx.fillStyle='#000'; pctx.fillRect(cx-4,y+1,8,1); pctx.fillStyle='#fff';   // rim notch
+  }
   function drawZzz(box){
     pctx.fillStyle='rgba(255,255,255,0.7)';
     var bx=box.ox+box.w+2, by=box.oy+8, ph=(animT*0.04)%3;
@@ -2372,12 +2324,11 @@
     // age only advances when the player spends segments (train/rest -> completeCycle).
     else if(!S.dead && S.stage!=='egg'){
       checkCritical();
-      // live countdowns for sickness reactions
-      if(S.critical){
+      // live countdown for a quick-time / decision event
+      if(S.critical && S.critical.kind==='qte' && qteTime){
         var rem=Math.max(0,S.critical.deadline-Date.now());
-        if(S.critical.kind==='qte'){ if(qteTime) qteTime.textContent='react in '+fmtMs(rem); }
-        else { alertTime.textContent='medicine in '+fmtMs(rem); }
-      } else if(S.sick){ alertTime.textContent='give it some medicine'; }
+        qteTime.textContent='\u23F1 '+(rem/1000).toFixed(1)+'s';
+      }
     }
 
     if(react){ react.t-=dtMs/16; if(react.t<=0) react=null; }
@@ -2433,7 +2384,7 @@
     walkX=Math.min(right,Math.max(left,walkX));
 
     var offY=Math.sin(t*2.2)*2, sq=1, shakeX=0, animFlip=null;
-    var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
+    var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired', goblet=react&&react.type==='goblet';
     var modeAnim = ((S.mode==='train'||S.mode==='play') && S.modeAct) ? ((findAct(S.mode==='train'?TRAIN:PLAY,S.modeAct)||{}).anim) : null;
     var curAnim = (react && react.type==='act' ? react.anim : null) || modeAnim;
 
@@ -2442,6 +2393,7 @@
     }
     else if(playing){ var ph=(react.t%16)/16; offY=-Math.abs(Math.sin(ph*Math.PI))*12; sq=0.9; }
     else if(resting){ offY=2; sq=0.86; }                      // stand still & rest
+    else if(goblet){ offY=Math.sin(t*3)*1; sq=1; }            // stand and present the prize
     else if(S.sick){ offY=Math.sin(t*8)*2; sq=0.95; }         // shiver in place
     else {
       // roam, with a different gait per species
@@ -2468,6 +2420,17 @@
     if(curAnim) drawActivity(curAnim, box, t);
     pctx.restore();
     if(resting||tired) drawZzz(box);
+    if(goblet){
+      var gp=Math.min(1,(260-react.t)/260*2.4);               // rises fast, then holds aloft
+      var gby=box.oy - 6 - gp*26 + Math.sin(t*2)*1.4, gcx=box.ox+box.w/2;
+      pctx.save();                                            // radiant burst behind it
+      pctx.globalAlpha=0.22+0.18*Math.abs(Math.sin(t*4)); pctx.fillStyle='#fff';
+      for(var rr=0;rr<8;rr++){ var a=t*1.5+rr*0.785; pctx.fillRect(Math.round(gcx+Math.cos(a)*17-1), Math.round(gby+6+Math.sin(a)*17-1),2,2); }
+      pctx.globalAlpha=1; pctx.restore();
+      drawGoblet(gcx, gby);
+      pctx.fillStyle='#fff';                                  // twinkles
+      for(var ss=0;ss<3;ss++){ var sa=t*2+ss*2.1, sx=gcx+Math.cos(sa)*13, sy=gby+6+Math.sin(sa)*9; pctx.fillRect(Math.round(sx),Math.round(sy-2),1,5); pctx.fillRect(Math.round(sx-2),Math.round(sy),5,1); }
+    }
     if(S.sick){ pctx.fillStyle='#fff'; pctx.fillRect(box.ox+box.w-2, box.oy+4+(Math.sin(t*6)+1)*2, 2,3); }
 
     if(flashT>0){ pctx.fillStyle='rgba(255,255,255,'+(flashT/22*0.6)+')'; pctx.fillRect(0,0,cw,ch); flashT--; }
