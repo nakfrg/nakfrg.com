@@ -1059,7 +1059,7 @@
     var style = EGG_STYLES[(Math.random()*EGG_STYLES.length)|0];
     return { v:2, stage:'egg', form:'egg_'+style, eggStyle:style,
       stats:{ health:68, energy:100 }, mana:20, rpg:freshRpg(),
-      age:0, cycles:0, seg:0, sinceExplore:0, goblet:false, mode:'idle', modeAct:null, spells:[], loadout:[], inventory:[], equipped:[], stageProg:0, ended:null,
+      age:0, cycles:0, seg:0, sinceExplore:0, goblet:false, mode:'idle', modeAct:null, spells:[], loadout:[null,null,null], inventory:[], equipped:[], stageProg:0, ended:null,
       mods:[], fight:null,
       sick:false, sickT:0, dead:false, deadCause:'', critical:null, log:[],
       lastSeen:Date.now(), born:Date.now() };
@@ -1914,12 +1914,14 @@
     ovBody.appendChild(hint);
   }
   function toggleSpell(id){
+    if(!Array.isArray(S.loadout)) S.loadout=[];
+    while(S.loadout.length<3) S.loadout.push(null);   // ensure 3 positional slots (fresh pets start empty)
     var i=S.loadout.indexOf(id);
     if(i>=0){ S.loadout[i]=null; blip(300,0.05,'sine'); }            // remove -> frees that exact slot
     else {
       var slot=S.loadout.indexOf(null);                              // fill the lowest empty slot
-      if(slot<0){ setMessage('3 spells max \u2014 tap an active spell to free a slot'); blip(180,0.08,'sawtooth'); return; }
-      S.loadout[slot]=id; blip(740,0.06,'sine');
+      if(slot<0){ S.loadout.shift(); S.loadout.push(id); blip(740,0.06,'sine'); }   // full -> bump the oldest spell, add the new
+      else { S.loadout[slot]=id; blip(740,0.06,'sine'); }
     }
     save();
   }
