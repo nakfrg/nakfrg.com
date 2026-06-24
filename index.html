@@ -20,7 +20,7 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     image-rendering: pixelated;
   }
-  body { display:flex; flex-direction:column; align-items:center; padding:14px 12px 28px; }
+  body { display:flex; flex-direction:column; align-items:center; padding:10px 12px 16px; }
   .pix { font-family:'Pixel', ui-monospace, monospace; -webkit-font-smoothing:none; font-smooth:never; }
 
   /* ── thick pixel buttons ── */
@@ -42,49 +42,47 @@
   .pixbtn.alert { animation: pulse .7s steps(2) infinite; }
   @keyframes pulse { 50% { background:#fff; color:#000; } }
 
-  #nav { display:flex; gap:14px; justify-content:center; margin-bottom:18px; }
+  #nav { display:flex; gap:14px; justify-content:center; margin-bottom:10px; }
 
   #app { width:100%; max-width:360px; }
-  .title { text-align:center; font-size:15px; letter-spacing:1px; margin-bottom:12px; }
+  .title { text-align:center; font-size:14px; letter-spacing:1px; margin-bottom:8px; }
 
-  #screen { position:relative; width:100%; height:250px; background:#000; overflow:hidden;
-    box-shadow: 0 0 0 4px #fff; margin: 4px 0 18px; }
+  #screen { position:relative; width:100%; height:150px; background:#000; overflow:hidden;
+    box-shadow: 0 0 0 3px #fff; margin: 2px 0 10px; }
   #pet { display:block; width:100%; height:100%; image-rendering:pixelated; }
-  #stageTag { position:absolute; top:7px; left:9px; font-size:7px; letter-spacing:1px; color:var(--dim); }
-  #ageTag   { position:absolute; top:7px; right:9px; font-size:7px; letter-spacing:1px; color:var(--dim); }
-  #nameTag  { position:absolute; bottom:8px; left:0; right:0; text-align:center; font-size:12px; }
+  #stageTag { position:absolute; top:5px; left:7px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  #ageTag   { position:absolute; top:5px; right:7px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  #nameTag  { position:absolute; bottom:5px; left:0; right:0; text-align:center; font-size:11px; }
 
-  #stats { margin:18px 0 4px; }
-  .stat { display:flex; align-items:center; gap:8px; margin:7px 0; }
-  .stat .lab { width:62px; font-size:7px; letter-spacing:1px; color:var(--dim); }
-  .track { flex:1; height:14px; position:relative; box-shadow:0 0 0 3px #fff; background:#000; }
+  #stats { margin:6px 0 2px; }
+  .stat { display:flex; align-items:center; gap:8px; margin:5px 0; }
+  .stat .lab { width:54px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  .track { flex:1; height:11px; position:relative; box-shadow:0 0 0 2px #fff; background:#000; }
   .seg { position:absolute; top:0; bottom:0; left:0; background:#fff; width:50%;
          transition:width .25s steps(10); }
   .stat.low .seg { animation: blinkfill .6s steps(2) infinite; }
   @keyframes blinkfill { 50% { opacity:.25; } }
 
-  #growthRow { display:flex; align-items:center; gap:8px; margin:14px 0 16px; }
-  #growthRow .lab { width:62px; font-size:7px; letter-spacing:1px; color:var(--dim); }
-  #growthTrack { flex:1; height:8px; position:relative; box-shadow:0 0 0 3px var(--faint); }
+  #growthRow, #cycleRow { display:flex; align-items:center; gap:8px; margin:7px 0; }
+  #growthRow .lab, #cycleRow .lab { width:54px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  #growthTrack, #cycleTrack { flex:1; height:7px; position:relative; box-shadow:0 0 0 2px var(--faint); }
   #growthFill { position:absolute; inset:0; width:0%; background:var(--dim); transition:width .3s steps(8); }
+  #cycleFill  { position:absolute; inset:0; width:0%; background:#fff; }
 
-  #actions, #foodPicker { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin: 6px 0 6px; }
+  #actions, #foodPicker { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin: 8px 0 6px; }
   #foodPicker { display:none; grid-template-columns: 1fr 1fr auto; }
   #alertWrap { margin:8px 0 2px; display:none; text-align:center; }
   #alertWrap .pixbtn { width:100%; }
-  #alertMsg { font-size:9px; letter-spacing:1px; color:#fff; margin-bottom:9px; min-height:11px; text-transform:uppercase; }
-  #alertTime { font-size:8px; letter-spacing:1px; color:var(--dim); margin-top:8px; min-height:10px; }
+  #alertMsg { font-size:9px; letter-spacing:1px; color:#fff; margin-bottom:8px; min-height:11px; text-transform:uppercase; }
+  #alertTime { font-size:8px; letter-spacing:1px; color:var(--dim); margin-top:6px; min-height:10px; }
   #alertWrap.crit #alertMsg { animation: blinkfill .55s steps(2) infinite; }
   #alertWrap.crit #alertTime { color:#fff; }
 
-  #msg  { min-height:14px; text-align:center; font-size:11px; color:var(--dim); margin:14px 0 4px; }
-  #hint { text-align:center; font-size:10px; line-height:1.6; color:var(--faint); margin-bottom:14px; min-height:30px; }
-
-  #logWrap { margin:6px 0 16px; }
-  .logTitle { font-size:7px; letter-spacing:2px; color:var(--dim); margin-bottom:7px; padding-left:2px; }
-  #eventLog { height:132px; overflow-y:auto; background:#000; box-shadow:0 0 0 3px var(--faint);
-    padding:8px 9px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size:10px; line-height:1.5; }
+  #logWrap { margin:8px 0 8px; }
+  .logTitle { font-size:7px; letter-spacing:2px; color:var(--dim); margin-bottom:5px; padding-left:2px; }
+  #eventLog { height:86px; overflow-y:auto; background:#000; box-shadow:0 0 0 2px var(--faint);
+    padding:6px 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:10px; line-height:1.45; }
   .logRow { display:flex; gap:8px; padding:2px 0; color:rgba(255,255,255,0.78); }
   .logRow .logT { color:var(--faint); flex:0 0 auto; }
   .logRow.good .logX { color:#fff; }
@@ -96,8 +94,8 @@
   #eventLog::-webkit-scrollbar-track { background:rgba(255,255,255,0.04); }
   #eventLog::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.22); }
 
-  #footer { display:flex; justify-content:center; gap:18px; align-items:center; margin-top:4px; }
-  .linkbtn { background:none; border:none; color:var(--dim); cursor:pointer; padding:6px;
+  #footer { display:flex; justify-content:center; gap:18px; align-items:center; margin-top:2px; }
+  .linkbtn { background:none; border:none; color:var(--dim); cursor:pointer; padding:5px;
              font:10px/1 ui-monospace, monospace; letter-spacing:1px; text-transform:uppercase; }
   .linkbtn:hover { color:#fff; }
   .linkbtn.confirm { color:#fff; animation: blinkfill .5s steps(2) infinite; }
@@ -125,14 +123,18 @@
 
     <div id="stats">
       <div class="stat" data-k="full">  <span class="lab pix">FULL</span>  <div class="track"><div class="seg"></div></div></div>
-      <div class="stat" data-k="happy"> <span class="lab pix">HAPPY</span> <div class="track"><div class="seg"></div></div></div>
       <div class="stat" data-k="energy"><span class="lab pix">ENERGY</span><div class="track"><div class="seg"></div></div></div>
-      <div class="stat" data-k="clean"> <span class="lab pix">CLEAN</span> <div class="track"><div class="seg"></div></div></div>
+      <div class="stat" data-k="health"><span class="lab pix">HEALTH</span><div class="track"><div class="seg"></div></div></div>
     </div>
 
     <div id="growthRow">
       <span class="lab pix">GROWTH</span>
       <div id="growthTrack"><div id="growthFill"></div></div>
+    </div>
+
+    <div id="cycleRow">
+      <span class="lab pix">EVENT</span>
+      <div id="cycleTrack"><div id="cycleFill"></div></div>
     </div>
 
     <div id="actions">
@@ -153,9 +155,6 @@
       <button class="pixbtn alert" id="alertBtn">Heal</button>
       <div id="alertTime" class="pix"></div>
     </div>
-
-    <div id="msg"></div>
-    <div id="hint"></div>
 
     <div id="logWrap">
       <div class="logTitle pix">EVENT LOG</div>
@@ -415,13 +414,36 @@
     { msg:"{n} stopped breathing in its sleep!", btn:"WAKE", win:"woke with a gasp", cause:"forgetting to breathe" }
   ];
 
+  // 5) lingering effects - shift stat decay or regen for a few cycles
+  var MOD_EVENTS = [
+    { msg:"{n} basks in a warm sunbeam. energy slowly returns.", mod:{ energy:6, cyc:3 } },
+    { msg:"{n} found a cozy burrow. health recovers for a while.", mod:{ health:6, cyc:3 } },
+    { msg:"{n} sips from a clean spring. feeling restored.", mod:{ full:5, health:3, cyc:2 } },
+    { msg:"{n} discovered a berry bush. snacking keeps it full.", mod:{ full:7, cyc:3 } },
+    { msg:"{n} is in the zone. perfectly content for a while.", mod:{ full:4, energy:4, health:4, cyc:2 } },
+    { msg:"A swarm of gnats pesters {n}. health drains faster.", mod:{ health:-6, cyc:3 } },
+    { msg:"{n} caught a chill. energy leaks away.", mod:{ energy:-5, cyc:3 } },
+    { msg:"{n} has a sluggish tummy. gets hungry quicker.", mod:{ full:-6, cyc:3 } },
+    { msg:"A heat wave rolls in. everything drains faster.", mod:{ full:-3, energy:-3, health:-3, cyc:2 } },
+    { msg:"{n} stepped in something foul. health suffers for a bit.", mod:{ health:-7, cyc:2 } }
+  ];
+
   // ── tuning ──
   var EGG_DUR   = 120;    // 2min: egg -> hatches into a baby
   var EGG_STYLES = ['dewy','mossy','stony'];
   var EGG_TO_BABY = { dewy:'padpole', mossy:'sproutling', stony:'pebblet' };
   var BABY_DUR  = 3600;   // 1h: baby -> junior
   var ADULT_AGE = 7200;   // 2h: junior -> adult
-  var DECAY = { full:100/2700, happy:100/2400, energy:100/5400, clean:100/3600 }; // per second
+  // per-cycle stat decay, by species (set from the egg the pet hatched from)
+  // each 30s cycle: full/energy/health drop by these amounts (events & mods adjust this)
+  var DECAY_BY_SPECIES = {
+    dewy:  { full:9, energy:7, health:5 },   // amphibian - balanced, hops a lot
+    mossy: { full:5, energy:6, health:7 },   // plant - eats little, but frail
+    stony: { full:7, energy:4, health:5 }    // stone - sturdy, steady energy
+  };
+  var CYCLE_SEC = 30;            // one stat/event cycle = 30 seconds
+  var CYCLE_MS  = CYCLE_SEC*1000;
+  var PET_SCALE = 0.42;          // smaller pet => more room to roam
   var POOP_MAX = 4;
   var POOP_DIRTY = 100/3000;     // extra clean drain per poop per second
   var POOP_SICK_TIME = 300;      // a poop left this long makes the frog sick (5 min)
@@ -433,9 +455,6 @@
   function poopInterval(){ return 110 + Math.random()*90; } // ~2-3 min
 
   // ── events / criticals / death tuning ──
-  var IDLE_EVERY      = 120000;          // funny "what's the pet doing" line every ~2 min (active)
-  var EVENT_EVERY_MIN = 70000;           // random stat/critical event window (active)
-  var EVENT_EVERY_MAX = 130000;
   var SICK_DEADLINE   = 300000;          // 5 min to give medicine for a critical illness
   var QTE_DEADLINE    = 18000;           // 18s to react to a quick-time danger
   var CHRONIC_SICK_DEATH = 1800;         // sim-seconds (~30 min) of unhealed neglect-sickness -> death
@@ -445,18 +464,19 @@
   var $ = function(s){ return document.querySelector(s); };
   var petCanvas=$('#pet'), pctx=petCanvas.getContext('2d');
   var stageTag=$('#stageTag'), ageTag=$('#ageTag'), nameTag=$('#nameTag');
-  var growthFill=$('#growthFill'), msgEl=$('#msg'), hintEl=$('#hint');
+  var growthFill=$('#growthFill'), cycleFill=$('#cycleFill'), msgEl=$('#msg'), hintEl=$('#hint');
   var actionsEl=$('#actions'), pickerEl=$('#foodPicker');
   var alertWrap=$('#alertWrap'), alertBtn=$('#alertBtn'), alertMsg=$('#alertMsg'), alertTime=$('#alertTime');
   var logEl=$('#eventLog');
+  function species(){ return DECAY_BY_SPECIES[S.eggStyle] ? S.eggStyle : 'dewy'; }
 
   // ── state ──
   function fresh(){
     var style = EGG_STYLES[(Math.random()*EGG_STYLES.length)|0];
     return { v:2, stage:'egg', form:'egg_'+style, eggStyle:style,
-      stats:{ full:70, happy:70, energy:70, clean:70 },
+      stats:{ full:70, energy:70, health:70 },
       age:0, care:{ feed:0, play:0, clean:0, rest:0 }, diet:{ meat:0, veggie:0 },
-      poops:[], poopTimer: poopInterval(),
+      poops:[], poopTimer: poopInterval(), mods:[],
       sick:false, sickT:0, dead:false, deadCause:'', critical:null, log:[],
       lastSeen:Date.now(), born:Date.now() };
   }
@@ -466,7 +486,14 @@
   if (!S.log) S.log = [];
   if (typeof S.dead === 'undefined') S.dead = false;
   if (typeof S.critical === 'undefined') S.critical = null;
-  if (S.stage==='egg' && !S.eggStyle){ S.eggStyle='dewy'; S.form='egg_dewy'; }
+  if (!S.eggStyle){ S.eggStyle='dewy'; if(S.stage==='egg') S.form='egg_dewy'; }
+  if (!S.mods) S.mods = [];
+  if (S.stats){
+    if (S.stats.health==null)
+      S.stats.health = (S.stats.happy!=null||S.stats.clean!=null) ? Math.round(((S.stats.happy!=null?S.stats.happy:70)+(S.stats.clean!=null?S.stats.clean:70))/2) : 70;
+    if (S.stats.full==null) S.stats.full=70;
+    if (S.stats.energy==null) S.stats.energy=70;
+  }
 
   function loadSave(){
     try { var raw=localStorage.getItem(SAVE_KEY); if(!raw) return null;
@@ -491,7 +518,7 @@
 
   // ── sim ──
   function clamp(v){ return v<0?0:v>100?100:v; }
-  function avgStat(){ var s=S.stats; return (s.full+s.happy+s.energy+s.clean)/4; }
+  function avgStat(){ var s=S.stats; return (s.full+s.energy+s.health)/3; }
   function poopOverdue(){ for(var i=0;i<S.poops.length;i++) if(S.poops[i].age>POOP_SICK_TIME) return true; return false; }
 
   function freeSlot(){
@@ -505,11 +532,8 @@
     S.age += dt;
     if(S.stage==='egg'){ checkEvolve(); return; } // an egg just quietly incubates
     var st=S.stats;
-    var cleanDrain = DECAY.clean*dt + S.poops.length*POOP_DIRTY*dt;
-    st.full=clamp(st.full-DECAY.full*dt);
-    st.happy=clamp(st.happy-DECAY.happy*dt);
-    st.energy=clamp(st.energy-DECAY.energy*dt);
-    st.clean=clamp(st.clean-cleanDrain);
+    // NOTE: stat decay now happens in discrete 30s cycles (runCycle / offline catch-up),
+    // not continuously here.
 
     // poop
     for(var i=0;i<S.poops.length;i++) S.poops[i].age+=dt;
@@ -523,11 +547,11 @@
     }
 
     // sickness
-    var anyZero = st.full<=0||st.happy<=0||st.energy<=0||st.clean<=0;
+    var anyZero = st.full<=0||st.energy<=0||st.health<=0;
     var dirty = poopOverdue();
     var critSick = S.critical && S.critical.kind==='sick';
     if(anyZero||dirty||critSick){ S.sick=true; if(anyZero||dirty) S.sickT+=dt; }
-    else if(S.sick && st.full>25&&st.happy>25&&st.energy>25&&st.clean>25){ S.sick=false; S.sickT=0; }
+    else if(S.sick && st.full>25&&st.energy>25&&st.health>25){ S.sick=false; S.sickT=0; }
     if(!S.sick) S.sickT=Math.max(0,S.sickT-dt*0.5);
 
     // death from long, untreated neglect-sickness
@@ -540,6 +564,27 @@
     if(S.dead) return;
 
     checkEvolve();
+  }
+
+  // ── 30-second stat/event cycle ──
+  function sumMods(){
+    var o={ full:0, energy:0, health:0 };
+    for(var i=0;i<S.mods.length;i++){ var m=S.mods[i]; o.full+=m.full||0; o.energy+=m.energy||0; o.health+=m.health||0; }
+    return o;
+  }
+  function tickMods(){ for(var i=S.mods.length-1;i>=0;i--){ if(--S.mods[i].cyc<=0) S.mods.splice(i,1); } }
+
+  function runCycle(){
+    if(S.dead||S.stage==='egg') return;
+    var base=DECAY_BY_SPECIES[species()], st=S.stats, mod=sumMods();
+    var overdue=0; for(var i=0;i<S.poops.length;i++) if(S.poops[i].age>POOP_SICK_TIME) overdue++;
+    var poopPenalty = overdue*4 + S.poops.length;   // dirty pet loses health
+    st.full   = clamp(st.full   - base.full   + (mod.full||0));
+    st.energy = clamp(st.energy - base.energy + (mod.energy||0));
+    st.health = clamp(st.health - base.health + (mod.health||0) - poopPenalty);
+    tickMods();
+    fireCycleEvent();   // an event happens every cycle
+    save();
   }
 
   function checkEvolve(){
@@ -628,12 +673,12 @@
     var c=S.critical, s=S.stats;
     if(c.kind==='sick'){
       S.sick=false; S.sickT=0;
-      s.full=clamp(s.full+10); s.happy=clamp(s.happy+10); s.energy=clamp(s.energy+10); s.clean=clamp(s.clean+12);
+      s.full=clamp(s.full+10); s.energy=clamp(s.energy+10); s.health=clamp(s.health+14);
       react={type:'clean',t:30};
       setMessage('phew - the medicine worked'); logEvent('\u2713 '+niceName()+' recovered from '+c.cause+'.');
       blip(520,0.12,'sine');
     } else {
-      s.happy=clamp(s.happy+12);
+      s.health=clamp(s.health+12);
       react={type:'play',t:30};
       setMessage(fillName(c.win)+'!'); logEvent('\u2713 '+niceName()+' '+fillName(c.win)+'.');
       blip(740,0.06); setTimeout(function(){ blip(960,0.08); },90);
@@ -652,11 +697,19 @@
   function applyStatEvent(e){
     var s=S.stats, net=0;
     if(e.full){ s.full=clamp(s.full+e.full); net+=e.full; }
-    if(e.happy){ s.happy=clamp(s.happy+e.happy); net+=e.happy; }
     if(e.energy){ s.energy=clamp(s.energy+e.energy); net+=e.energy; }
-    if(e.clean){ s.clean=clamp(s.clean+e.clean); net+=e.clean; }
+    var h=(e.health||0)+(e.happy||0)+(e.clean||0);   // happy & clean fold into health
+    if(h){ s.health=clamp(s.health+h); net+=h; }
     var m=fillName(e.msg); setMessage(m); logEvent(m);
     blip(net>=0?500:200,0.06,'triangle'); save();
+  }
+
+  function applyModEvent(e){
+    var m=e.mod, mod={ cyc:m.cyc||3 };
+    if(m.full) mod.full=m.full; if(m.energy) mod.energy=m.energy; if(m.health) mod.health=m.health;
+    S.mods.push(mod);
+    var t=fillName(e.msg); setMessage(t); logEvent(t);
+    blip(440,0.06,'triangle'); save();
   }
 
   function startSickEvent(){
@@ -675,22 +728,20 @@
     flashT=22; updateAlert(); save();
   }
 
-  function fireRandomEvent(){
-    if(S.dead||S.stage==='egg'||S.critical||eating||wash) return;
+  // one event fires at the end of every 30s cycle
+  function fireCycleEvent(){
+    if(S.dead||S.stage==='egg') return;
+    var busy = eating||wash||S.critical;
     var r=Math.random();
-    if(S.age>60 && r<0.13){ startSickEvent(); return; }
-    if(S.age>60 && r<0.24){ startQTE(); return; }
-    applyStatEvent(STAT_EVENTS[(Math.random()*STAT_EVENTS.length)|0]);
+    if(!busy && S.age>60 && r<0.07){ startSickEvent(); return; }
+    if(!busy && S.age>60 && r<0.13){ startQTE(); return; }
+    if(r<0.30){ applyModEvent(MOD_EVENTS[(Math.random()*MOD_EVENTS.length)|0]); return; }
+    if(r<0.62){ applyStatEvent(STAT_EVENTS[(Math.random()*STAT_EVENTS.length)|0]); return; }
+    logEvent(fillName(IDLE[(Math.random()*IDLE.length)|0]));   // flavor beat
   }
 
-  function idleActivity(){
-    if(S.dead||S.stage==='egg'||S.critical) return;
-    logEvent(fillName(IDLE[(Math.random()*IDLE.length)|0]));
-  }
-
-  var idleAcc=0, eventAcc=0;
-  var nextEvent = EVENT_EVERY_MIN + Math.random()*(EVENT_EVERY_MAX-EVENT_EVERY_MIN);
-  function resetEventTimers(){ idleAcc=0; eventAcc=0; nextEvent=EVENT_EVERY_MIN+Math.random()*(EVENT_EVERY_MAX-EVENT_EVERY_MIN); }
+  var cycleAcc=0;   // ms into the current 30s cycle
+  function resetEventTimers(){ cycleAcc=0; S.mods=[]; }
 
   // ── care actions ──
   var react=null;          // transient anim state
@@ -723,22 +774,23 @@
     if(kind==='feed'){ showPicker(true); return; }
     if(kind==='heal'){
       if(S.critical && S.critical.kind==='sick'){ resolveCritical(); return; }
-      s.full=clamp(s.full+12); s.happy=clamp(s.happy+12); s.energy=clamp(s.energy+12); s.clean=clamp(s.clean+15);
+      s.full=clamp(s.full+12); s.energy=clamp(s.energy+12); s.health=clamp(s.health+16);
       S.sickT=Math.max(0,S.sickT-180);
       react={type:'clean',t:30}; blip(520,0.1,'sine'); setMessage('feeling a little better');
       logEvent(niceName()+' took some medicine.'); updateAlert(); save(); return;
     }
     if(kind==='play'){
-      if(s.energy<8){ react={type:'tired',t:30}; setMessage('too sleepy - rest first'); blip(180,0.12,'sawtooth'); return; }
-      s.happy=clamp(s.happy+26); s.energy=clamp(s.energy-14); s.full=clamp(s.full-8);
+      if(s.energy<8){ react={type:'tired',t:30}; setMessage('too sleepy - rest first');
+        logEvent(niceName()+' is too sleepy to play - needs a rest.'); blip(180,0.12,'sawtooth'); return; }
+      s.health=clamp(s.health+24); s.energy=clamp(s.energy-14); s.full=clamp(s.full-8);
       S.care.play++; react={type:'play',t:50}; blip(620,0.05); setMessage('hop hop! so happy');
       logEvent('you played with '+niceName()+'. Hop hop!'); save();
     } else if(kind==='clean'){
-      startWash(); s.clean=clamp(s.clean+34); s.happy=clamp(s.happy+4);
+      startWash(); s.health=clamp(s.health+16);
       S.care.clean++; blip(700,0.05,'sine'); setMessage('splish - scrubbing the screen');
       logEvent('you cleaned up after '+niceName()+'.'); save();
     } else if(kind==='rest'){
-      s.energy=clamp(s.energy+30); s.happy=clamp(s.happy+2);
+      s.energy=clamp(s.energy+30); s.health=clamp(s.health+3);
       S.care.rest++; react={type:'rest',t:70}; blip(300,0.12,'sine'); setMessage('zzz... recharged');
       logEvent(niceName()+' had a good rest. Zzz.'); save();
     }
@@ -750,7 +802,7 @@
   }
 
   var msgT=0;
-  function setMessage(t){ msgEl.textContent=t; msgT=160; }
+  function setMessage(t){ if(msgEl) msgEl.textContent=t; msgT=160; }
 
   document.querySelectorAll('[data-act]').forEach(function(b){
     b.addEventListener('click',function(){ act(b.getAttribute('data-act')); });
@@ -810,34 +862,17 @@
     else if(S.stage==='junior') prog=(S.age-BABY_DUR)/(ADULT_AGE-BABY_DUR);
     else prog=1;
     growthFill.style.width = Math.max(0,Math.min(100,prog*100))+'%';
+    var cp = (S.dead||S.stage==='egg') ? 0 : Math.max(0,Math.min(100, cycleAcc/CYCLE_MS*100));
+    if(cycleFill) cycleFill.style.width = cp+'%';
   }
   function fmtAge(sec){ var m=Math.floor(sec/60); if(m<60) return m+'M';
     var h=Math.floor(m/60); if(h<24) return h+'H'+(m%60)+'M'; return Math.floor(h/24)+'D'; }
-
-  var HINTS = {
-    egg_dewy:'A DEWY EGG. keep it cozy - it hatches in about 2 minutes.',
-    egg_mossy:'A MOSSY EGG. keep it cozy - it hatches in about 2 minutes.',
-    egg_stony:'A STONY EGG. keep it cozy - it hatches in about 2 minutes.',
-    padpole:'PADPOLE - what you do most as a baby sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
-    sproutling:'SPROUTLING - what you do most as a baby sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
-    pebblet:'PEBBLET - what you do most as a baby sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
-    hoplet:'HOPLET - diet decides the adult:  mostly MEAT -> Springer . mostly VEGGIES -> Dartling',
-    chubbin:'CHUBBIN - diet decides the adult:  mostly MEAT -> Bullhorn . mostly VEGGIES -> Toadsage',
-    dewdrop:'DEWDROP - diet decides the adult:  mostly MEAT -> Canopy . mostly VEGGIES -> Lotus',
-    springer:'SPRINGER - the mighty meat-fed jumper. fully grown.',
-    dartling:'DARTLING - the flashy greens-fed dart frog. fully grown.',
-    bullhorn:'BULLHORN - the booming meat-fed bullfrog. fully grown.',
-    toadsage:'TOADSAGE - the wise greens-fed toad. fully grown.',
-    canopy:'CANOPY - the nimble meat-fed tree frog. fully grown.',
-    lotus:'LOTUS - the serene greens-fed pond mystic. fully grown.'
-  };
 
   function render(){
     if(S.dead){
       stageTag.textContent='GONE';
       ageTag.textContent=fmtAge(S.age);
       nameTag.textContent='RIP '+niceName();
-      hintEl.textContent='your frog has passed on ('+S.deadCause+"). press 'new egg' below to start over.";
       actionsEl.style.display='none'; pickerEl.style.display='none';
       updateAlert(); setBars(); renderLog(); return;
     }
@@ -848,13 +883,11 @@
       nameTag.textContent=FORM_NAMES[S.form];
       actionsEl.style.display='none'; pickerEl.style.display='none';
       alertWrap.style.display='none'; alertWrap.classList.remove('crit');
-      hintEl.textContent=HINTS[S.form]||'a mystery egg. keep it cozy and wait...';
       setBars(); renderLog(); return;
     }
     stageTag.textContent = S.stage.toUpperCase() + (S.sick?' SICK':'');
     ageTag.textContent = fmtAge(S.age);
     nameTag.textContent = FORM_NAMES[S.form];
-    hintEl.textContent = HINTS[S.form]||'';
     updateAlert(); setBars(); renderLog();
   }
 
@@ -866,16 +899,19 @@
       if(map[y][x]==='#') pctx.fillRect(Math.round(ox+x*unit),Math.round(oy+y*unit),Math.ceil(unit),Math.ceil(unit));
   }
 
-  function drawSprite(form, offY, sq){
+  function drawSprite(form, offY, sq, xc, flip){
     var rows=SPR[form], H=rows.length, W=rows[0].length;
-    var unit=Math.max(2,Math.floor((ch*0.62)/H));
+    var unit=Math.max(2,Math.floor((ch*PET_SCALE)/H));
     var sx=unit, sy=unit;
     if(sq){ sy=unit*sq; sx=unit*(1+(1-sq)*0.6); }
-    var totalW=W*sx, totalH=H*sy, floorY=ch*0.80;
-    var ox=(cw-totalW)/2, oy=floorY-totalH+offY;
+    var totalW=W*sx, totalH=H*sy, floorY=ch*0.82;
+    if(xc==null) xc=cw/2;
+    var ox=xc-totalW/2, oy=floorY-totalH+offY;
     pctx.fillStyle='#fff';
-    for(var y=0;y<H;y++) for(var x=0;x<W;x++)
-      if(rows[y][x]==='#') pctx.fillRect(Math.round(ox+x*sx),Math.round(oy+y*sy),Math.ceil(sx),Math.ceil(sy));
+    for(var y=0;y<H;y++) for(var x=0;x<W;x++){
+      var src = flip ? (W-1-x) : x;
+      if(rows[y][src]==='#') pctx.fillRect(Math.round(ox+x*sx),Math.round(oy+y*sy),Math.ceil(sx),Math.ceil(sy));
+    }
     return { ox:ox, oy:oy, w:totalW, h:totalH, unit:unit, floorY:floorY };
   }
 
@@ -915,7 +951,7 @@
   function drawFood(box){
     if(!eating) return;
     var map = eating.type==='meat'?MEAT:VEG, unit=3, mapW=map[0].length;
-    var fx = box.ox - mapW*unit - 8, fy = box.floorY-map.length*unit;
+    var fx = Math.max(2, box.ox - mapW*unit - 8), fy = box.floorY-map.length*unit;
     blitMap(map, fx, fy, unit, eating.biteFrac);
     // tongue flick toward the food on each bite
     if(react && react.type==='eat'){
@@ -934,19 +970,17 @@
   }
 
   var animT=0, last=performance.now(), simAcc=0;
+  // pet roaming state (cosmetic, not persisted)
+  var walkX=null, walkDir=1, hopTimer=0, hopping=false, hopPhase=0, trudgePause=0;
   function frame(now){
     var dtMs=Math.min(120, now-last); last=now; animT+=dtMs;
 
     simAcc+=dtMs; while(simAcc>=1000){ simulate(1); simAcc-=1000; }
 
-    // active-time event timers (only tick while you're watching, and not while incubating)
+    // 30-second cycle: a progress bar fills, then fires an event + applies stat decay, and resets
     if(!S.dead && S.stage!=='egg'){
-      idleAcc+=dtMs;
-      if(idleAcc>=IDLE_EVERY){ idleAcc-=IDLE_EVERY; idleActivity(); }
-      if(!S.critical && !eating && !wash){
-        eventAcc+=dtMs;
-        if(eventAcc>=nextEvent){ eventAcc=0; nextEvent=EVENT_EVERY_MIN+Math.random()*(EVENT_EVERY_MAX-EVENT_EVERY_MIN); fireRandomEvent(); }
-      }
+      cycleAcc+=dtMs;
+      while(cycleAcc>=CYCLE_MS){ cycleAcc-=CYCLE_MS; runCycle(); }
       checkCritical();
       // live countdown text on the alert
       if(S.critical){
@@ -958,15 +992,15 @@
     // eating
     if(eating){ eating.biteTimer-=dtMs; if(eating.biteTimer<=0){ eating.biteTimer=520; bite(); } }
     if(react){ react.t-=dtMs/16; if(react.t<=0) react=null; }
-    if(msgT>0){ msgT-=dtMs/16; if(msgT<=0) msgEl.textContent=''; }
+    if(msgT>0){ msgT-=dtMs/16; if(msgT<=0 && msgEl) msgEl.textContent=''; }
 
     pctx.setTransform(dpr,0,0,dpr,0,0);
     pctx.clearRect(0,0,cw,ch); pctx.fillStyle='#000'; pctx.fillRect(0,0,cw,ch);
 
     // floor line
     pctx.strokeStyle='rgba(255,255,255,0.5)'; pctx.lineWidth=1;
-    var fy=Math.round(ch*0.80)+0.5;
-    pctx.beginPath(); pctx.moveTo(cw*0.10,fy); pctx.lineTo(cw*0.90,fy); pctx.stroke();
+    var fy=Math.round(ch*0.82)+0.5;
+    pctx.beginPath(); pctx.moveTo(cw*0.06,fy); pctx.lineTo(cw*0.94,fy); pctx.stroke();
 
     // dead: show a grave and stop the pet animation
     if(S.dead){ drawGrave(); setBars(); requestAnimationFrame(frame); return; }
@@ -981,23 +1015,47 @@
       pctx.save(); pctx.translate(shake,0);
       drawSprite(S.form, bob, 1);
       pctx.restore();
-      hintEl.textContent = 'incubating... hatches in '+fmtMs(togo*1000);
       if(flashT>0){ pctx.fillStyle='rgba(255,255,255,'+(flashT/22*0.6)+')'; pctx.fillRect(0,0,cw,ch); flashT--; }
       setBars();
       requestAnimationFrame(frame); return;
     }
 
-    var t=animT/1000, offY=Math.sin(t*2.2)*2, sq=1;
-    var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
-    if(eating){ sq=0.95; offY=Math.sin(t*9)*1.2; }
-    else if(playing){ var ph=(react.t%16)/16; offY=-Math.abs(Math.sin(ph*Math.PI))*14; sq=0.9; }
-    else if(resting){ offY=2; sq=0.86; }
-    else if(S.sick){ offY=Math.sin(t*8)*2; sq=0.95; }
-    else { var c=(animT%3200)/3200;
-      if(c>0.85){ offY-=Math.abs(Math.sin(((c-0.85)/0.15)*Math.PI))*8; sq=0.92; }
-      else if(Math.sin(t*2.2)>0.97) sq=0.9; }
+    // ── walking pet ──
+    var t=animT/1000;
+    var unit0=Math.max(2,Math.floor((ch*PET_SCALE)/13));
+    var halfW=(16*unit0)/2, marg=8;
+    var left=marg+halfW, right=cw-marg-halfW;
+    if(walkX==null) walkX=cw/2;
+    walkX=Math.min(right,Math.max(left,walkX));
 
-    var box=drawSprite(S.form, offY, sq);
+    var offY=Math.sin(t*2.2)*2, sq=1;
+    var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
+
+    if(eating){ sq=0.95; offY=Math.sin(t*9)*1.2; }            // stand still & eat
+    else if(playing){ var ph=(react.t%16)/16; offY=-Math.abs(Math.sin(ph*Math.PI))*12; sq=0.9; }
+    else if(resting){ offY=2; sq=0.86; }                      // stand still & rest
+    else if(S.sick){ offY=Math.sin(t*8)*2; sq=0.95; }         // shiver in place
+    else {
+      // roam, with a different gait per species
+      var sp=species();
+      if(sp==='mossy'){                 // plant: slow, smooth glide + float
+        walkX += walkDir*0.030*dtMs; offY=Math.sin(t*1.6)*2.5;
+      } else if(sp==='stony'){          // stone: heavy trudge with pauses + waddle
+        if(trudgePause>0){ trudgePause-=dtMs; offY=Math.sin(t*3)*1; }
+        else { walkX += walkDir*0.020*dtMs; offY=Math.abs(Math.sin(t*5))*2.5;
+               if(Math.random()<0.004) trudgePause=400+Math.random()*700; }
+      } else {                          // dewy (default): discrete hops
+        hopTimer-=dtMs;
+        if(!hopping && hopTimer<=0){ hopping=true; hopPhase=0; }
+        if(hopping){ hopPhase+=dtMs; var hp=hopPhase/280;
+          if(hp>=1){ hopping=false; hopTimer=420+Math.random()*360; }
+          else { walkX += walkDir*0.10*dtMs; offY=-Math.sin(hp*Math.PI)*12; sq=0.9; } }
+      }
+      if(walkX<=left){ walkX=left; walkDir=1; }
+      else if(walkX>=right){ walkX=right; walkDir=-1; }
+    }
+
+    var box=drawSprite(S.form, offY, sq, walkX, walkDir<0);
     drawPoops(box);
     drawFood(box);
     if(resting||tired) drawZzz(box);
@@ -1028,6 +1086,13 @@
     var elapsed=Math.max(0,(Date.now()-(S.lastSeen||Date.now()))/1000);
     if(elapsed<1) return;
     var capped=Math.min(elapsed,MAX_CATCHUP);
+    // apply offline stat decay (continuous approximation of the cycles missed; no events fire)
+    if(S.stage!=='egg'){
+      var base=DECAY_BY_SPECIES[species()], cyc=capped/CYCLE_SEC, st=S.stats;
+      st.full  =clamp(st.full   - base.full*cyc);
+      st.energy=clamp(st.energy - base.energy*cyc);
+      st.health=clamp(st.health - base.health*cyc);
+    }
     simulate(capped);
     if(S.dead) return;
     if(elapsed>capped){ S.age+=(elapsed-capped); checkEvolve(); }
