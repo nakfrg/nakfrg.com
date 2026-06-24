@@ -56,6 +56,13 @@
     box-shadow: 0 0 0 3px #fff; margin: 2px 0 12px; }
   #pet { display:block; width:100%; height:100%; image-rendering:pixelated; }
   #nameTag  { position:absolute; bottom:5px; left:0; right:0; text-align:center; font-size:11px; }
+  #combatBar { position:absolute; top:6px; right:6px; z-index:5; display:none; gap:5px; }
+  #combatBar.show { display:flex; }
+  #combatBar .cbtn { font-family:'Pixel',monospace; font-size:8px; letter-spacing:1px; color:#fff; line-height:1;
+    background:rgba(0,0,0,0.55); border:1.5px solid #fff; padding:6px 7px; cursor:pointer; text-transform:uppercase;
+    -webkit-tap-highlight-color:transparent; }
+  #combatBar .cbtn.on { background:#fff; color:#000; }
+  #combatBar .cbtn:active { transform:translateY(1px); }
 
   #stats { margin:6px 0 2px; }
   .stat { display:flex; align-items:center; gap:8px; margin:5px 0; }
@@ -199,6 +206,10 @@
     <div id="screen">
       <canvas id="pet"></canvas>
       <span id="nameTag" class="pix">DEWY EGG</span>
+      <div id="combatBar">
+        <button class="cbtn" id="spd2x" type="button">2&times;</button>
+        <button class="cbtn" id="autoBtn" type="button">Auto</button>
+      </div>
       <div id="overlay">
         <div id="ovTitle" class="pix"></div>
         <div id="ovBody"></div>
@@ -291,7 +302,7 @@
     titan:["   #   ##   #   ","  ##   ##   ##  "," ############## "," ###  ####  ### ","   ####  ####   ","################","#######  #######","### ###  ### ###","### ######## ###","#### ###### ####","   ##########   ","  ####    ####  "," #####    ##### "],
     trickster:["  #        #    ","  ##      ##    ","  ###    ###    ","   ########     ","  ##########    "," ### #### ###   "," #  ######  #   "," ## # ## # ##   "," #  ######  #   ","  ##########    ","   ##    ##     ","  ##      ##    "," ##        ##   "],
     oracle:["    #  ##  #    ","     ####       ","    ##  ##      ","   ###  ###     ","   ## ## ##     ","  ###    ###    ","  ##  ##  ##    ","  ## #  # ##    ","  ##  ##  ##    ","   ## ## ##     ","    ######      ","    ##  ##      ","   ###  ###     "],
-    godfrog:["  #  #  #  #    ","  # ## ## #     ","   ######       ","  ## ## ## #    "," ###########    ","## ##  ## ##    ","##  ####  ##    ","## ###### ##    ","##  ####  ##    "," ##########     ","  ## ## ##      "," ###    ###     ","###      ###    "]
+    godfrog:["     #  #  #    ", "      ## ##     ", "     #######    ", "                ", "    ##    ##    ", "   # ###### #   ", "   ##########   ", "   ##########   ", "  ############  ", "  #  ######  #  ", "  #  ######  #  ", "  #  ##  ##  #  ", "    ###  ###    "]
   };
   var FORM_NAMES = { egg_dewy:"DEWY EGG",egg_mossy:"MOSSY EGG",egg_stony:"STONY EGG",
     padpole:"PADPOLE",sproutling:"SPROUTLING",pebblet:"PEBBLET",
@@ -585,7 +596,6 @@
   var ACT_MIN_MS  = 2600;        // floor for train/play/rest
   var ACT_STEP_MS = 26;          // ms shaved off a train/play action per governing-stat point
   var PET_SCALE = 0.42;
-  var MAX_CATCHUP = 3*24*3600 + 3600;
   var SAVE_KEY = 'tamafroggi_save_v2';
 
   // ── combat tuning ──
@@ -645,11 +655,11 @@
   ];
   var ADULTS = [
     // apex: the pinnacle - every stat high (checked before everything)
-    { form:'godfrog',   apex:true, req:{ str:22, dex:22, end:22, int:22, spi:22, lck:22 } },
-    // rare: need two strong stats - checked before commons
-    { form:'titan',     rare:true, req:{ str:18, end:18 } },
-    { form:'trickster', rare:true, req:{ dex:18, lck:16 } },
-    { form:'oracle',    rare:true, req:{ int:18, spi:18 } },
+    { form:'godfrog',   apex:true, req:{ str:25, dex:25, end:25, int:25, spi:25, lck:25 } },
+    // rare: need two strong stats pushed hard - checked before commons
+    { form:'titan',     rare:true, req:{ str:40, end:40 } },
+    { form:'trickster', rare:true, req:{ dex:40, lck:40 } },
+    { form:'oracle',    rare:true, req:{ int:40, spi:40 } },
     // common: one leading stat, broad coverage
     { form:'bullhorn',  req:{ str:10 } },
     { form:'dartling',  req:{ dex:10 } },
@@ -959,7 +969,7 @@
   // ── pet derived combat stats (equipped items via ST, stage-buffs via bf*) ──
   function maxHP(){ return Math.round((60 + ST('end')*8) * bfMul('hp')); }
   function hpRegen(){ return 1 + Math.floor(ST('end')*0.12); }      // passive HP per cycle (END)
-  function energyRegen(){ return 1 + Math.floor(ST('spi')*0.10); }  // passive energy per cycle (SPI)
+  function energyRegen(){ return 10 + Math.floor(ST('spi')/5); }  // passive energy per completed cycle: 10 base, +1 per 5 SPI
   function petATK(){ return Math.round((ST('str') + Math.floor(ST('dex')/4)) * bfMul('atk')); }
   function petDEF(){ return Math.round((Math.floor(ST('end')/4) + Math.floor(ST('dex')/8)) * bfMul('def')); }
   function petCritChance(){ return Math.min(0.85, ST('lck')*0.008 + equipEffect('crit') + bfAdd('crit')); }
@@ -973,7 +983,7 @@
   function manaRegenRound(){ return 1 + Math.floor(ST('spi')*0.07 + ST('int')*0.035); }   // per combat round \u2014 SPI sustains casting
   // rest: heal HP (END) or recover energy (SPI); the chosen stat sets amount + speed
   function restHeal(){ return 8 + Math.round(ST('end')*0.8); }
-  function restEnergyGain(){ return 9 + Math.round(ST('spi')*0.9); }   // low base; SPI makes resting far more efficient
+  function restEnergyGain(){ return 20 + Math.floor(ST('spi')/2); }   // energy per rest: 20 base, +1 per 2 SPI (160 SPI -> 100)
   function restDur(stat){ return Math.max(ACT_MIN_MS, ACT_DUR.rest - (S.rpg[stat||'end']||0)*ACT_STEP_MS); }
 
   // ── spells: learned at stat thresholds. Activate up to 3; they cast in order in combat. ──
@@ -1026,12 +1036,17 @@
     { id:'vamp_fang',  name:'Vampire Fang',   rarity:'rare', lifesteal:0.15, desc:'heal 15% of all damage you deal' },
     { id:'thorn_hide', name:'Thorn Hide',     rarity:'rare', reflect:0.35,   desc:'reflect 35% of damage taken back at the foe' },
     { id:'swift_glass',name:'Swift Hourglass',rarity:'rare', haste:0.20,     desc:'you attack 20% faster' },
+    { id:'mana_focus', name:'Mana Focus',     rarity:'rare', manaCost:0.10,  desc:'your spells cost 10% less mana' },
+    { id:'mana_sigil', name:'Mana Sigil',     rarity:'rare', manaCost:0.15,  desc:'your spells cost 15% less mana' },
+    { id:'spirit_spark',name:'Spirit Spark',  rarity:'rare', sparkMul:0.8,   desc:'every 5th action, a spark zaps the foe for 80% of spirit' },
     // ── epic ──
     { id:'storm_talon',name:'Storm Talon',    rarity:'epic', combo:0.25,     desc:'25% chance to instantly strike again \u2014 chains up to 5\u00d7' },
     { id:'hemorrhage', name:'Hemorrhage',     rarity:'epic', bleed:0.6, bleedCrit:true, desc:'savage bleeds \u2014 crits make the wound gush twice as hard' },
     { id:'executioner',name:'Executioner',    rarity:'epic', sunder:0.20, execute:0.7, desc:'20% sunder, and hits land far harder on weakened foes' },
     { id:'bloodgorge', name:'Bloodgorge',     rarity:'epic', lifesteal:0.25, desc:'heal 25% of all damage you deal' },
     { id:'phoenix',    name:'Phoenix Plume',  rarity:'epic', revive:0.35,    desc:'cheat death once per battle \u2014 revive at 35% HP' },
+    { id:'mana_core',  name:'Mana Core',      rarity:'epic', manaCost:0.20,  desc:'your spells cost 20% less mana' },
+    { id:'mana_wellspring',name:'Mana Wellspring',rarity:'epic', manaRecover:0.10, desc:'10% chance to recover 50% of max mana the moment you run dry' },
     // ── legendary (deep bosses only) ──
     { id:'dragon_fang',name:'Dragon Fang',    rarity:'legendary', combo:0.20, lifesteal:0.15, sunder:0.12, desc:'apex relic: combo + lifesteal + sunder, all at once' },
     { id:'ailoren',  name:'Blood Shadow Ailoren', rarity:'legendary', combo:0.10, swordQi:0.30,    desc:'+10% combo \u00b7 30% on hit: a Sword Qi arc rips across the ground for 150% damage' },
@@ -1042,8 +1057,8 @@
     { id:'seles',    name:'Thorn Seles Suffering', rarity:'legendary', counterSpear:0.50,          desc:'50% when struck: a light spear drops on the foe for 150% of endurance' }
   ];
   var RARITY_POOL = {
-    rare:['combo_claw','serrated','sunder_maul','vamp_fang','thorn_hide','swift_glass'],
-    epic:['storm_talon','hemorrhage','executioner','bloodgorge','phoenix'],
+    rare:['combo_claw','serrated','sunder_maul','vamp_fang','thorn_hide','swift_glass','mana_focus','mana_sigil','spirit_spark'],
+    epic:['storm_talon','hemorrhage','executioner','bloodgorge','phoenix','mana_core','mana_wellspring'],
     legendary:['dragon_fang','ailoren','nashir','helos','elres','stmung','seles'] };
   var RARITY_COL = { rare:'#8fd0ff', epic:'#d79bff', legendary:'#ffd166' };
   function itemById(id){ for(var i=0;i<ITEMS.length;i++) if(ITEMS[i].id===id) return ITEMS[i]; return null; }
@@ -1078,6 +1093,12 @@
   var $ = function(s){ return document.querySelector(s); };
   var petCanvas=$('#pet'), pctx=petCanvas.getContext('2d');
   var nameTag=$('#nameTag');
+  // ── combat speed / auto toggles (session-only, combat HUD) ──
+  var combatBar=$('#combatBar'), spd2xBtn=$('#spd2x'), autoBtn=$('#autoBtn');
+  var fastMode=false, autoMode=false, autoEventT=0, autoNoteEl=null;
+  function refreshCombatToggles(){ if(spd2xBtn) spd2xBtn.className='cbtn'+(fastMode?' on':''); if(autoBtn) autoBtn.className='cbtn'+(autoMode?' on':''); }
+  if(spd2xBtn) spd2xBtn.addEventListener('click', function(){ fastMode=!fastMode; refreshCombatToggles(); blip(fastMode?760:420,0.05,'square'); });
+  if(autoBtn)  autoBtn.addEventListener('click', function(){ autoMode=!autoMode; autoEventT=0; refreshCombatToggles(); blip(autoMode?760:420,0.05,'square'); });
   var msgEl=$('#msg'), hintEl=$('#hint');
   var questRow=$('#questRow'), questBiome=$('#questBiome'), questProg=$('#questProg'), questAge=$('#questAge');
   var actionsEl=$('#actions'), subPicker=$('#subPicker'), rpgRow=$('#rpgRow');
@@ -1208,7 +1229,7 @@
     if(S.dead||S.stage==='egg') return;
     var st=S.stats, mod=sumMods();
     st.health = Math.min(maxHP(), Math.max(0, st.health + hpRegen()*3 + (mod.health||0)));
-    st.energy = clamp((st.energy||0) + energyRegen()*4 + (mod.energy||0));
+    st.energy = clamp((st.energy||0) + energyRegen() + (mod.energy||0));
     S.mana    = Math.min(maxMana(), (S.mana||0) + manaRegenTick()*2 + (mod.mana||0));
     tickMods();
     S.age++;
@@ -1267,7 +1288,7 @@
   function restOnce(kind){
     if(S.dead||S.stage==='egg'||S.fight) return;
     var st=S.stats;
-    if(kind==='energy'){ var be=st.energy||0; st.energy=clamp(be + restEnergyGain()*2);
+    if(kind==='energy'){ var be=st.energy||0; st.energy=clamp(be + restEnergyGain());
       setMessage(niceName()+' rests and recovers energy.'); logEvent(niceName()+' rested for energy (+'+(st.energy-be)+').'); blip(380,0.07,'sine'); }
     else { var bh=st.health; st.health=Math.min(maxHP(), st.health + Math.round(restHeal()*2.6));
       setMessage(niceName()+' rests and heals.'); logEvent(niceName()+' rested to heal (+'+(st.health-bh)+' HP).'); blip(440,0.07,'sine'); }
@@ -1317,7 +1338,7 @@
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n);
       f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0; f.spellIdx=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0; f.castFx=null;
-      f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0;
+      f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0; f.sparkN=0;
       f.shield=Math.round(bfAdd('shieldPer'))||0;   // a stage boon can grant shields each fight
       f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
       combatLog('\u2694 '+(e.n+1)+'/'+f.combatsTotal+': '+f.enemy.name+(f.enemy.biomeBoss?'  \u2605 BOSS':(f.enemy.elite?'  \u25c6 ELITE':'')));
@@ -1340,6 +1361,7 @@
   }
   function chooseEvent(i){
     var f=S.fight; if(!f||!f.event||!f.event.choices) return;
+    autoNoteEl=null; autoEventT=0;
     var ch=f.event.choices[i]; if(!ch) return;
     var bHP=S.stats.health, bMana=(S.mana||0), bBuffs=Object.assign({},f.buffs);
     ch.run(f);
@@ -1379,9 +1401,12 @@
     }
   }
   var CAST_MS=620;
+  // effective mana cost after item reductions (Mana Focus/Sigil/Core)
+  function spellCost(sp){ var r=Math.min(0.75, equipEffect('manaCost')); return Math.max(1, Math.round(sp.cost*(1-r))); }
   function doCast(sp, f){
-    if((S.mana||0) < sp.cost) return false;
-    S.mana-=sp.cost; f.actions=(f.actions||0)+1;
+    var cost=spellCost(sp);
+    if((S.mana||0) < cost) return false;
+    S.mana-=cost; f.actions=(f.actions||0)+1;
     // kick off the visual cast: offensive spells lunge the pet forward; self-buffs glow in place
     var kind=spellVfx(sp), offensive=(['heal','regen','ward'].indexOf(kind)<0);
     f.castFx={ kind:kind, t:CAST_MS, dur:CAST_MS, big:(sp.id==='ascend'||sp.id==='cataclysm') };
@@ -1407,20 +1432,33 @@
   function castNextSpell(){
     var f=S.fight, ld=S.loadout||[];
     var any=false; for(var z=0;z<ld.length;z++) if(ld[z]) any=true; if(!any) return;
+    if(tryCast(f, ld)) return;
+    // Mana Wellspring: a relic may surge mana back the moment you run dry
+    var mr=equipEffect('manaRecover');
+    if(mr>0 && (S.mana||0) < cheapestCost(ld) && Math.random()<mr){
+      S.mana=Math.min(maxMana(), (S.mana||0)+Math.round(maxMana()*0.5));
+      setProc(f,'mana'); f.flashPet=Math.max(f.flashPet||0,6);
+      combatLog('\u25C9 second wind \u2014 mana surges back!'); blip(680,0.08,'sine');
+      tryCast(f, ld);
+    }
+  }
+  function cheapestCost(ld){ var m=1e9; for(var i=0;i<ld.length;i++){ var sp=ld[i]&&spellById(ld[i]); if(sp){ var c=spellCost(sp); if(c<m) m=c; } } return m; }
+  function tryCast(f, ld){
     var hpFrac=S.stats.health/maxHP();
     for(var n=0;n<ld.length;n++){
       var idx=((f.spellIdx||0)+n)%ld.length, id=ld[idx];
       if(!id) continue;
       var sp=spellById(id); if(!sp) continue;
-      if((S.mana||0) < sp.cost) continue;
+      if((S.mana||0) < spellCost(sp)) continue;
       if(sp.type==='heal'  && hpFrac>=0.92) continue;             // don't waste a heal at full HP
       if(sp.type==='regen' && (f.regen || hpFrac>=0.92)) continue; // regen already rolling / not needed
       if(sp.type==='shield'&& (f.shield||0)>0) continue;          // shield already up
       f.spellIdx=(idx+1)%ld.length;
       doCast(sp, f);
-      return;
+      return true;
     }
     f.spellIdx=((f.spellIdx||0)+1)%ld.length;   // nothing castable this round
+    return false;
   }
 
   function interludeRegen(){
@@ -1483,6 +1521,8 @@
   // legendary item procs that fire after a landed hit (Sword Qi, dagger fan, Ilar angel). mutates e.hp.
   function applyHitProcs(f, e){
     var base=Math.max(1, petATK()-e.def), atk=petATK(), sup=false;
+    var spm=equipEffect('sparkMul');                  // Spirit Spark \u2014 every 5th action
+    if(spm>0){ f.sparkN=(f.sparkN||0)+1; if(f.sparkN%5===0){ var kd=Math.max(1,Math.round(ST('spi')*spm)); e.hp-=kd; f.flashEne=7; setProc(f,'spark'); combatLog('\u2738 spark \u2192 '+kd); blip(960,0.05,'square'); } }
     var sq=equipEffect('swordQi');                    // Blood Shadow Ailoren
     if(sq>0 && Math.random()<sq){ var qd=Math.max(1,Math.round(base*1.5)); e.hp-=qd; f.flashEne=8; setProc(f,'swordqi'); combatLog('\u29C9 Sword Qi \u2192 '+qd); blip(840,0.05,'square'); }
     var dp=equipEffect('daggerProc');                 // Gale Elres Whisperer
@@ -1978,6 +2018,9 @@
       ovBody.appendChild(ovActionRow(ch.label, 'this stage only', function(){ chooseEvent(i); }));
     });
     var note=document.createElement('div'); note.className='ovhint'; note.textContent='boons last only for this stage run'; ovBody.appendChild(note);
+    autoNoteEl=null;
+    if(autoMode){ autoEventT=0; var ac=document.createElement('div'); ac.className='ovhint'; ac.style.color='#fff';
+      ac.textContent='auto-picking first option\u2026'; ovBody.appendChild(ac); autoNoteEl=ac; }
   }
 
   function openSpells(){
@@ -1994,7 +2037,7 @@
       var slot=S.loadout.indexOf(id), active=slot>=0;
       var row=document.createElement('div'); row.className='ovrow'+(active?' on':'');
       row.innerHTML='<div class="ovdot">'+(active?(slot+1):'')+'</div><div class="ovtext"><div class="ovname">'+sp.name+(active?'  \u00b7 cast '+(slot+1):'')+
-        '</div><div class="ovsub">'+(sp.desc||spellTypeName(sp.type))+'  \u00b7  '+sp.cost+' mana</div></div>';
+        '</div><div class="ovsub">'+(sp.desc||spellTypeName(sp.type))+'  \u00b7  '+spellCost(sp)+' mana</div></div>';
       row.addEventListener('click', function(){ toggleSpell(id); openSpells(); });
       ovBody.appendChild(row);
     });
@@ -2163,6 +2206,8 @@
     on(actionsEl, !dead && !egg && !qte && !fight && !(S.pendingReward && !invMakeRoom));
     on(subPicker, false);
     on(alertWrap, sick && !dead && !egg && !qte && !fight);
+    if(combatBar) combatBar.className = (fight && !dead) ? 'show' : '';
+    if(fight) refreshCombatToggles();
     if(dead||egg||fight||qte) pickerMode='none';
     renderActions();   // rebuild the grid only if the picker mode changed
     if(pickerMode==='none' && actionsEl){
@@ -2585,6 +2630,17 @@
       pctx.beginPath(); pctx.arc(eneX, cy, R, 0, 6.28); pctx.stroke();
       for(var x=0;x<10;x++){ var xa=x/10*6.28; pctx.fillRect(Math.round(eneX+Math.cos(xa)*R),Math.round(cy+Math.sin(xa)*R),3,3); }
       pctx.globalAlpha=1; pctx.lineWidth=1;
+    } else if(c.kind==='spark'){
+      // a quick electric zap arcs into the foe
+      pctx.globalAlpha=p<0.6?1:(1-(p-0.6)/0.4); pctx.lineWidth=2;
+      pctx.beginPath(); pctx.moveTo(eneX-12,cy-8); pctx.lineTo(eneX-4,cy-1); pctx.lineTo(eneX-8,cy+2); pctx.lineTo(eneX+2,cy+9); pctx.stroke();
+      for(var z=0;z<5;z++){ var za=z/5*6.28+p*4, zr=6+p*12; pctx.fillRect(Math.round(eneX+Math.cos(za)*zr),Math.round(cy+Math.sin(za)*zr),2,2); }
+      pctx.globalAlpha=1; pctx.lineWidth=1;
+    } else if(c.kind==='mana'){
+      // mana motes spiral back into the pet
+      for(var m=0;m<6;m++){ var mph=(p+m/6)%1; pctx.globalAlpha=1-mph; pctx.fillRect(Math.round(petX-12+m*5),Math.round(cy+12-mph*30),2,2); }
+      pctx.globalAlpha=0.5*(1-p); pctx.lineWidth=2; pctx.beginPath(); pctx.arc(petX, cy, 16+p*6, 0, 6.28); pctx.stroke();
+      pctx.globalAlpha=1; pctx.lineWidth=1;
     }
     pctx.restore();
   }
@@ -2807,7 +2863,14 @@
 
     // COMBAT: pauses the cycle clock; plays out in real time tick-by-tick
     if(!S.dead && S.fight){
-      fightTick(dtMs);
+      fightTick(dtMs*(fastMode?2:1));
+      // AUTO: after a delay, pick the first option of a combat choice event (QTEs are NOT handled \u2014 they still fail)
+      if(autoMode && S.fight && S.fight.state==='event'){
+        autoEventT+=dtMs;
+        var autoLim=fastMode?5000:10000, rem=Math.max(0,Math.ceil((autoLim-autoEventT)/1000));
+        if(autoNoteEl) autoNoteEl.textContent='auto-picking first option in '+rem+'s\u2026';
+        if(autoEventT>=autoLim){ autoEventT=0; autoNoteEl=null; chooseEvent(0); }
+      } else { autoEventT=0; }
       checkCritical();
       // live combat feed in the LOG section + vitals; only rebuild the feed when it changes
       var sig = S.fight ? (S.fight.log.length+'|'+(S.fight.log[S.fight.log.length-1]||'')) : '';
@@ -2970,34 +3033,14 @@
     requestAnimationFrame(frame);
   }
 
-  // ── offline catch-up: cycles are deliberate now, so being away does NOT age the pet.
-  //    the egg still incubates in real time; a living pet just recovers a little while away. ──
-  function catchUp(){
-    if(S.dead) return;
-    var elapsed=Math.max(0,(Date.now()-(S.lastSeen||Date.now()))/1000);
-    if(elapsed<1){ S.lastSeen=Date.now(); return; }
-    if(S.stage==='egg'){
-      simulate(Math.min(elapsed,MAX_CATCHUP));   // egg keeps incubating while away (and may hatch)
-    } else {
-      var mins=Math.min(elapsed,MAX_CATCHUP)/60, st=S.stats;   // ~1 regen pulse per minute away
-      var pulses=Math.floor(mins);
-      if(pulses>0){
-        st.health=Math.min(maxHP(), (st.health||0) + hpRegen()*pulses);
-        st.energy=clamp((st.energy||0) + energyRegen()*pulses);
-        S.mana=Math.min(maxMana(), (S.mana||0) + manaRegenTick()*pulses);
-      }
-      simulate(Math.min(elapsed,MAX_CATCHUP));   // sickness still resolves/accrues while away
-      if(S.dead) return;
-      checkEvolve();
-    }
-    S.lastSeen=Date.now();
-  }
+  // offline catch-up removed: cycles are deliberate (segment-spend only) and there is no real-time
+  // action clock, so being away changes nothing. the egg still incubates live while the app is open.
 
   setInterval(save,5000);
-  document.addEventListener('visibilitychange',function(){ if(document.hidden) save(); else { catchUp(); render(); } });
+  document.addEventListener('visibilitychange',function(){ if(document.hidden) save(); else { render(); } });
   window.addEventListener('beforeunload',save);
 
-  catchUp(); sizeCanvas(); render(); save(); requestAnimationFrame(frame);
+  sizeCanvas(); render(); save(); requestAnimationFrame(frame);
 })();
 </script>
 </body>
