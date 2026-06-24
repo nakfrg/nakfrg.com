@@ -721,7 +721,8 @@
   }
 
   // ── temporary, stage-only buffs (roguelike). live on S.fight.buffs; discarded when the stage ends ──
-  function freshBuffs(){ return { atk:1, hp:1, def:1, crit:0, dodge:0, mana:1, haste:0 }; }
+  function freshBuffs(){ return { atk:1, hp:1, def:1, crit:0, dodge:0, mana:1, haste:0,
+    critMult:0, lifesteal:0, combo:0, reflect:0, execute:0, bleed:0, sunder:0, foeAtk:1, shieldPer:0, interHeal:0 }; }
   function bfMul(k){ var f=S.fight; return (f&&f.buffs&&f.buffs[k]!=null)?f.buffs[k]:1; }
   function bfAdd(k){ var f=S.fight; return (f&&f.buffs&&f.buffs[k]!=null)?f.buffs[k]:0; }
   function healPet(frac){ S.stats.health=Math.min(maxHP(), S.stats.health+Math.round(maxHP()*frac)); }
@@ -733,46 +734,199 @@
     var dM=Math.round((S.mana||0) - bMana);       if(dM)  parts.push((dM>0?'+':'')+dM+' mana');
     function mul(k,lbl){ if(b[k]!==bBuffs[k]){ var p=Math.round((b[k]/bBuffs[k]-1)*100); if(p) parts.push(lbl+' '+(p>0?'+':'')+p+'%'); } }
     function add(k,lbl){ if(b[k]!==bBuffs[k]){ var p=Math.round((b[k]-bBuffs[k])*100); if(p) parts.push(lbl+' '+(p>0?'+':'')+p+'%'); } }
+    function flat(k,lbl){ if(b[k]!==bBuffs[k]){ var d=Math.round(b[k]-bBuffs[k]); if(d) parts.push(lbl+' '+(d>0?'+':'')+d); } }
     mul('atk','ATK'); mul('hp','Max HP'); mul('def','DEF'); mul('mana','Max Mana');
-    add('crit','Crit'); add('dodge','Dodge'); add('haste','Atk Spd');
+    add('crit','Crit'); add('dodge','Dodge'); add('haste','Atk Spd'); add('critMult','Crit DMG');
+    add('lifesteal','Lifesteal'); add('combo','Combo'); add('reflect','Thorns'); add('execute','Execute'); add('bleed','Bleed'); add('sunder','Sunder');
+    if(b.foeAtk!==bBuffs.foeAtk){ var fp=Math.round((1-b.foeAtk)*100); if(fp) parts.push('Foe DMG '+(fp>0?'-':'+')+Math.abs(fp)+'%'); }
+    flat('shieldPer','Shield/fight'); flat('interHeal','Heal/fight');
     return parts;
   }
 
-  // positive encounters — many offer a choice between two stage-only boons
-  var POS_EVENTS = [
+  // ── in-battle event library (140 events). general pools show everywhere; each biome adds 10 of its own. ──
+  function mpAdd(x){ S.mana=Math.min(maxMana(), (S.mana||0)+x); }
+  function mpFull(){ S.mana=maxMana(); }
+
+  // 40 general positives (mix of two-choice boons and single auto boons)
+  var GEN_POS = [
     { title:'Ancient Whetstone', text:'A whetstone hums with old power. You sharpen up.',
-      choices:[ {label:'+12% Attack',     run:function(f){f.buffs.atk*=1.12;}},
-                {label:'+12% Crit chance', run:function(f){f.buffs.crit+=0.12;}} ] },
-    { title:'Hearty Feast', text:'A warm meal sits steaming on a stump. You dig in.',
-      choices:[ {label:'Heal 60% HP',  run:function(f){healPet(0.6);}},
-                {label:'+20% Max HP',  run:function(f){f.buffs.hp*=1.2; healPet(0.2);}} ] },
-    { title:'Lucky Clover Patch', text:'A patch of four-leaf clovers. Fortune favours you.',
-      choices:[ {label:'+10% Crit chance', run:function(f){f.buffs.crit+=0.10;}},
-                {label:'+10% Dodge',       run:function(f){f.buffs.dodge+=0.10;}} ] },
-    { title:'War Totem', text:'A totem radiates a martial aura. You bask in it.',
-      choices:[ {label:'+10% Attack',  run:function(f){f.buffs.atk*=1.10;}},
-                {label:'+18% Defense', run:function(f){f.buffs.def*=1.18;}} ] },
+      choices:[ {label:'+15% Attack', run:function(f){f.buffs.atk*=1.15;}}, {label:'+12% Crit', run:function(f){f.buffs.crit+=0.12;}} ] },
+    { title:'Hearty Feast', text:'A warm meal steams on a stump. You dig in.',
+      choices:[ {label:'Heal 60% HP', run:function(f){healPet(0.6);}}, {label:'+22% Max HP', run:function(f){f.buffs.hp*=1.22; healPet(0.22);}} ] },
+    { title:'Lucky Clover Patch', text:'Four-leaf clovers everywhere. Fortune smiles.',
+      choices:[ {label:'+12% Crit', run:function(f){f.buffs.crit+=0.12;}}, {label:'+12% Dodge', run:function(f){f.buffs.dodge+=0.12;}} ] },
+    { title:'War Totem', text:'A totem radiates a martial aura.',
+      choices:[ {label:'+12% Attack', run:function(f){f.buffs.atk*=1.12;}}, {label:'+22% Defense', run:function(f){f.buffs.def*=1.22;}} ] },
     { title:'Mana Spring', text:'A spring of glowing water bubbles up.',
-      choices:[ {label:'Refill Mana',    run:function(f){S.mana=maxMana();}},
-                {label:'+25% Max Mana',  run:function(f){f.buffs.mana*=1.25; S.mana=Math.min(maxMana(),S.mana+20);}} ] },
+      choices:[ {label:'Refill Mana', run:function(f){mpFull();}}, {label:'+30% Max Mana', run:function(f){f.buffs.mana*=1.3; mpAdd(20);}} ] },
     { title:'Adrenaline Rush', text:'Your heart pounds. Everything quickens.',
-      choices:[ {label:'+15% Attack speed', run:function(f){f.buffs.haste+=0.15;}},
-                {label:'Heal 35% + small mana', run:function(f){healPet(0.35); S.mana=Math.min(maxMana(),(S.mana||0)+15);}} ] },
-    // simple auto heals (no choice)
+      choices:[ {label:'+18% Atk Speed', run:function(f){f.buffs.haste+=0.18;}}, {label:'Heal 35% + mana', run:function(f){healPet(0.35); mpAdd(15);}} ] },
+    { title:'Vampire Charm', text:'A ruby charm thirsts on your behalf.',
+      choices:[ {label:'+18% Lifesteal', run:function(f){f.buffs.lifesteal+=0.18;}}, {label:'Heal 45% HP', run:function(f){healPet(0.45);}} ] },
+    { title:'Twin Daggers', text:'A matched pair, balanced and eager.',
+      choices:[ {label:'+15% Combo', run:function(f){f.buffs.combo+=0.15;}}, {label:'+18% Atk Speed', run:function(f){f.buffs.haste+=0.18;}} ] },
+    { title:'Spiked Aegis', text:'A shield bristling with barbs.',
+      choices:[ {label:'+35% Thorns', run:function(f){f.buffs.reflect+=0.35;}}, {label:'+22% Defense', run:function(f){f.buffs.def*=1.22;}} ] },
+    { title:"Executioner's Mark", text:'A grim sigil that scents weakness.',
+      choices:[ {label:'+60% Execute', run:function(f){f.buffs.execute+=0.6;}}, {label:'+12% Attack', run:function(f){f.buffs.atk*=1.12;}} ] },
+    { title:'Focusing Crystal', text:'It narrows the world to a single point.',
+      choices:[ {label:'+0.6 Crit DMG', run:function(f){f.buffs.critMult+=0.6;}}, {label:'+25% Max Mana', run:function(f){f.buffs.mana*=1.25; mpAdd(15);}} ] },
+    { title:"Hunter's Instinct", text:'You read the next foe before it moves.',
+      choices:[ {label:'+12% Attack', run:function(f){f.buffs.atk*=1.12;}}, {label:'+14% Crit', run:function(f){f.buffs.crit+=0.14;}} ] },
+    { title:'Iron Resolve', text:'You plant your feet. Nothing moves you.',
+      choices:[ {label:'+22% Max HP', run:function(f){f.buffs.hp*=1.22; healPet(0.2);}}, {label:'+25% Defense', run:function(f){f.buffs.def*=1.25;}} ] },
+    { title:'Battle Hymn', text:'A marching song lifts your blade.',
+      choices:[ {label:'+14% Attack', run:function(f){f.buffs.atk*=1.14;}}, {label:'+15% Atk Speed', run:function(f){f.buffs.haste+=0.15;}} ] },
+    { title:'Turtle Charm', text:'Slow, steady, unbreakable.',
+      choices:[ {label:'+30% Defense', run:function(f){f.buffs.def*=1.3;}}, {label:'+1 Shield/fight', run:function(f){f.buffs.shieldPer+=1;}} ] },
+    { title:"Gambler's Coin", text:'Heads you win big. Tails... also you win big?',
+      choices:[ {label:'+20% Crit', run:function(f){f.buffs.crit+=0.20;}}, {label:'+18% Dodge', run:function(f){f.buffs.dodge+=0.18;}} ] },
+    { title:'Frenzy Idol', text:'It wants you to keep swinging.',
+      choices:[ {label:'+15% Combo', run:function(f){f.buffs.combo+=0.15;}}, {label:'+15% Attack', run:function(f){f.buffs.atk*=1.15;}} ] },
+    { title:"Champion's Boon", text:'A hero of old lends their strength.',
+      choices:[ {label:'+12% ATK & DEF', run:function(f){f.buffs.atk*=1.12; f.buffs.def*=1.12;}}, {label:'+10% Crit, +0.5 Crit DMG', run:function(f){f.buffs.crit+=0.10; f.buffs.critMult+=0.5;}} ] },
+    { title:'Sharpshooter Stance', text:'You steady your breathing.',
+      choices:[ {label:'+12% Crit', run:function(f){f.buffs.crit+=0.12;}}, {label:'+0.5 Crit DMG', run:function(f){f.buffs.critMult+=0.5;}} ] },
+    { title:'Berserker Brew', text:'It burns going down. In a good way.',
+      choices:[ {label:'+20% Attack', run:function(f){f.buffs.atk*=1.20;}}, {label:'+12% Lifesteal', run:function(f){f.buffs.lifesteal+=0.12;}} ] },
     { title:'Healing Spring', text:'Cool water mends your wounds.', auto:function(f){healPet(0.5);} },
-    { title:'Friendly Sprite', text:'A tiny sprite patches you up and zips away.', auto:function(f){healPet(0.4); S.mana=Math.min(maxMana(),(S.mana||0)+20);} }
+    { title:'Friendly Sprite', text:'A sprite patches you up and zips off.', auto:function(f){healPet(0.4); mpAdd(20);} },
+    { title:'Bloodthorn Vine', text:'It coils round your weapon, hungry.', auto:function(f){f.buffs.bleed+=0.3;} },
+    { title:'Guardian Ward', text:'A pale barrier settles over you.', auto:function(f){f.buffs.shieldPer+=1;} },
+    { title:'Stoneskin Draught', text:'Your hide turns to slate.', auto:function(f){f.buffs.def*=1.28;} },
+    { title:'Eagle Eye', text:'Suddenly every weak point glows.', auto:function(f){f.buffs.crit+=0.14;} },
+    { title:'Phantom Step', text:'Your footwork turns slippery.', auto:function(f){f.buffs.dodge+=0.14;} },
+    { title:'Second Wind', text:'You learn to breathe between blows.', auto:function(f){f.buffs.interHeal+=Math.round(maxHP()*0.06); healPet(0.15);} },
+    { title:'Quicksilver Tonic', text:'The world slows; you do not.', auto:function(f){f.buffs.haste+=0.20;} },
+    { title:'Sunderstone', text:'It teaches your blade to crack armor.', auto:function(f){f.buffs.sunder+=0.15;} },
+    { title:'Lifebloom', text:'A flower that blooms when you bleed.', auto:function(f){f.buffs.interHeal+=Math.round(maxHP()*0.05); healPet(0.2);} },
+    { title:'Vital Surge', text:'Vigor floods every limb.', auto:function(f){f.buffs.hp*=1.25; healPet(0.3);} },
+    { title:'Mana Geyser', text:'Raw arcane power erupts upward.', auto:function(f){f.buffs.mana*=1.3; mpFull();} },
+    { title:"Warrior's Feast", text:'Red meat and resolve.', auto:function(f){f.buffs.atk*=1.15; healPet(0.25);} },
+    { title:'Crit Lens', text:'You see exactly where to strike.', auto:function(f){f.buffs.crit+=0.10; f.buffs.critMult+=0.4;} },
+    { title:'Leech Sigil', text:'Every wound you deal feeds you.', auto:function(f){f.buffs.lifesteal+=0.16;} },
+    { title:'Rampart', text:'Stone walls rise at your side.', auto:function(f){f.buffs.def*=1.18; f.buffs.shieldPer+=1;} },
+    { title:'Mercy Shrine', text:'A gentle light knits you whole.', auto:function(f){healPet(1);} },
+    { title:'Thornmail Blessing', text:'Your skin answers every hit.', auto:function(f){f.buffs.reflect+=0.45;} },
+    { title:'Time Dilation', text:'Seconds stretch like taffy.', auto:function(f){f.buffs.haste+=0.18; f.buffs.dodge+=0.06;} },
+    { title:'Wild Surge', text:'A chaotic font of power \u2014 you grab a fistful.', auto:function(f){ var pick=(Math.random()*4)|0;
+        if(pick===0){f.buffs.atk*=1.25;} else if(pick===1){f.buffs.lifesteal+=0.22;} else if(pick===2){f.buffs.combo+=0.2;} else {f.buffs.critMult+=0.9;} } }
   ];
-  // negative encounters — funny, with a small bite (stage-only)
-  var NEG_EVENTS = [
+
+  // 30 general negatives (funny, small bites \u2014 all stage-only)
+  var GEN_NEG = [
     { title:'Banana Peel', text:'Someone left a banana peel. You find it. The hard way.', run:function(f){hurtPetFrac(0.12);} },
     { title:'Cursed Idol', text:'You poke the glowing idol. It pokes back. Rude.', run:function(f){f.buffs.atk*=0.90;} },
-    { title:'Gremlin Toll', text:'A gremlin demands a toll. You have no coins, so it takes interest.', run:function(f){S.mana=Math.round((S.mana||0)*0.8); hurtPetFrac(0.06);} },
-    { title:'Suspicious Mushroom', text:'You eat a suspicious mushroom. Bold choice. Regrettable.', run:function(f){hurtPetFrac(0.10);} },
+    { title:'Gremlin Toll', text:'A gremlin demands a toll. It takes interest instead.', run:function(f){S.mana=Math.round((S.mana||0)*0.8); hurtPetFrac(0.06);} },
+    { title:'Suspicious Mushroom', text:'You eat a suspicious mushroom. Bold. Regrettable.', run:function(f){hurtPetFrac(0.10);} },
     { title:'Quicksand', text:'The ground betrays you. You flail. Majestically.', run:function(f){f.buffs.dodge=Math.max(0,f.buffs.dodge-0.05); hurtPetFrac(0.05);} },
-    { title:'Gloom Cloud', text:'A gloom settles in. Your sword feels heavier than your hopes.', run:function(f){f.buffs.atk*=0.92;} },
-    { title:'Pickpocket Imp', text:'An imp high-fives you, then vanishes. So does some of your mana.', run:function(f){S.mana=Math.round((S.mana||0)*0.6);} }
+    { title:'Gloom Cloud', text:'Your sword feels heavier than your hopes.', run:function(f){f.buffs.atk*=0.92;} },
+    { title:'Pickpocket Imp', text:'An imp high-fives you. Your mana waves goodbye.', run:function(f){S.mana=Math.round((S.mana||0)*0.6);} },
+    { title:'Rockslide', text:'Gravity files a complaint against you.', run:function(f){hurtPetFrac(0.14);} },
+    { title:'Weakening Hex', text:'Your muscles forget what they were for.', run:function(f){f.buffs.atk*=0.88;} },
+    { title:'Brittle Curse', text:'Your guard turns to glass.', run:function(f){f.buffs.def*=0.88;} },
+    { title:'Sapping Vines', text:'Clingy plants drain you dry.', run:function(f){hurtPetFrac(0.07); S.mana=Math.round((S.mana||0)*0.8);} },
+    { title:'Stumble', text:'You trip over absolutely nothing.', run:function(f){hurtPetFrac(0.08);} },
+    { title:'Bad Omen', text:'A black cat crosses your path. Foes grow bold.', run:function(f){f.buffs.foeAtk*=1.12;} },
+    { title:'Jinx', text:'Your luck takes a brief holiday.', run:function(f){f.buffs.crit=Math.max(0,f.buffs.crit-0.06);} },
+    { title:'Leech Swarm', text:'Tiny mouths, big appetite.', run:function(f){hurtPetFrac(0.10);} },
+    { title:'Cracked Armor', text:'A hairline fracture, just where it counts.', run:function(f){f.buffs.def*=0.85;} },
+    { title:'Dizzy Spell', text:'The horizon does a little spin.', run:function(f){f.buffs.dodge=Math.max(0,f.buffs.dodge-0.06);} },
+    { title:'Hex Totem', text:'A scowling totem curses your form.', run:function(f){f.buffs.atk*=0.9; hurtPetFrac(0.04);} },
+    { title:'Mana Burn', text:'Your reserves go up in smoke.', run:function(f){S.mana=Math.round((S.mana||0)*0.5);} },
+    { title:'Stinging Nettles', text:'Nature\u2019s least favorite hug.', run:function(f){hurtPetFrac(0.09);} },
+    { title:'Misstep', text:'Left foot, meet right foot. Disaster.', run:function(f){hurtPetFrac(0.06); f.buffs.dodge=Math.max(0,f.buffs.dodge-0.04);} },
+    { title:'Doom Whisper', text:'A voice lists your every flaw, alphabetically.', run:function(f){f.buffs.atk*=0.9;} },
+    { title:'Corroded Blade', text:'Rust spreads across your edge.', run:function(f){f.buffs.atk*=0.92; hurtPetFrac(0.04);} },
+    { title:'Gloomspore', text:'A puff of spores, a wave of nausea.', run:function(f){hurtPetFrac(0.10);} },
+    { title:'Heavy Heart', text:'Worry weighs your arms; foes sense it.', run:function(f){f.buffs.atk*=0.92; f.buffs.foeAtk*=1.06;} },
+    { title:'Treacherous Path', text:'Loose stones, steep drop, bad day.', run:function(f){hurtPetFrac(0.11);} },
+    { title:'Sloth Curse', text:'Everything feels like wading through syrup.', run:function(f){f.buffs.foeAtk*=1.10;} },
+    { title:'Frailty', text:'You feel suddenly, alarmingly mortal.', run:function(f){f.buffs.hp*=0.9;} },
+    { title:'Pinprick Trap', text:'A hidden needle finds your heel.', run:function(f){hurtPetFrac(0.07);} },
+    { title:'Wrong Turn', text:'You take the scenic, painful route.', run:function(f){hurtPetFrac(0.05); f.buffs.atk*=0.95;} }
   ];
-  function pickEvent(pool, seed){ return pool[Math.floor(Math.random()*pool.length)]; }
+
+  // ── 70 biome-specific events: 7 positive + 3 negative per biome (only appear in that biome) ──
+  var BIOME_POS = [
+    [ { title:'Sunlit Meadow', text:'Warm grass, open sky. You feel invincible.', auto:function(f){f.buffs.atk*=1.14; healPet(0.25);} },
+      { title:"Lark's Song", text:'A skylark trills and your senses sharpen.', choices:[ {label:'+12% Crit', run:function(f){f.buffs.crit+=0.12;}}, {label:'+12% Dodge', run:function(f){f.buffs.dodge+=0.12;}} ] },
+      { title:'Wild Honeycomb', text:'Golden, sticky, restorative. Worth the stings.', auto:function(f){f.buffs.hp*=1.2; healPet(0.4);} },
+      { title:'Galloping Hare', text:'You race a hare and somehow keep pace.', auto:function(f){f.buffs.haste+=0.16; f.buffs.dodge+=0.08;} },
+      { title:'Field of Clover', text:'Luck thick enough to roll in.', auto:function(f){f.buffs.crit+=0.12; f.buffs.lifesteal+=0.10;} },
+      { title:'Warm Breeze', text:'A gentle wind carries your hurts away.', auto:function(f){f.buffs.interHeal+=Math.round(maxHP()*0.06); healPet(0.2);} },
+      { title:'Standing Stone', text:'An old menhir thrums with quiet might.', choices:[ {label:'+14% Attack', run:function(f){f.buffs.atk*=1.14;}}, {label:'+24% Defense', run:function(f){f.buffs.def*=1.24;}} ] } ],
+    [ { title:'Ancient Oak', text:'You press a palm to bark older than kingdoms.', auto:function(f){f.buffs.hp*=1.22; f.buffs.def*=1.12; healPet(0.2);} },
+      { title:'Firefly Swarm', text:'Living sparks reveal every weak point.', auto:function(f){f.buffs.crit+=0.12; f.buffs.critMult+=0.5;} },
+      { title:"Druid's Blessing", text:'A hooded figure tends your wounds, then is gone.', auto:function(f){healPet(0.5); f.buffs.interHeal+=Math.round(maxHP()*0.05);} },
+      { title:'Thornvine Wrap', text:'Brambles armor you, points outward.', auto:function(f){f.buffs.reflect+=0.4; f.buffs.def*=1.1;} },
+      { title:"Owl's Wisdom", text:'It blinks once, and you simply know more.', choices:[ {label:'+30% Max Mana', run:function(f){f.buffs.mana*=1.3; mpAdd(15);}}, {label:'+12% Crit', run:function(f){f.buffs.crit+=0.12;}} ] },
+      { title:'Mushroom Ring', text:'You step inside the fairy circle. Bold.', auto:function(f){f.buffs.combo+=0.16;} },
+      { title:'Heartwood Sap', text:'Amber sap, warm and reviving.', choices:[ {label:'+16% Lifesteal', run:function(f){f.buffs.lifesteal+=0.16;}}, {label:'Heal 55% HP', run:function(f){healPet(0.55);}} ] } ],
+    [ { title:'Sacred Spring', text:'The water is impossibly clear, and kind.', auto:function(f){healPet(1);} },
+      { title:'Misty Veil', text:'Fog wraps you; foes swing at shadows.', auto:function(f){f.buffs.dodge+=0.14; f.buffs.def*=1.1;} },
+      { title:'Frog Chorus', text:'A thousand kin sing your name. You swell with pride.', auto:function(f){f.buffs.atk*=1.16; f.buffs.haste+=0.1;} },
+      { title:'Lily Pad Lift', text:'You ride the pads like stepping-stones.', auto:function(f){f.buffs.dodge+=0.12; f.buffs.interHeal+=Math.round(maxHP()*0.05);} },
+      { title:'Reed Flute', text:'A haunting tune steadies your hand.', choices:[ {label:'Refill +25% Mana', run:function(f){f.buffs.mana*=1.25; mpFull();}}, {label:'+12% Crit', run:function(f){f.buffs.crit+=0.12;}} ] },
+      { title:"Heron's Grace", text:'Still, patient, deadly. You learn its poise.', auto:function(f){f.buffs.crit+=0.12; f.buffs.dodge+=0.1;} },
+      { title:'Tidal Surge', text:'The lake rises at your call and crashes on your foes.', auto:function(f){f.buffs.atk*=1.12; f.buffs.foeAtk*=0.9;} } ],
+    [ { title:'Crystal Vein', text:'Facets catch your reflection a hundred sharp ways.', auto:function(f){f.buffs.critMult+=0.7; f.buffs.crit+=0.08;} },
+      { title:'Glowworm Light', text:'Soft luminescence guides your strikes.', choices:[ {label:'+30% Max Mana', run:function(f){f.buffs.mana*=1.3; mpAdd(20);}}, {label:'+12% Crit', run:function(f){f.buffs.crit+=0.12;}} ] },
+      { title:'Buried Hoard', text:'Someone\u2019s lost treasure, now arming you.', auto:function(f){f.buffs.atk*=1.13; f.buffs.def*=1.13;} },
+      { title:'Echoing Roar', text:'Your battle cry returns sevenfold.', auto:function(f){f.buffs.combo+=0.15; f.buffs.atk*=1.08;} },
+      { title:'Stalactite Shard', text:'A razor sliver fits your grip perfectly.', auto:function(f){f.buffs.bleed+=0.35; f.buffs.atk*=1.06;} },
+      { title:'Geode Heart', text:'You crack it open; warmth pours out.', auto:function(f){f.buffs.hp*=1.22; healPet(0.35);} },
+      { title:'Goldscale Find', text:'A coin from a richer age \u2014 lucky and lethal.', auto:function(f){f.buffs.lifesteal+=0.14; f.buffs.crit+=0.1;} } ],
+    [ { title:'Lightning Rod', text:'You catch the storm and hold it in your fist.', auto:function(f){f.buffs.atk*=1.14; f.buffs.haste+=0.12;} },
+      { title:"Eagle's Updraft", text:'A thermal lifts you light as a feather.', auto:function(f){f.buffs.dodge+=0.14; f.buffs.haste+=0.12;} },
+      { title:'Summit Vista', text:'From up here, everything is clear.', choices:[ {label:'+14% Attack', run:function(f){f.buffs.atk*=1.14;}}, {label:'+14% Crit', run:function(f){f.buffs.crit+=0.14;}} ] },
+      { title:'Thunderclap', text:'A crack of sound rattles you into a frenzy.', auto:function(f){f.buffs.combo+=0.15; f.buffs.critMult+=0.5;} },
+      { title:'Glacial Ward', text:'A sheet of ice forms a moving shield.', auto:function(f){f.buffs.def*=1.18; f.buffs.shieldPer+=1;} },
+      { title:'Mountain Spirit', text:'An old guardian breathes vigor into you.', auto:function(f){f.buffs.hp*=1.22; healPet(0.4);} },
+      { title:"Storm's Fury", text:'You ride the gale, untouchable and furious.', choices:[ {label:'+20% Attack', run:function(f){f.buffs.atk*=1.20;}}, {label:'Foes hit -12%', run:function(f){f.buffs.foeAtk*=0.88;}} ] } ],
+    [ { title:'Demon Pact', text:'You shake a clawed hand. The terms are... generous.', choices:[ {label:'+26% ATK (-8% HP)', run:function(f){f.buffs.atk*=1.26; hurtPetFrac(0.08);}}, {label:'+22% Lifesteal', run:function(f){f.buffs.lifesteal+=0.22;}} ] },
+      { title:'Ember Heart', text:'A coal of pure malice fuses to your blade.', auto:function(f){f.buffs.bleed+=0.4; f.buffs.atk*=1.08;} },
+      { title:'Soul Harvest', text:'The ash remembers the fallen, and feeds you.', auto:function(f){f.buffs.lifesteal+=0.25;} },
+      { title:'Void Rift', text:'A tear in the world hungers for the weak.', auto:function(f){f.buffs.execute+=0.7; f.buffs.crit+=0.08;} },
+      { title:'Hellfire Brand', text:'It sears a sigil of devastation into your arm.', auto:function(f){f.buffs.atk*=1.12; f.buffs.critMult+=0.6;} },
+      { title:'Shadow Cloak', text:'Darkness drapes you and lashes back at attackers.', auto:function(f){f.buffs.dodge+=0.12; f.buffs.reflect+=0.3;} },
+      { title:'Infernal Forge', text:'You temper yourself in unholy flame.', auto:function(f){f.buffs.atk*=1.13; f.buffs.def*=1.13;} } ],
+    [ { title:"Fallen Champion's Arms", text:'A hero\u2019s blade and shield, still warm with purpose.', auto:function(f){f.buffs.atk*=1.16; f.buffs.def*=1.16;} },
+      { title:'Royal Armory', text:'Racks of pristine plate at your disposal.', auto:function(f){f.buffs.def*=1.2; f.buffs.shieldPer+=1;} },
+      { title:'Sacred Relic', text:'A reliquary blazes with protective light.', auto:function(f){f.buffs.hp*=1.2; healPet(1);} },
+      { title:"Tyrant's Bane", text:'A weapon forged to end exactly this place.', auto:function(f){f.buffs.execute+=0.7; f.buffs.atk*=1.1;} },
+      { title:'War Banner', text:'You raise the old standard and feel the rally.', choices:[ {label:'+14% ATK, +10% Crit', run:function(f){f.buffs.atk*=1.14; f.buffs.crit+=0.10;}}, {label:'+24% Defense', run:function(f){f.buffs.def*=1.24;}} ] },
+      { title:'Arcane Reactor', text:'A humming core of bound power.', auto:function(f){f.buffs.mana*=1.35; f.buffs.critMult+=0.6; mpFull();} },
+      { title:'Last Stand', text:'Backs to the wall, the impossible becomes simple.', auto:function(f){f.buffs.atk*=1.15; f.buffs.def*=1.15; f.buffs.lifesteal+=0.12; healPet(0.3);} } ]
+  ];
+  var BIOME_NEG = [
+    [ { title:'Bee Swarm', text:'You disturbed a hive. They had opinions.', run:function(f){hurtPetFrac(0.10);} },
+      { title:'Thistle Patch', text:'Spiky, spiteful, everywhere.', run:function(f){hurtPetFrac(0.06); f.buffs.dodge=Math.max(0,f.buffs.dodge-0.05);} },
+      { title:'Sudden Squall', text:'A summer storm rolls in, emboldening foes.', run:function(f){f.buffs.foeAtk*=1.10;} } ],
+    [ { title:'Bramble Snare', text:'Thorny loops grab your ankles.', run:function(f){hurtPetFrac(0.08); f.buffs.dodge=Math.max(0,f.buffs.dodge-0.05);} },
+      { title:'Poison Spores', text:'A burst cloud sets your lungs ablaze.', run:function(f){hurtPetFrac(0.11);} },
+      { title:'Tangled Roots', text:'The forest floor grips your blade-arm.', run:function(f){f.buffs.atk*=0.9;} } ],
+    [ { title:'Leech Bog', text:'Every step squelches with hungry mouths.', run:function(f){hurtPetFrac(0.08); S.mana=Math.round((S.mana||0)*0.8);} },
+      { title:'Sinking Mud', text:'You\u2019re thigh-deep before you notice.', run:function(f){f.buffs.dodge=Math.max(0,f.buffs.dodge-0.06); hurtPetFrac(0.05);} },
+      { title:'Cold Current', text:'Numb fingers, sloppy swings.', run:function(f){f.buffs.atk*=0.9;} } ],
+    [ { title:'Cave-In', text:'The ceiling votes against you.', run:function(f){hurtPetFrac(0.14);} },
+      { title:'Pitch Dark', text:'You can\u2019t see your own paws.', run:function(f){f.buffs.dodge=Math.max(0,f.buffs.dodge-0.05); f.buffs.crit=Math.max(0,f.buffs.crit-0.06);} },
+      { title:'Bat Swarm', text:'Leathery chaos pours from a crevice.', run:function(f){hurtPetFrac(0.07); S.mana=Math.round((S.mana||0)*0.8);} } ],
+    [ { title:'Avalanche', text:'The whole slope comes to say hello.', run:function(f){hurtPetFrac(0.14);} },
+      { title:'Bitter Cold', text:'Your joints lock; the foe presses in.', run:function(f){f.buffs.foeAtk*=1.10; hurtPetFrac(0.04);} },
+      { title:'Thin Air', text:'Each breath gives less than the last.', run:function(f){f.buffs.hp*=0.9;} } ],
+    [ { title:'Lava Geyser', text:'The ground exhales fire without warning.', run:function(f){hurtPetFrac(0.15);} },
+      { title:'Soul Drain', text:'Something ancient sips at your essence.', run:function(f){S.mana=Math.round((S.mana||0)*0.5); hurtPetFrac(0.05);} },
+      { title:'Creeping Despair', text:'A cold certainty that you cannot win. (You can.)', run:function(f){f.buffs.atk*=0.88;} } ],
+    [ { title:'Curse of the Tyrant', text:'A baleful eye marks you from on high.', run:function(f){f.buffs.atk*=0.88; f.buffs.foeAtk*=1.10;} },
+      { title:'Crumbling Hall', text:'The fortress sheds a wall on your head.', run:function(f){hurtPetFrac(0.13);} },
+      { title:'Void Whispers', text:'They tell you secrets you didn\u2019t want.', run:function(f){S.mana=Math.round((S.mana||0)*0.5); f.buffs.crit=Math.max(0,f.buffs.crit-0.05);} } ]
+  ];
+  function eventPool(kind, biome){
+    biome=biome||0;
+    return kind==='pos' ? GEN_POS.concat(BIOME_POS[biome]||[]) : GEN_NEG.concat(BIOME_NEG[biome]||[]);
+  }
+  function pickEvent(pool){ return pool[Math.floor(Math.random()*pool.length)]; }
 
   // ── pet derived combat stats (equipped items via ST, stage-buffs via bf*) ──
   function maxHP(){ return Math.round((60 + ST('end')*8) * bfMul('hp')); }
@@ -781,7 +935,7 @@
   function petATK(){ return Math.round((ST('str') + Math.floor(ST('dex')/4)) * bfMul('atk')); }
   function petDEF(){ return Math.round((Math.floor(ST('end')/4) + Math.floor(ST('dex')/8)) * bfMul('def')); }
   function petCritChance(){ return Math.min(0.85, ST('lck')*0.008 + equipEffect('crit') + bfAdd('crit')); }
-  function petCritMult(){ return Math.min(5, 1.5 + ST('dex')*0.01 + equipEffect('critMult')); }
+  function petCritMult(){ return Math.min(5, 1.5 + ST('dex')*0.01 + equipEffect('critMult') + bfAdd('critMult')); }
   function petDodge(){ return Math.min(0.6, ST('lck')*0.005 + equipEffect('dodge') + bfAdd('dodge')); }
   // attack cadence: more DEX -> faster swings; haste items + buffs speed it further
   function petAtkInterval(){ return Math.max(260, Math.round((PET_ATK_BASE - ST('dex')*3) * (1-equipEffect('haste')-bfAdd('haste')))); }
@@ -1127,6 +1281,7 @@
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n);
       f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=0; f.fx=null; f.burn=null; f.regen=null; f.actions=0; f.spellIdx=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0;
+      f.shield=Math.round(bfAdd('shieldPer'))||0;   // a stage boon can grant shields each fight
       f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
       combatLog('\u2694 '+(e.n+1)+'/'+f.combatsTotal+': '+f.enemy.name+(e.boss?'  \u2605 BOSS':''));
     } else {
@@ -1134,7 +1289,7 @@
     }
   }
   function setupEvent(kind){
-    var f=S.fight, pool = kind==='pos'?POS_EVENTS:NEG_EVENTS, ev=pickEvent(pool);
+    var f=S.fight, ev=pickEvent(eventPool(kind, f?f.biome:0));
     f.event={ kind:kind, title:ev.title, text:ev.text, choices:ev.choices||null, result:null, chosenLabel:null };
     if(ev.choices){ f.state='event'; openEventChoice(); blip(640,0.08,'sine'); }
     else {
@@ -1212,7 +1367,7 @@
 
   function interludeRegen(){
     // catch your breath between foes; SPI drives it (so casters can survive long gauntlets), with a small flat floor
-    var hpGain=Math.floor(ST('spi')*0.9) + Math.floor(maxHP()*0.012);
+    var hpGain=Math.floor(ST('spi')*0.9) + Math.floor(maxHP()*0.012) + Math.round(bfAdd('interHeal'));
     S.stats.health=Math.min(maxHP(), S.stats.health+hpGain);
     S.mana=Math.min(maxMana(), (S.mana||0) + Math.floor(maxMana()*0.10) + manaRegenTick());
   }
@@ -1230,12 +1385,14 @@
     var f=S.fight, e=f.enemy; f.eneLunge=1;
     if(!special && Math.random()<petDodge()){ f.flashPet=4; combatLog('~ '+niceName()+' dodged!'); blip(700,0.04,'sine'); return; }
     if(!special && f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); return; }
-    var edmg=Math.max(Math.round(e.atk*0.38*mult), Math.round((e.atk-petDEF())*mult), 1), ecrit=Math.random()<e.crit;
+    var edmg=Math.max(Math.round(e.atk*0.38*mult), Math.round((e.atk-petDEF())*mult), 1);
+    edmg=Math.max(1, Math.round(edmg*bfMul('foeAtk')));
+    var ecrit=Math.random()<e.crit;
     if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
     S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=special?14:9;
     combatLog((special?'\u2737 ':(ecrit?'\u2726':'\u00b7'))+' '+e.name+' \u2192 '+edmg+(ecrit?' CRIT':''));
     blip(ecrit?170:240,0.05,'sawtooth');
-    var refl=equipEffect('reflect');
+    var refl=equipEffect('reflect')+bfAdd('reflect');
     if(refl>0){ var rd=Math.max(1,Math.round(edmg*refl)); e.hp-=rd; f.flashEne=6; combatLog('\u21BA thorns \u2192 '+rd); if(e.hp<=0){ winBattle(); return; } }
     if(S.stats.health<=0){
       var rev=hasReviveItem();
@@ -1263,14 +1420,14 @@
     var dmg=Math.max(1, petATK()-e.def), crit=Math.random()<petCritChance();
     if(crit) dmg=Math.round(dmg*petCritMult());
     var vuln=false; if((f.vuln||0)>0){ dmg=Math.round(dmg*1.5); f.vuln--; vuln=true; }
-    var exec=equipEffect('execute'); if(exec>0 && (e.hp/e.maxHp)<0.25){ dmg=Math.round(dmg*(1+exec)); }
+    var exec=equipEffect('execute')+bfAdd('execute'); if(exec>0 && (e.hp/e.maxHp)<0.25){ dmg=Math.round(dmg*(1+exec)); }
     e.hp-=dmg; f.flashEne=9; f.lunge=1;
-    var ls=equipEffect('lifesteal'); if(ls>0){ S.stats.health=Math.min(maxHP(),S.stats.health+Math.round(dmg*ls)); }
+    var ls=equipEffect('lifesteal')+bfAdd('lifesteal'); if(ls>0){ S.stats.health=Math.min(maxHP(),S.stats.health+Math.round(dmg*ls)); }
     combatLog((isCombo?'\u21BB':(crit?'\u2726':'\u00b7'))+' '+niceName()+' \u2192 '+dmg+(crit?' CRIT':'')+(vuln?' \u25C8':''));
     blip(crit?900:680,0.04,'square');
-    var bl=equipEffect('bleed');
+    var bl=equipEffect('bleed')+bfAdd('bleed');
     if(bl>0){ var bd=Math.max(1, Math.round(petATK()*bl*((crit&&hasBleedCrit())?2:1))); f.bleed={ dmg:bd, rounds:5 }; }
-    var sun=equipEffect('sunder');
+    var sun=equipEffect('sunder')+bfAdd('sunder');
     if(sun>0 && Math.random()<sun){ f.vuln=3; f.sunderFlash=12; combatLog('\u25C8 SUNDERED! +50% damage for 3 hits'); blip(420,0.08,'sawtooth'); }
     if(e.hp<=0){ winBattle(); return true; }
     if(++f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); return true; }
@@ -1299,7 +1456,7 @@
     if(f.petTick>=petAtkInterval()){
       f.petTick-=petAtkInterval();
       if(playerHit(f,e,false)) return;
-      var comboCh=equipEffect('combo'), chains=0;
+      var comboCh=equipEffect('combo')+bfAdd('combo'), chains=0;
       while(comboCh>0 && chains<5 && Math.random()<comboCh){
         chains++; f.comboFlash=10;
         combatLog('\u21BB COMBO \u00d7'+chains+'!'); blip(1000+chains*60,0.04,'square');
