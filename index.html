@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nakfrg</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="frog.png">
+<style>
+  :root { --frog-size: 24px; --floor-offset: 60px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    cursor: default;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Thin floor line the frog lands on (sits above the bottom edge) */
+  #floor {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: var(--floor-offset);
+    height: 2px;
+    background: #fff;
+    z-index: 1;
+  }
+
+  /* The frog */
+  #frog {
+    position: fixed;
+    left: 0; top: 0;
+    width: var(--frog-size); height: var(--frog-size);
+    image-rendering: pixelated;        /* crisp for a tiny pixel sprite */
+    will-change: transform;
+    cursor: pointer;
+    z-index: 10;
+    touch-action: none;
+  }
+  /* Fallback frog drawn in CSS/SVG if frog.png is missing */
+  #frog.is-fallback { background: transparent; }
+
+  /* Hidden link — invisible until you find/hover it */
+  .secret {
+    position: fixed;
+    right: 10px; bottom: 8px;
+    font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: rgba(255,255,255,0.05);       /* almost invisible on black */
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    transition: color 0.3s ease;
+    z-index: 5;
+  }
+  .secret:hover { color: rgba(255,255,255,0.5); }
+  .secret:visited { color: rgba(255,255,255,0.05); }
+  .secret:visited:hover { color: rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+
+  <!-- The frog. Drop a 24x24 frog.png next to this file; otherwise the SVG fallback shows. -->
+  <img id="frog" src="frog.png" alt="" draggable="false">
+
+  <!-- Thin floor line the frog lands on -->
+  <div id="floor"></div>
+
+  <!-- Hidden link to CapyCalc -->
+  <a class="secret" href="https://capycalc.nakfrg.com/" title="?">·</a>
+
+<script>
+(function () {
+  var frog = document.getElementById('frog');
+
+  // ── Fallback frog: if frog.png fails to load, swap in a tiny drawn SVG. ──
+  var FALLBACK = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">' +
+      '<g>' +
+        '<ellipse cx="10" cy="13" rx="8" ry="6" fill="#4caf50"/>' +
+        '<circle cx="5.5" cy="6" r="3" fill="#4caf50"/>' +
+        '<circle cx="14.5" cy="6" r="3" fill="#4caf50"/>' +
+        '<circle cx="5.5" cy="5.5" r="1.4" fill="#fff"/>' +
+        '<circle cx="14.5" cy="5.5" r="1.4" fill="#fff"/>' +
+        '<circle cx="5.7" cy="5.7" r="0.7" fill="#111"/>' +
+        '<circle cx="14.3" cy="5.7" r="0.7" fill="#111"/>' +
+        '<path d="M7 14 q3 2 6 0" stroke="#2e7d32" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+      '</g>' +
+    '</svg>'
+  );
+  frog.addEventListener('error', function () {
+    frog.src = FALLBACK;
+    frog.classList.add('is-fallback');
+  });
+  // Some browsers fire load before our handler attaches; double-check natural size.
+  if (frog.complete && frog.naturalWidth === 0) {
+    frog.src = FALLBACK;
+    frog.classList.add('is-fallback');
+  }
+
+  // ── Physics state ──
+  var SIZE = 24;
+  var FLOOR_OFFSET = 60; // px above the bottom edge — matches --floor-offset in CSS
+  function vw() { return window.innerWidth; }
+  function vh() { return window.innerHeight; }
+  function floorY() { return vh() - FLOOR_OFFSET - SIZE; } // top-y where the frog rests on the line
+
+  var state = {
+    x: vw() * 0.5,
+    y: vh() * 0.4,
+    vx: (Math.random() * 2 - 1) * 3,
+    vy: 0,
+    angle: 0,
+    facing: 1
+  };
+
+  // Tunables
+  var GRAVITY = 0.55;          // downward pull per frame
+  var RESTITUTION = 0.72;      // bounciness on impact (0..1)
+  var FRICTION = 0.985;        // air drag
+  var FLOOR_FRICTION = 0.82;   // horizontal slowdown when on the floor
+  var MOUSE_RADIUS = 90;       // how close the cursor affects the frog
+  var MOUSE_FORCE = 0.9;       // strength of the cursor repulsion
+  var MAX_SPEED = 28;          // clamp so flings don't get absurd
+  var REST_HOP_CHANCE = 0.012; // when settled, occasionally hop on its own
+
+  // Mouse / touch tracking
+  var mouse = { x: -999, y: -999, active: false, px: -999, py: -999, vx: 0, vy: 0 };
+  function setMouse(x, y) {
+    if (mouse.active) { mouse.vx = x - mouse.x; mouse.vy = y - mouse.y; }
+    mouse.x = x; mouse.y = y; mouse.active = true;
+  }
+  window.addEventListener('mousemove', function (e) { setMouse(e.clientX, e.clientY); });
+  window.addEventListener('mouseleave', function () { mouse.active = false; });
+  window.addEventListener('touchmove', function (e) {
+    if (e.touches[0]) setMouse(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  window.addEventListener('touchend', function () { mouse.active = false; });
+
+  // Click / tap the frog -> CapyCalc (with a little hop first).
+  var CLICK_URL = 'https://capycalc.nakfrg.com/';
+  var pressed = false, pressX = 0, pressY = 0, moved = false;
+  frog.addEventListener('pointerdown', function (e) {
+    pressed = true; moved = false; pressX = e.clientX; pressY = e.clientY;
+    // grab + fling: give it a little upward pop
+    state.vy -= 6; state.vx += (Math.random() * 4 - 2);
+  });
+  window.addEventListener('pointermove', function (e) {
+    if (pressed && (Math.abs(e.clientX - pressX) > 4 || Math.abs(e.clientY - pressY) > 4)) moved = true;
+  });
+  frog.addEventListener('pointerup', function () {
+    if (pressed && !moved) { window.location.href = CLICK_URL; }
+    pressed = false;
+  });
+
+  function clampSpeed() {
+    var sp = Math.hypot(state.vx, state.vy);
+    if (sp > MAX_SPEED) { var k = MAX_SPEED / sp; state.vx *= k; state.vy *= k; }
+  }
+
+  var onFloor = false;
+
+  function step() {
+    var W = vw(), H = vh();
+
+    // Gravity
+    state.vy += GRAVITY;
+
+    // Cursor repulsion — push the frog away from the cursor when close.
+    if (mouse.active) {
+      var cx = state.x + SIZE / 2, cy = state.y + SIZE / 2;
+      var dx = cx - mouse.x, dy = cy - mouse.y;
+      var dist = Math.hypot(dx, dy);
+      if (dist < MOUSE_RADIUS && dist > 0.001) {
+        var strength = (1 - dist / MOUSE_RADIUS) * MOUSE_FORCE;
+        state.vx += (dx / dist) * strength * 12;
+        state.vy += (dy / dist) * strength * 12;
+        // impart some of the cursor's own motion (flick the frog)
+        state.vx += mouse.vx * 0.25 * strength;
+        state.vy += mouse.vy * 0.25 * strength;
+      }
+    }
+    // decay cursor velocity each frame
+    mouse.vx *= 0.6; mouse.vy *= 0.6;
+
+    // Air friction
+    state.vx *= FRICTION;
+    state.vy *= FRICTION;
+    clampSpeed();
+
+    // Integrate
+    state.x += state.vx;
+    state.y += state.vy;
+
+    onFloor = false;
+
+    // Walls
+    if (state.x < 0) { state.x = 0; state.vx = -state.vx * RESTITUTION; }
+    else if (state.x > W - SIZE) { state.x = W - SIZE; state.vx = -state.vx * RESTITUTION; }
+
+    // Ceiling
+    if (state.y < 0) { state.y = 0; state.vy = -state.vy * RESTITUTION; }
+
+    // Floor (the visible line, above the bottom edge)
+    var fY = floorY();
+    if (state.y > fY) {
+      state.y = fY;
+      state.vy = -state.vy * RESTITUTION;
+      state.vx *= FLOOR_FRICTION;
+      onFloor = true;
+      if (Math.abs(state.vy) < 1.2) state.vy = 0; // settle
+    }
+
+    // When resting on the floor, occasionally hop on its own so it feels alive.
+    if (onFloor && Math.abs(state.vx) < 0.4 && Math.abs(state.vy) < 0.4) {
+      if (Math.random() < REST_HOP_CHANCE) {
+        state.vy = -(8 + Math.random() * 5);
+        state.vx = (Math.random() * 2 - 1) * 4;
+      }
+    }
+
+    // Facing direction
+    if (state.vx > 0.3) state.facing = 1;
+    else if (state.vx < -0.3) state.facing = -1;
+
+    // Lean into motion + a little spin when airborne and fast.
+    var targetAngle = Math.max(-0.5, Math.min(0.5, state.vx * 0.03));
+    state.angle += (targetAngle - state.angle) * 0.2;
+
+    // Render
+    frog.style.transform =
+      'translate(' + state.x.toFixed(2) + 'px,' + state.y.toFixed(2) + 'px) ' +
+      'scaleX(' + state.facing + ') ' +
+      'rotate(' + (state.angle * state.facing) + 'rad)';
+
+    requestAnimationFrame(step);
+  }
+
+  // Keep the frog inside the viewport on resize.
+  window.addEventListener('resize', function () {
+    state.x = Math.min(state.x, vw() - SIZE);
+    state.y = Math.min(state.y, floorY());
+  });
+
+  requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>
