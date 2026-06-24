@@ -991,7 +991,7 @@
   }
 
   // ── STAGE COMBAT (tick-based; plays out on screen; cycle is paused while fighting) ──
-  function combatLog(line){ var f=S.fight; if(!f) return; f.log.push(line); if(f.log.length>6) f.log.shift(); }
+  function combatLog(line){ var f=S.fight; if(!f) return; f.log.push(line); if(f.log.length>40) f.log.shift(); }
 
   var APPROACH_MS = 1500;   // travel-in / enemy-walk-on time before a battle starts
   function startStage(biome, stage){
@@ -1043,9 +1043,42 @@
   }
   function loseBattle(died){ var f=S.fight; f.state='lost'; f.stateT=1300; f.died=died; }
 
+  // a single enemy hit (normal or a boss special). mult scales damage; special hits bypass shield.
+  function enemyStrike(mult, special){
+    var f=S.fight, e=f.enemy; f.eneLunge=1;
+    if(!special && Math.random()<petDodge()){ f.flashPet=4; combatLog('~ '+niceName()+' dodged!'); blip(700,0.04,'sine'); return; }
+    if(!special && f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); return; }
+    var edmg=Math.max(1, Math.round((e.atk-petDEF())*mult)), ecrit=Math.random()<e.crit;
+    if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
+    S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=special?14:9;
+    combatLog((special?'\u2737 ':(ecrit?'\u2726':'\u00b7'))+' '+e.name+' \u2192 '+edmg+(ecrit?' CRIT':''));
+    blip(ecrit?170:240,0.05,'sawtooth');
+    var refl=equipEffect('reflect');
+    if(refl>0){ var rd=Math.max(1,Math.round(edmg*refl)); e.hp-=rd; f.flashEne=6; combatLog('\u21BA thorns \u2192 '+rd); if(e.hp<=0){ winBattle(); return; } }
+    if(S.stats.health<=0){
+      var rev=hasReviveItem();
+      if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12;
+        combatLog('\u2605 PHOENIX! revived at '+Math.round(rev*100)+'%'); blip(1100,0.18,'sine'); return; }
+      loseBattle(true); return;
+    }
+    if(S.stats.health<=Math.max(1,Math.round(maxHP()*0.12))){ loseBattle(false); return; }
+  }
+  // pick a boss special by biome for flavour
+  function bossSpecial(f){
+    var b=f.biome, types = b===6?['laser','nova']:b===4?['meteor','quake']:b===3?['quake','meteor']:b===5?['nova','laser']:b===2?['nova']:['meteor','laser'];
+    if(isFinalEncounter(f.biome,f.stage,f.battleIdx)) types=['meteor','laser','nova','quake'];
+    var t=types[(f.specialN||0)%types.length]; f.specialN=(f.specialN||0)+1;
+    var names={laser:'fires a searing beam!',meteor:'calls down a METEOR!',quake:'splits the ground!',nova:'erupts in a nova!'};
+    combatLog('\u2737 '+f.enemy.name+' '+names[t]); blip(120,0.22,'sawtooth',0.08);
+    f.fx={ type:t, t:950, dur:950 };
+    enemyStrike(1.45, true);
+  }
+
   function fightTick(dt){
     var f=S.fight; if(!f) return;
-    if(f.flashPet>0) f.flashPet--; if(f.flashEne>0) f.flashEne--; if(f.lunge>0) f.lunge-=dt/220;
+    if(f.flashPet>0) f.flashPet--; if(f.flashEne>0) f.flashEne--;
+    if(f.lunge>0) f.lunge-=dt/200; if(f.eneLunge>0) f.eneLunge-=dt/200;
+    if(f.fx){ f.fx.t-=dt; if(f.fx.t<=0) f.fx=null; }
     f.scroll=(f.scroll||0)+dt;   // backdrop clock
     // approach: pet hops in, backdrop scrolls, enemy walks on from the right
     if(f.state==='approach'){
@@ -1078,31 +1111,14 @@
         if(f.state!=='fight') return;
       }
     }
-    // enemy attack (we may dodge; they can crit; items reflect/revive)
-    f.eneTick+=dt;
-    if(f.eneTick>=ENE_ATK_BASE){
-      f.eneTick-=ENE_ATK_BASE;
-      if(Math.random()<petDodge()){
-        f.flashPet=4; combatLog('~ '+niceName()+' dodged!'); blip(700,0.04,'sine');
-      }
-      else if(f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); }
-      else {
-        var edmg=Math.max(1, e.atk-petDEF()), ecrit=Math.random()<e.crit;
-        if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
-        S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=9;
-        combatLog((ecrit?'\u2726':'\u00b7')+' '+e.name+' \u2192 '+edmg+(ecrit?' CRIT':''));
-        blip(ecrit?170:240,0.05,'sawtooth');
-        var refl=equipEffect('reflect');
-        if(refl>0){ var rd=Math.max(1,Math.round(edmg*refl)); e.hp-=rd; f.flashEne=6; combatLog('\u21BA thorns \u2192 '+rd); if(e.hp<=0){ winBattle(); return; } }
-        if(S.stats.health<=0){
-          var rev=hasReviveItem();
-          if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12;
-            combatLog('\u2605 PHOENIX! revived at '+Math.round(rev*100)+'%'); blip(1100,0.18,'sine'); return; }
-          loseBattle(true); return;
-        }
-        if(S.stats.health<=Math.max(1,Math.round(maxHP()*0.12))){ loseBattle(false); return; }
-      }
+    // boss special attack (dramatic; every ~5s)
+    if(e.boss){
+      f.specialTick=(f.specialTick||0)+dt;
+      if(f.specialTick>=5000){ f.specialTick=0; bossSpecial(f); if(f.state!=='fight') return; }
     }
+    // enemy normal attack
+    f.eneTick+=dt;
+    if(f.eneTick>=ENE_ATK_BASE){ f.eneTick-=ENE_ATK_BASE; enemyStrike(1, false); if(f.state!=='fight') return; }
   }
 
   function endFight(){
@@ -1197,6 +1213,21 @@
   }
   function renderLog(){
     if(!logEl) return;
+    var title=document.querySelector('.logTitle');
+    // during a battle, the log section becomes the combat feed (keeps art clear)
+    if(S.fight && S.fight.log){
+      if(title) title.textContent='BATTLE';
+      var f=S.fight, lines=f.log;
+      if(!lines.length){ logEl.innerHTML='<div class="logRow logEmpty">\u2694 engaging\u2026</div>'; }
+      else {
+        var hb='';
+        for(var j=0;j<lines.length;j++) hb+='<div class="logRow">'+escHtml(lines[j])+'</div>';
+        logEl.innerHTML=hb;
+      }
+      logEl.scrollTop=logEl.scrollHeight;   // keep the newest line in view
+      return;
+    }
+    if(title) title.textContent='LOG';
     if(!S.log||!S.log.length){ logEl.innerHTML='<div class="logRow logEmpty">...all quiet for now...</div>'; return; }
     var h='';
     for(var i=0;i<S.log.length;i++) h+='<div class="logRow"><span class="logT">'+S.log[i].t+'</span>'+escHtml(S.log[i].m)+'</div>';
@@ -1346,27 +1377,29 @@
     if(S.stage==='egg'){ setMessage("it's still an egg \u2014 give it time to hatch"); return; }
     if(actx && actx.state==='suspended') actx.resume();
     var s=S.stats;
-    // menu buttons toggle: tap again to close and return to the pet
-    if(kind==='spells'||kind==='status'||kind==='inventory'){
-      if(ovKind===kind && overlayEl.classList.contains('open')){ closeOverlay(); return; }
-      if(kind==='spells') openSpells(); else if(kind==='status') openStatus(); else openInventory();
-      return;
-    }
-    // tap the ACTIVE action's own button again to STOP it
-    if(S.mode!=='idle' && ((kind==='rest'&&S.mode==='rest')||(kind==='train'&&S.mode==='train'))){
-      setMode('idle'); setMessage(niceName()+' stopped.'); return;
-    }
-    // while one action runs, the OTHER sustained actions are locked \u2014 stop the running one first
-    var running = S.mode && S.mode!=='idle';
-    if(running && (kind==='rest'||kind==='train')){
+    // 1) tapping the ACTIVE sustained action's own button stops it
+    if(S.mode!=='idle' && kind===S.mode){ setMode('idle'); setMessage(niceName()+' stopped.'); return; }
+    // 2) tapping a panel's button while that panel is open closes it (back to the pet)
+    var openK = overlayEl.classList.contains('open') ? ovKind : null;
+    var closes = (kind==='explore' && (openK==='biomes'||openK==='stages')) ||
+                 (kind==='train' && openK==='train') || (kind==='rest' && openK==='rest') ||
+                 (kind==='spells' && openK==='spells') || (kind==='status' && openK==='status') ||
+                 (kind==='inventory' && openK==='inventory');
+    if(closes){ closeOverlay(); return; }
+    // 3) lock: can't start a different sustained action while one is running
+    if(S.mode && S.mode!=='idle' && (kind==='rest'||kind==='train')){
       setMessage('tap '+(S.mode==='rest'?'Rest':'Train')+' again to stop first'); return;
     }
+    // 4) open the relevant panel / action
     if(kind==='rest'){ openRest(); return; }
     if(kind==='train'){ openSub('train'); return; }
     if(kind==='explore'){
       if(S.stage==='baby'){ setMessage('too young to explore \u2014 grow up first'); return; }
       openBiomes(); return;
     }
+    if(kind==='spells'){ openSpells(); return; }
+    if(kind==='status'){ openStatus(); return; }
+    if(kind==='inventory'){ openInventory(); return; }
     if(kind==='heal'){
       if(S.critical && S.critical.kind==='sick'){ resolveCritical(); return; }
       s.health=Math.min(maxHP(),s.health+20); s.energy=clamp((s.energy||0)+12);
@@ -1422,27 +1455,29 @@
     var b=document.createElement('button'); b.className='pixbtn'+(cls?' '+cls:''); b.textContent=label;
     b.addEventListener('click',onclick); return b;
   }
-  function openSub(mode){
-    subMode=mode; subPicker.innerHTML='';
+  function ovActionRow(label, sub, onclick){
+    var row=document.createElement('div'); row.className='ovrow';
+    row.innerHTML='<div class="ovdot"></div><div class="ovtext"><div class="ovname">'+label+'</div><div class="ovsub">'+sub+'</div></div>';
+    row.addEventListener('click', onclick); return row;
+  }
+  function openSub(mode){   // train picker, shown in the in-screen overlay
     var pool = mode==='train'?TRAIN:PLAY;
+    openOverlay(mode==='train'?'TRAIN \u2014 PICK A DRILL':'PLAY','train');
     pool.forEach(function(a){
-      subPicker.appendChild(makeBtn(a.label+'  '+RPG_NAME[a.stat],'',function(){
-        setMode(mode, a.id);
+      ovBody.appendChild(ovActionRow(a.label, 'raises '+RPG_NAME[a.stat], function(){
+        setMode(mode, a.id); closeOverlay();
         setMessage((mode==='train'?'training: ':'playing: ')+a.label);
         logEvent(niceName()+' is now '+(mode==='train'?'training ':'playing ')+a.label.toUpperCase()+'.');
       }));
     });
-    subPicker.appendChild(makeBtn('\u2715 back','cancel',function(){ closeSub(); }));
-    updateControls();
+    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='pick a drill \u00b7 tap Train again to stop'; ovBody.appendChild(hint);
   }
-  function closeSub(){ subMode=null; if(subPicker) subPicker.innerHTML=''; updateControls(); }
-
+  function closeSub(){ subMode=null; if(subPicker) subPicker.innerHTML=''; }
   function openRest(){
-    subMode='rest'; subPicker.innerHTML='';
-    subPicker.appendChild(makeBtn('Heal HP  END','',function(){ setMode('rest','heal'); setMessage(niceName()+' rests to heal.'); logEvent(niceName()+' is healing up (END).'); }));
-    subPicker.appendChild(makeBtn('Energy  SPI','',function(){ setMode('rest','energy'); setMessage(niceName()+' rests for energy.'); logEvent(niceName()+' is recovering energy (SPI).'); }));
-    subPicker.appendChild(makeBtn('\u2715 back','cancel',function(){ closeSub(); }));
-    updateControls();
+    openOverlay('REST','rest');
+    ovBody.appendChild(ovActionRow('Heal HP','recover health (END)', function(){ setMode('rest','heal'); closeOverlay(); setMessage(niceName()+' rests to heal.'); logEvent(niceName()+' is healing up (END).'); }));
+    ovBody.appendChild(ovActionRow('Recover Energy','restore energy (SPI)', function(){ setMode('rest','energy'); closeOverlay(); setMessage(niceName()+' rests for energy.'); logEvent(niceName()+' is recovering energy (SPI).'); }));
+    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='tap Rest again to stop'; ovBody.appendChild(hint);
   }
   function frontierBiome(){ return Math.min(N_BIOMES-1, Math.floor((S.stageProg||0)/N_STAGES)); }
 
@@ -1860,24 +1895,61 @@
     }
   }
 
+  // dramatic combat FX (boss specials) drawn over the scene
+  function drawFx(f, petX, eneX, gy){
+    var fx=f.fx; if(!fx) return; var p=1-Math.max(0,fx.t)/fx.dur;   // 0..1 progress
+    pctx.fillStyle='#fff';
+    if(fx.type==='laser'){
+      // charging dot -> beam sweeping from boss to pet
+      var by=gy-22;
+      if(p<0.4){ var r=2+Math.sin(animT*0.05)*2; pctx.fillRect(Math.round(eneX-r), Math.round(by-r), r*2, r*2); }
+      else { var w=(eneX-petX); var th=Math.max(2, 10*(1-Math.abs(p-0.7)/0.3));
+        if(Math.floor(animT/40)%2===0){ pctx.fillRect(Math.round(petX), Math.round(by-th/2), Math.round(w), th); }
+        // muzzle flare
+        for(var s=0;s<5;s++){ var a=Math.random()*6.28, d=Math.random()*10; pctx.fillRect(Math.round(petX+Math.cos(a)*d), Math.round(by+Math.sin(a)*d),2,2); } }
+    } else if(fx.type==='meteor'){
+      // a big rock falls from the top onto the pet, then impact burst
+      if(p<0.7){ var my=(-30)+(gy-30)*(p/0.7), mr=6+p*4;
+        for(var yy=-mr;yy<mr;yy++) for(var xx=-mr;xx<mr;xx++){ if(xx*xx+yy*yy<=mr*mr) pctx.fillRect(Math.round(petX+xx),Math.round(my+yy),1,1); }
+        // trail
+        pctx.globalAlpha=0.4; pctx.fillRect(Math.round(petX-2), Math.round(my-mr-10), 4, 10); pctx.globalAlpha=1;
+      } else { var br=(p-0.7)/0.3*30;   // shockwave ring
+        pctx.globalAlpha=1-(p-0.7)/0.3;
+        for(var k=0;k<14;k++){ var ang=k/14*6.28; pctx.fillRect(Math.round(petX+Math.cos(ang)*br), Math.round(gy-3+Math.sin(ang)*br*0.4),2,2); }
+        pctx.globalAlpha=1; }
+    } else if(fx.type==='quake'){
+      // rising debris around the pet
+      for(var q=0;q<10;q++){ var qx=petX-20+q*4, qh=Math.abs(Math.sin(p*3.14+q))*14; pctx.fillRect(Math.round(qx), Math.round(gy-qh), 2, qh); }
+    } else if(fx.type==='nova'){
+      var nr=p*46; pctx.globalAlpha=1-p; pctx.lineWidth=2; pctx.strokeStyle='#fff';
+      pctx.beginPath(); pctx.arc(eneX, gy-16, nr, 0, 6.28); pctx.stroke(); pctx.globalAlpha=1;
+    }
+  }
+
   function drawFight(){
     var f=S.fight; if(!f) return; var e=f.enemy;
     var approaching = f.state==='approach';
     var scroll = (f.travelX||0)*0.5 + (f.scroll||0)*0.015;
     drawBackdrop(f.biome, scroll);
-    var lunge=Math.max(0,f.lunge||0);
+    var gy=Math.round(ch*0.82);
+    var lunge=Math.max(0,f.lunge||0);                 // pet lunge (forward)
+    var eLunge=Math.max(0,f.eneLunge||0);             // enemy lunge (forward, bounces back)
+    var shake = (f.fx && f.fx.type==='quake') ? Math.sin(animT*0.5)*3 : 0;
     var enter = approaching ? (1-Math.pow(1-Math.min(1,f.eneEnter||0),2)) : 1;   // easeOut walk-on
-    var petX=cw*0.27 + lunge*12;
-    var eneX=cw*0.74 + (1-enter)*(cw*0.62);   // slides in from the right edge
+    var petX=cw*0.30 + lunge*22;                       // bigger, snappier lunge
+    var eneX=cw*0.70 - eLunge*26 + (1-enter)*(cw*0.55);// enemy charges left toward pet, then bounces
     var petFlash=f.flashPet>0, eneFlash=f.flashEne>0;
     var bob=Math.sin(animT*0.02)*2;
-    var hop = approaching ? -Math.abs(Math.sin(animT*0.022))*9 : bob;   // hopping while traveling
+    var hop = approaching ? -Math.abs(Math.sin(animT*0.022))*9 : bob;
     var petRows=SPR[S.form]||SPR.springer, eneRows=ENE_SPR[e.sprite]||ENE_SPR.slime0;
     var blinkP=petFlash && (Math.floor(animT/55)%2===0), blinkE=eneFlash && (Math.floor(animT/55)%2===0);
-    // bosses loom large; the final tyrant largest
-    var eScale = isFinalEncounter(f.biome,f.stage,f.battleIdx) ? 1.9 : (e.boss ? 1.6 : 1.0);
-    if(!blinkP) drawCreature(petRows, petX, hop-(petFlash?3:0), 1.0, false);
+    // creatures ~50% smaller than before; bosses still loom
+    var eScale = isFinalEncounter(f.biome,f.stage,f.battleIdx) ? 1.0 : (e.boss ? 0.82 : 0.5);
+    pctx.save(); if(shake) pctx.translate(shake,0);
+    if(!blinkP) drawCreature(petRows, petX, hop-(petFlash?3:0), 0.5, false);
     if(enter>0.02 && !blinkE) drawCreature(eneRows, eneX, -bob-(eneFlash?3:0), eScale, true);
+    drawFx(f, petX, eneX, gy);
+    pctx.restore();
     // header
     pctx.fillStyle='#fff'; pctx.textAlign='center'; pctx.font='8px "Pixel",monospace';
     pctx.fillText('STAGE '+(f.stage+1)+'  \u00b7  '+(f.battleIdx+1)+'/'+f.battlesTotal, cw*0.5, 11);
@@ -1887,22 +1959,15 @@
     drawBar(cw*0.06, 38, cw*0.37, (S.mana||0)/maxMana(), true);
     if(!approaching) drawBar(cw*0.57, 28, cw*0.37, Math.max(0,e.hp)/e.maxHp);
     if(f.shield>0){ pctx.font='7px "Pixel",monospace'; pctx.fillText('\u25C7 shield x'+f.shield, cw*0.245, 52); }
-    // combat log
-    pctx.textAlign='left'; pctx.font='7px "Pixel",monospace';
-    var lines=f.log.slice(-5), ly=ch-8-(lines.length-1)*9;
-    for(var i=0;i<lines.length;i++){
-      pctx.fillStyle='rgba(255,255,255,'+(0.35+0.65*(i+1)/lines.length).toFixed(2)+')';
-      pctx.fillText(lines[i], cw*0.06, ly+i*9);
-    }
-    // banners
+    // banners (the running log lives in the LOG section below, not on the art)
     if(approaching){
       pctx.fillStyle='#fff'; pctx.font='9px "Pixel",monospace'; pctx.textAlign='center';
-      pctx.fillText(e.boss?'\u2605 A BOSS APPROACHES':'\u2192 traveling\u2026', cw*0.5, ch*0.46);
+      pctx.fillText(e.boss?'\u2605 A BOSS APPROACHES':'\u2192 traveling\u2026', cw*0.5, ch*0.5);
     } else if(f.state==='won'||f.state==='lost'||f.state==='interlude'){
-      pctx.fillStyle='rgba(0,0,0,0.55)'; pctx.fillRect(0, ch*0.42, cw, 24);
+      pctx.fillStyle='rgba(0,0,0,0.55)'; pctx.fillRect(0, ch*0.44, cw, 24);
       pctx.fillStyle='#fff'; pctx.font='11px "Pixel",monospace'; pctx.textAlign='center';
       var txt = f.state==='won'?'STAGE CLEAR!' : f.state==='lost'?(f.died?'DEFEATED':'RETREAT!') : 'ONWARD\u2026';
-      pctx.fillText(txt, cw*0.5, ch*0.42+17);
+      pctx.fillText(txt, cw*0.5, ch*0.44+17);
     }
     pctx.textAlign='left';
   }
@@ -1991,7 +2056,7 @@
     pctx.globalAlpha=1; pctx.restore();
   }
 
-  var animT=0, last=performance.now(), simAcc=0;
+  var animT=0, last=performance.now(), simAcc=0, lastLogSig='';
   // pet roaming state (cosmetic, not persisted)
   var walkX=null, walkDir=1, hopTimer=0, hopping=false, hopPhase=0, trudgePause=0;
   function frame(now){
@@ -2003,6 +2068,10 @@
     if(!S.dead && S.fight){
       fightTick(dtMs);
       checkCritical();
+      // live combat feed in the LOG section + vitals; only rebuild the feed when it changes
+      var sig = S.fight ? (S.fight.log.length+'|'+(S.fight.log[S.fight.log.length-1]||'')) : '';
+      if(sig!==lastLogSig){ lastLogSig=sig; renderLog(); }
+      setBars();
     }
     // AGE clock (steady) + ACTION timer (per-action). egg ages via simulate above.
     else if(!S.dead && S.stage!=='egg'){
