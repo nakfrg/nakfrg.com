@@ -70,11 +70,31 @@
 
   #actions, #foodPicker { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin: 6px 0 6px; }
   #foodPicker { display:none; grid-template-columns: 1fr 1fr auto; }
-  #healWrap { margin:6px 0; display:none; }
-  #healWrap .pixbtn { width:100%; }
+  #alertWrap { margin:8px 0 2px; display:none; text-align:center; }
+  #alertWrap .pixbtn { width:100%; }
+  #alertMsg { font-size:9px; letter-spacing:1px; color:#fff; margin-bottom:9px; min-height:11px; text-transform:uppercase; }
+  #alertTime { font-size:8px; letter-spacing:1px; color:var(--dim); margin-top:8px; min-height:10px; }
+  #alertWrap.crit #alertMsg { animation: blinkfill .55s steps(2) infinite; }
+  #alertWrap.crit #alertTime { color:#fff; }
 
   #msg  { min-height:14px; text-align:center; font-size:11px; color:var(--dim); margin:14px 0 4px; }
   #hint { text-align:center; font-size:10px; line-height:1.6; color:var(--faint); margin-bottom:14px; min-height:30px; }
+
+  #logWrap { margin:6px 0 16px; }
+  .logTitle { font-size:7px; letter-spacing:2px; color:var(--dim); margin-bottom:7px; padding-left:2px; }
+  #eventLog { height:132px; overflow-y:auto; background:#000; box-shadow:0 0 0 3px var(--faint);
+    padding:8px 9px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:10px; line-height:1.5; }
+  .logRow { display:flex; gap:8px; padding:2px 0; color:rgba(255,255,255,0.78); }
+  .logRow .logT { color:var(--faint); flex:0 0 auto; }
+  .logRow.good .logX { color:#fff; }
+  .logRow.bad  { color:rgba(255,255,255,0.95); }
+  .logRow.crit .logX { color:#fff; font-weight:bold; text-shadow:0 0 6px #fff; }
+  .logRow.evo  .logX { color:#fff; }
+  .logEmpty { color:var(--faint); font-style:normal; }
+  #eventLog::-webkit-scrollbar { width:8px; }
+  #eventLog::-webkit-scrollbar-track { background:rgba(255,255,255,0.04); }
+  #eventLog::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.22); }
 
   #footer { display:flex; justify-content:center; gap:18px; align-items:center; margin-top:4px; }
   .linkbtn { background:none; border:none; color:var(--dim); cursor:pointer; padding:6px;
@@ -127,12 +147,19 @@
       <button class="pixbtn" data-food="cancel">X</button>
     </div>
 
-    <div id="healWrap">
-      <button class="pixbtn alert" data-act="heal">Heal</button>
+    <div id="alertWrap">
+      <div id="alertMsg" class="pix"></div>
+      <button class="pixbtn alert" id="alertBtn">Heal</button>
+      <div id="alertTime" class="pix"></div>
     </div>
 
     <div id="msg"></div>
     <div id="hint"></div>
+
+    <div id="logWrap">
+      <div class="logTitle pix">EVENT LOG</div>
+      <div id="eventLog"></div>
+    </div>
 
     <div id="footer">
       <button class="linkbtn" id="newBtn">&#8634; new padpole</button>
@@ -163,9 +190,222 @@
     springer:"SPRINGER",dartling:"DARTLING",bullhorn:"BULLHORN",toadsage:"TOADSAGE",canopy:"CANOPY",lotus:"LOTUS" };
 
   // food + poop pixel art
-  var MEAT = ["  #####  "," ####### ","#########","#########"," ####### ","   ###   ","   ###   "];
+  // big bone-in steak: round knuckle bone juts out the left, meaty body on the right
+  var MEAT = [
+    "                  ",
+    "       #######    ",
+    "     ###########  ",
+    "    ############# ",
+    "   ############## ",
+    " #  ############# ",
+    "### ############# ",
+    "### ############# ",
+    " #  ############# ",
+    "   ############## ",
+    "    ############# ",
+    "     ###########  ",
+    "       #######    "];
   var VEG  = ["  #   #  "," ### ### ","#########"," ####### ","   ###   ","   ###   ","   ###   "];
-  var POOP = ["  ##  "," #  # "," #### ","######"];
+  // big unmistakable swirly poop (soft-serve silhouette, pointed tip)
+  var POOP = [
+    "    ##    ",
+    "   ####   ",
+    "   ####   ",
+    "  ######  ",
+    "  ######  ",
+    " ######## ",
+    " ######## ",
+    "##########",
+    "##########",
+    " ######## "];
+  // tombstone (rest in peace, lil froggi)
+  var GRAVE = [
+    "     ####     ",
+    "   ########   ",
+    "  ##########  ",
+    " ############ ",
+    " ############ ",
+    " #####  ##### ",
+    " ###      ### ",
+    " ###      ### ",
+    " #####  ##### ",
+    " #####  ##### ",
+    " #####  ##### ",
+    " ############ ",
+    "##############"];
+
+  // ── EVENT POOLS (~156 total) ──  {n} = pet's name
+  // 1) funny idle activities (no stat effect) shown in the log every ~2 min
+  var IDLE = [
+    "{n} is staring intensely at a fly.",
+    "{n} did a little hop for no reason.",
+    "{n} is pretending to be a rock.",
+    "{n} blew a tiny bubble. Pop.",
+    "{n} licked its own eyeball. Classic frog.",
+    "{n} is judging your life choices.",
+    "{n} found a leaf and is very proud.",
+    "{n} is practicing its ribbit. Needs work.",
+    "{n} attempted a backflip. Mostly succeeded.",
+    "{n} is napping with one eye open.",
+    "{n} sneezed and surprised itself.",
+    "{n} is contemplating the void.",
+    "{n} did a slow, satisfying blink.",
+    "{n} is doing tiny froggy push-ups.",
+    "{n} tried to eat a pixel. It failed.",
+    "{n} is humming a swamp tune.",
+    "{n} caught a bug and immediately regretted it.",
+    "{n} is sunbathing under an imaginary sun.",
+    "{n} hiccuped three times in a row.",
+    "{n} is rearranging its lily pad furniture.",
+    "{n} stared at you until it got weird.",
+    "{n} is writing a memoir nobody asked for.",
+    "{n} discovered its reflection. Mind blown.",
+    "{n} is plotting something. You can tell.",
+    "{n} did jazz hands. It has no hands.",
+    "{n} is being dramatically still.",
+    "{n} burped the alphabet up to D.",
+    "{n} is meditating on the meaning of mud.",
+    "{n} tried to high-five a passing beetle.",
+    "{n} is wiggling for no apparent reason.",
+    "{n} found a shiny pebble. New best friend.",
+    "{n} is practicing looking adorable.",
+    "{n} yawned so wide it scared a moth.",
+    "{n} is counting the stars. Reached four.",
+    "{n} did a smug little wiggle.",
+    "{n} is pretending the floor is lava.",
+    "{n} whispered a secret to a snail.",
+    "{n} is auditioning for a nature documentary.",
+    "{n} tried to wink but blinked instead.",
+    "{n} is doing breathing exercises. Loudly.",
+    "{n} found the comfiest spot. It's the same spot.",
+    "{n} is composing a ballad about flies.",
+    "{n} attempted telekinesis on a leaf.",
+    "{n} is being suspiciously quiet.",
+    "{n} did a happy little shimmy.",
+    "{n} is daydreaming about a bigger pond.",
+    "{n} stretched and made an old-man noise.",
+    "{n} is staring at the wall like it owes money.",
+    "{n} practiced its menacing face. Adorable.",
+    "{n} is rolling around for the fun of it.",
+    "{n} found lint and declared it treasure.",
+    "{n} is trying to remember why it came here.",
+    "{n} did a tiny victory dance over nothing.",
+    "{n} is pondering whether flies have feelings.",
+    "{n} licked the screen from the inside. Ew.",
+    "{n} is rehearsing an acceptance speech.",
+    "{n} flopped over dramatically. It's fine.",
+    "{n} is pretending to swim on dry land.",
+    "{n} gave a passing cloud a thumbs up.",
+    "{n} is collecting dewdrops in a tiny pile.",
+    "{n} did a sick beatbox. For one second.",
+    "{n} is having an existential moment.",
+    "{n} found its own foot. Riveting.",
+    "{n} is napping standing up. Talented.",
+    "{n} tried to look busy when you logged in.",
+    "{n} is whispering 'ribbit' like a threat.",
+    "{n} organized its thoughts. There were two.",
+    "{n} is vibing. Just vibing.",
+    "{n} attempted a cartwheel. Physics said no.",
+    "{n} is gazing wistfully into the middle distance.",
+    "{n} blinked in morse code. Said nothing.",
+    "{n} is doing yoga. The pose is 'puddle'.",
+    "{n} found a stick. Today is a good day.",
+    "{n} is practicing patience. Failing fast."
+  ];
+
+  // 2) minor random events that nudge stats (good / bad / chaotic)
+  var STAT_EVENTS = [
+    { msg:"{n} found a fat juicy fly!", full:15, happy:5 },
+    { msg:"{n} caught a tasty moth midair.", full:12, happy:8 },
+    { msg:"A warm sunbeam appeared. Cozy!", energy:12, happy:8 },
+    { msg:"{n} took a refreshing dip.", clean:18, happy:6 },
+    { msg:"{n} had a wonderful dream.", energy:15, happy:10 },
+    { msg:"A gentle rain washed {n} clean.", clean:20 },
+    { msg:"{n} did a great workout.", energy:8, happy:8, full:-6 },
+    { msg:"{n} discovered a berry stash.", full:18, happy:6 },
+    { msg:"A friendly bird sang to {n}.", happy:14 },
+    { msg:"{n} found a perfect lily pad to lounge on.", energy:10, happy:8 },
+    { msg:"{n} ate a crunchy beetle. Yum.", full:14 },
+    { msg:"{n} got a surprise belly rub.", happy:16 },
+    { msg:"{n} won a staring contest with a toad.", happy:12 },
+    { msg:"{n} found a cool mud spa.", clean:10, happy:10 },
+    { msg:"{n} snagged a dragonfly. Feast!", full:16, happy:6 },
+    { msg:"Cool breeze. {n} feels refreshed.", energy:10, clean:6 },
+    { msg:"{n} napped in a flower. Adorable and rested.", energy:16 },
+    { msg:"{n} found loose change. Rich (in flies) now.", happy:10 },
+    { msg:"{n} aced a tiny puzzle. Smart frog!", happy:12, energy:-4 },
+    { msg:"{n} got fan mail from a tadpole.", happy:15 },
+    { msg:"{n} ate a questionable berry.", full:-6, clean:-8, happy:-6 },
+    { msg:"{n} slipped in the mud.", clean:-14, happy:-6 },
+    { msg:"{n} stubbed a toe on a rock.", happy:-10, energy:-4 },
+    { msg:"A rude gnat buzzed {n} all afternoon.", happy:-12 },
+    { msg:"{n} had a nightmare about herons.", energy:-12, happy:-8 },
+    { msg:"{n} sat in something gross.", clean:-18 },
+    { msg:"{n} chased its tail and got dizzy.", energy:-12, happy:-4 },
+    { msg:"{n} lost a staring contest. Humiliating.", happy:-12 },
+    { msg:"{n} got rained on. Grumpy and damp.", happy:-8, energy:-6 },
+    { msg:"{n} overate and feels sluggish.", energy:-10, happy:-4 },
+    { msg:"{n} bit a sour bug. Yuck.", full:-8, happy:-6 },
+    { msg:"{n} tripped over its own foot.", happy:-8, energy:-6 },
+    { msg:"Mosquitoes feasted on {n}.", happy:-10, clean:-6 },
+    { msg:"{n} stayed up late doom-scrolling.", energy:-16 },
+    { msg:"{n} got stage fright mid-ribbit.", happy:-10 },
+    { msg:"{n} rolled in a dust patch.", clean:-16 },
+    { msg:"{n} got the hiccups for an hour.", energy:-8, happy:-6 },
+    { msg:"A loud noise startled {n}.", happy:-10, energy:-6 },
+    { msg:"{n} forgot to eat. Tummy rumbles.", full:-12 },
+    { msg:"{n} sulked about nothing in particular.", happy:-12 },
+    { msg:"{n} found mystery jam. Worth it? Unclear.", full:10, clean:-10 },
+    { msg:"{n} traded energy for pure joy.", energy:-10, happy:16 },
+    { msg:"{n} ate too fast. Full but hiccuping.", full:16, happy:-6 },
+    { msg:"{n} cannonballed into the pond.", clean:16, energy:-8 },
+    { msg:"{n} pulled an all-nighter inventing things.", happy:12, energy:-16 },
+    { msg:"{n} fought a leaf. The leaf won.", happy:-8, energy:-6 },
+    { msg:"{n} found spicy food. Regret and delight.", full:12, clean:-6, happy:4 },
+    { msg:"{n} did extreme lounging. Pro level.", energy:14, full:-6 },
+    { msg:"{n} licked something it shouldn't. Tingly!", energy:10, happy:-6 },
+    { msg:"{n} found a tiny hat. Confidence +100.", happy:18 }
+  ];
+
+  // 3) sudden illness - give medicine before the timer runs out or {n} dies
+  var SICK_EVENTS = [
+    { msg:"{n} caught the bog flu!", cause:"the bog flu" },
+    { msg:"{n} ate a bad fly and feels awful.", cause:"a very bad fly" },
+    { msg:"{n} has the swamp sniffles.", cause:"the swamp sniffles" },
+    { msg:"{n} turned a worrying shade of green.", cause:"mystery green-itis" },
+    { msg:"{n}'s tummy is doing backflips.", cause:"a rebellious tummy" },
+    { msg:"{n} caught a chill in the night.", cause:"a nasty chill" },
+    { msg:"{n} drank pond scum. Big mistake.", cause:"pond-scum poisoning" },
+    { msg:"{n} broke out in spots! That's new and bad.", cause:"the spotty plague" },
+    { msg:"{n} is running a fever. Hop to it!", cause:"a swamp fever" },
+    { msg:"{n} sneezed itself dizzy.", cause:"the sneezles" },
+    { msg:"{n} ate a glow-mushroom. Glows AND aches.", cause:"glow-mushroom flu" },
+    { msg:"{n} has a frog-throat. Can't ribbit.", cause:"froggy-throat" },
+    { msg:"{n} caught something off a passing toad.", cause:"toad-borne crud" },
+    { msg:"{n} feels green around the gills. Literally.", cause:"the green-gills" },
+    { msg:"{n} is queasy after eating a beetle wrong.", cause:"beetle belly" },
+    { msg:"{n} has the wobbles. Medicine, stat!", cause:"the wobbles" }
+  ];
+
+  // 4) quick-time dangers - tap the button before the timer runs out or {n} dies
+  var QTE_EVENTS = [
+    { msg:"A HERON swoops down!", btn:"DODGE", win:"juked the heron like a champ", cause:"a hungry heron" },
+    { msg:"A snake slithers close!", btn:"HOP", win:"hopped to safety", cause:"a sneaky snake" },
+    { msg:"{n} is choking on a beetle!", btn:"COUGH", win:"coughed it right up", cause:"a stuck beetle" },
+    { msg:"A hawk's shadow looms!", btn:"HIDE", win:"hid just in time", cause:"a swooping hawk" },
+    { msg:"The pond is draining fast!", btn:"SWIM", win:"swam to deeper water", cause:"a drained pond" },
+    { msg:"A kid with a net appears!", btn:"FLEE", win:"escaped the net", cause:"a jar and a curious kid" },
+    { msg:"A boulder is rolling over!", btn:"LEAP", win:"leapt clear", cause:"a rolling boulder" },
+    { msg:"{n} is sinking in quicksand!", btn:"WRIGGLE", win:"wriggled free", cause:"the quicksand" },
+    { msg:"A hungry pike lunges!", btn:"JUMP", win:"jumped out of reach", cause:"a hungry pike" },
+    { msg:"Lightning is about to strike!", btn:"DUCK", win:"ducked the bolt", cause:"a lightning bolt" },
+    { msg:"A lawnmower roars closer!", btn:"BOLT", win:"bolted away", cause:"a lawnmower (rural tragedy)" },
+    { msg:"An owl locks eyes in the dark!", btn:"FREEZE", win:"played dead perfectly", cause:"a night owl" },
+    { msg:"A frog-catcher's hand reaches in!", btn:"SLIP", win:"slipped away, slippery as ever", cause:"a frog-catcher" },
+    { msg:"A wave is about to crash!", btn:"DIVE", win:"dove under it", cause:"a rogue wave" },
+    { msg:"A cat is on the prowl!", btn:"SCRAM", win:"scrammed up a reed", cause:"a curious cat" },
+    { msg:"{n} stopped breathing in its sleep!", btn:"WAKE", win:"woke with a gasp", cause:"forgetting to breathe" }
+  ];
 
   // ── tuning ──
   var BABY_DUR  = 3600;   // 1h: baby -> junior
@@ -181,12 +421,23 @@
 
   function poopInterval(){ return 110 + Math.random()*90; } // ~2-3 min
 
+  // ── events / criticals / death tuning ──
+  var IDLE_EVERY      = 120000;          // funny "what's the pet doing" line every ~2 min (active)
+  var EVENT_EVERY_MIN = 70000;           // random stat/critical event window (active)
+  var EVENT_EVERY_MAX = 130000;
+  var SICK_DEADLINE   = 300000;          // 5 min to give medicine for a critical illness
+  var QTE_DEADLINE    = 18000;           // 18s to react to a quick-time danger
+  var CHRONIC_SICK_DEATH = 1800;         // sim-seconds (~30 min) of unhealed neglect-sickness -> death
+  var LOG_MAX = 40;
+
   // ── DOM ──
   var $ = function(s){ return document.querySelector(s); };
   var petCanvas=$('#pet'), pctx=petCanvas.getContext('2d');
   var stageTag=$('#stageTag'), ageTag=$('#ageTag'), nameTag=$('#nameTag');
   var growthFill=$('#growthFill'), msgEl=$('#msg'), hintEl=$('#hint');
-  var actionsEl=$('#actions'), pickerEl=$('#foodPicker'), healWrap=$('#healWrap');
+  var actionsEl=$('#actions'), pickerEl=$('#foodPicker');
+  var alertWrap=$('#alertWrap'), alertBtn=$('#alertBtn'), alertMsg=$('#alertMsg'), alertTime=$('#alertTime');
+  var logEl=$('#eventLog');
 
   // ── state ──
   function fresh(){
@@ -194,11 +445,15 @@
       stats:{ full:70, happy:70, energy:70, clean:70 },
       age:0, care:{ feed:0, play:0, clean:0, rest:0 }, diet:{ meat:0, veggie:0 },
       poops:[], poopTimer: poopInterval(),
-      sick:false, sickT:0, lastSeen:Date.now(), born:Date.now() };
+      sick:false, sickT:0, dead:false, deadCause:'', critical:null, log:[],
+      lastSeen:Date.now(), born:Date.now() };
   }
   var S = loadSave() || fresh();
   if (!S.diet) S.diet = { meat:0, veggie:0 };
   if (!S.poops) S.poops = [];
+  if (!S.log) S.log = [];
+  if (typeof S.dead === 'undefined') S.dead = false;
+  if (typeof S.critical === 'undefined') S.critical = null;
 
   function loadSave(){
     try { var raw=localStorage.getItem(SAVE_KEY); if(!raw) return null;
@@ -233,6 +488,7 @@
   function spawnPoop(){ if(S.poops.length>=POOP_MAX) return; S.poops.push({ slot:freeSlot(), age:0 }); }
 
   function simulate(dt){
+    if(S.dead) return;
     S.age += dt;
     var st=S.stats;
     var cleanDrain = DECAY.clean*dt + S.poops.length*POOP_DIRTY*dt;
@@ -255,10 +511,19 @@
     // sickness
     var anyZero = st.full<=0||st.happy<=0||st.energy<=0||st.clean<=0;
     var dirty = poopOverdue();
-    if(anyZero||dirty){ S.sick=true; S.sickT+=dt; }
+    var critSick = S.critical && S.critical.kind==='sick';
+    if(anyZero||dirty||critSick){ S.sick=true; if(anyZero||dirty) S.sickT+=dt; }
     else if(S.sick && st.full>25&&st.happy>25&&st.energy>25&&st.clean>25){ S.sick=false; S.sickT=0; }
     if(!S.sick) S.sickT=Math.max(0,S.sickT-dt*0.5);
-    if(S.sickT>=NEGLECT_MAX){ runAway(); return; }
+
+    // death from long, untreated neglect-sickness
+    if(S.sickT>=CHRONIC_SICK_DEATH){
+      die(dirty ? 'living in its own filth too long' : 'severe, untreated neglect');
+      return;
+    }
+    // death from an ignored critical (medicine / quick-time) deadline
+    checkCritical();
+    if(S.dead) return;
 
     checkEvolve();
   }
@@ -282,9 +547,124 @@
   function evolveTo(stage,form){
     S.stage=stage; S.form=form; flashT=22;
     blip(660,0.12,'triangle',0.07); setTimeout(function(){ blip(880,0.14,'triangle',0.07); },130);
-    setMessage(FORM_NAMES[form]+'! it evolved'); save();
+    setMessage(FORM_NAMES[form]+'! it evolved'); logEvent('\u2605 evolved into '+niceName()+'!'); save();
   }
-  function runAway(){ setMessage('your frog hopped back to the pond...'); S=fresh(); save(); }
+  // ── death ──
+  function die(cause){
+    if(S.dead) return;
+    S.dead=true; S.deadCause=cause||'unknown causes'; S.critical=null; S.sick=false;
+    showPicker(false);
+    setMessage(niceName()+' has died');
+    logEvent('\u2020 '+niceName()+' has died \u2014 '+S.deadCause+'.');
+    blip(200,0.3,'sawtooth',0.07); setTimeout(function(){ blip(110,0.5,'sawtooth',0.07); },260);
+    updateAlert(); render(); save();
+  }
+
+  // ── name helpers ──
+  function niceName(){ var s=FORM_NAMES[S.form]||'Froggi'; return s.charAt(0)+s.slice(1).toLowerCase(); }
+  function fillName(t){ return t.replace(/\{n\}/g, niceName()); }
+
+  // ── event log ──
+  function clockNow(){ var d=new Date(); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+  function escHtml(s){ return String(s).replace(/[&<>]/g,function(c){ return c==='&'?'&amp;':c==='<'?'&lt;':'&gt;'; }); }
+  function logEvent(msg){
+    if(!S.log) S.log=[];
+    S.log.unshift({ t:clockNow(), m:msg });
+    if(S.log.length>LOG_MAX) S.log.length=LOG_MAX;
+    renderLog();
+  }
+  function renderLog(){
+    if(!logEl) return;
+    if(!S.log||!S.log.length){ logEl.innerHTML='<div class="logRow logEmpty">...all quiet for now...</div>'; return; }
+    var h='';
+    for(var i=0;i<S.log.length;i++) h+='<div class="logRow"><span class="logT">'+S.log[i].t+'</span>'+escHtml(S.log[i].m)+'</div>';
+    logEl.innerHTML=h;
+  }
+
+  // ── alert / critical UI ──
+  function updateAlert(){
+    if(!alertWrap) return;
+    if(S.dead){ alertWrap.style.display='none'; alertWrap.classList.remove('crit'); return; }
+    if(S.critical){
+      alertWrap.style.display='block'; alertWrap.classList.add('crit');
+      if(S.critical.kind==='sick'){ alertMsg.textContent='SICK \u2014 give medicine, fast!'; alertBtn.textContent='\u2695 give medicine'; }
+      else { alertMsg.textContent=(S.critical.flash||'QUICK!'); alertBtn.textContent='\u25B6 '+S.critical.btn; }
+    } else if(S.sick){
+      alertWrap.style.display='block'; alertWrap.classList.remove('crit');
+      alertMsg.textContent='feeling unwell'; alertBtn.textContent='\u2695 heal'; alertTime.textContent='';
+    } else {
+      alertWrap.style.display='none'; alertWrap.classList.remove('crit'); alertTime.textContent='';
+    }
+  }
+
+  function resolveCritical(){
+    if(!S.critical) return;
+    var c=S.critical, s=S.stats;
+    if(c.kind==='sick'){
+      S.sick=false; S.sickT=0;
+      s.full=clamp(s.full+10); s.happy=clamp(s.happy+10); s.energy=clamp(s.energy+10); s.clean=clamp(s.clean+12);
+      react={type:'clean',t:30};
+      setMessage('phew - the medicine worked'); logEvent('\u2713 '+niceName()+' recovered from '+c.cause+'.');
+      blip(520,0.12,'sine');
+    } else {
+      s.happy=clamp(s.happy+12);
+      react={type:'play',t:30};
+      setMessage(fillName(c.win)+'!'); logEvent('\u2713 '+niceName()+' '+fillName(c.win)+'.');
+      blip(740,0.06); setTimeout(function(){ blip(960,0.08); },90);
+    }
+    S.critical=null; updateAlert(); save();
+  }
+
+  function checkCritical(){
+    if(S.dead||!S.critical) return;
+    if(Date.now()>S.critical.deadline) die(S.critical.cause);
+  }
+
+  // ── random events ──
+  function rand(a,b){ return a+Math.random()*(b-a); }
+
+  function applyStatEvent(e){
+    var s=S.stats, net=0;
+    if(e.full){ s.full=clamp(s.full+e.full); net+=e.full; }
+    if(e.happy){ s.happy=clamp(s.happy+e.happy); net+=e.happy; }
+    if(e.energy){ s.energy=clamp(s.energy+e.energy); net+=e.energy; }
+    if(e.clean){ s.clean=clamp(s.clean+e.clean); net+=e.clean; }
+    var m=fillName(e.msg); setMessage(m); logEvent(m);
+    blip(net>=0?500:200,0.06,'triangle'); save();
+  }
+
+  function startSickEvent(){
+    var e=SICK_EVENTS[(Math.random()*SICK_EVENTS.length)|0];
+    S.sick=true;
+    S.critical={ kind:'sick', cause:e.cause, deadline:Date.now()+SICK_DEADLINE };
+    var m=fillName(e.msg); setMessage(m); logEvent('\u26A0 '+m);
+    blip(160,0.2,'sawtooth',0.07); flashT=22; updateAlert(); save();
+  }
+
+  function startQTE(){
+    var e=QTE_EVENTS[(Math.random()*QTE_EVENTS.length)|0];
+    S.critical={ kind:'qte', btn:e.btn, win:e.win, cause:e.cause, flash:fillName(e.msg), deadline:Date.now()+QTE_DEADLINE };
+    var m=fillName(e.msg); setMessage(m); logEvent('\u26A0 '+m+' \u2014 TAP '+e.btn);
+    blip(900,0.08,'square',0.08); setTimeout(function(){ blip(900,0.08,'square',0.08); },150);
+    flashT=22; updateAlert(); save();
+  }
+
+  function fireRandomEvent(){
+    if(S.dead||S.critical||eating||wash) return;
+    var r=Math.random();
+    if(S.age>60 && r<0.13){ startSickEvent(); return; }
+    if(S.age>60 && r<0.24){ startQTE(); return; }
+    applyStatEvent(STAT_EVENTS[(Math.random()*STAT_EVENTS.length)|0]);
+  }
+
+  function idleActivity(){
+    if(S.dead||S.critical) return;
+    logEvent(fillName(IDLE[(Math.random()*IDLE.length)|0]));
+  }
+
+  var idleAcc=0, eventAcc=0;
+  var nextEvent = EVENT_EVERY_MIN + Math.random()*(EVENT_EVERY_MAX-EVENT_EVERY_MIN);
+  function resetEventTimers(){ idleAcc=0; eventAcc=0; nextEvent=EVENT_EVERY_MIN+Math.random()*(EVENT_EVERY_MAX-EVENT_EVERY_MIN); }
 
   // ── care actions ──
   var react=null;          // transient anim state
@@ -304,28 +684,36 @@
       // digestion: a poop comes sooner
       S.poopTimer = Math.min(S.poopTimer, 30 + Math.random()*40);
       setMessage(eating.type==='meat' ? 'chomp - tasty meat' : 'crunch - fresh greens');
+      logEvent(niceName()+(eating.type==='meat' ? ' devoured a bone-in steak.' : ' munched some fresh greens.'));
       eating=null; save();
     }
   }
 
   function act(kind){
+    if(S.dead) return;
     if(actx && actx.state==='suspended') actx.resume();
     var s=S.stats;
     if(kind==='feed'){ showPicker(true); return; }
     if(kind==='heal'){
+      if(S.critical && S.critical.kind==='sick'){ resolveCritical(); return; }
       s.full=clamp(s.full+12); s.happy=clamp(s.happy+12); s.energy=clamp(s.energy+12); s.clean=clamp(s.clean+15);
-      react={type:'clean',t:30}; blip(520,0.1,'sine'); setMessage('feeling a little better'); save(); return;
+      S.sickT=Math.max(0,S.sickT-180);
+      react={type:'clean',t:30}; blip(520,0.1,'sine'); setMessage('feeling a little better');
+      logEvent(niceName()+' took some medicine.'); updateAlert(); save(); return;
     }
     if(kind==='play'){
       if(s.energy<8){ react={type:'tired',t:30}; setMessage('too sleepy - rest first'); blip(180,0.12,'sawtooth'); return; }
       s.happy=clamp(s.happy+26); s.energy=clamp(s.energy-14); s.full=clamp(s.full-8);
-      S.care.play++; react={type:'play',t:50}; blip(620,0.05); setMessage('hop hop! so happy'); save();
+      S.care.play++; react={type:'play',t:50}; blip(620,0.05); setMessage('hop hop! so happy');
+      logEvent('you played with '+niceName()+'. Hop hop!'); save();
     } else if(kind==='clean'){
       startWash(); s.clean=clamp(s.clean+34); s.happy=clamp(s.happy+4);
-      S.care.clean++; blip(700,0.05,'sine'); setMessage('splish - scrubbing the screen'); save();
+      S.care.clean++; blip(700,0.05,'sine'); setMessage('splish - scrubbing the screen');
+      logEvent('you cleaned up after '+niceName()+'.'); save();
     } else if(kind==='rest'){
       s.energy=clamp(s.energy+30); s.happy=clamp(s.happy+2);
-      S.care.rest++; react={type:'rest',t:70}; blip(300,0.12,'sine'); setMessage('zzz... recharged'); save();
+      S.care.rest++; react={type:'rest',t:70}; blip(300,0.12,'sine'); setMessage('zzz... recharged');
+      logEvent(niceName()+' had a good rest. Zzz.'); save();
     }
   }
 
@@ -346,9 +734,17 @@
       if(f==='cancel') return; startEat(f);
     });
   });
+  alertBtn.addEventListener('click',function(){
+    if(S.dead) return;
+    if(actx && actx.state==='suspended') actx.resume();
+    if(S.critical){ resolveCritical(); }
+    else if(S.sick){ act('heal'); }
+  });
   $('#newBtn').addEventListener('click',function(){
     if(confirm('Start over with a fresh padpole? Your current frog is lost.')){
-      S=fresh(); save(); showPicker(false); setMessage('a new padpole appears'); }
+      S=fresh(); resetEventTimers(); save(); showPicker(false);
+      setMessage('a new padpole appears'); logEvent('a fresh padpole hatched. hello!');
+      updateAlert(); render(); }
   });
 
   // ── wash animation ──
@@ -391,12 +787,20 @@
   };
 
   function render(){
+    if(S.dead){
+      stageTag.textContent='GONE';
+      ageTag.textContent=fmtAge(S.age);
+      nameTag.textContent='RIP '+niceName();
+      hintEl.textContent='your frog has passed on ('+S.deadCause+"). press 'new padpole' below to hatch another.";
+      actionsEl.style.display='none'; pickerEl.style.display='none';
+      updateAlert(); setBars(); renderLog(); return;
+    }
+    actionsEl.style.display='grid';
     stageTag.textContent = S.stage.toUpperCase() + (S.sick?' SICK':'');
     ageTag.textContent = fmtAge(S.age);
     nameTag.textContent = FORM_NAMES[S.form];
     hintEl.textContent = HINTS[S.form]||'';
-    healWrap.style.display = S.sick ? 'block' : 'none';
-    setBars();
+    updateAlert(); setBars(); renderLog();
   }
 
   function blitMap(map, ox, oy, unit, eatenFrac){
@@ -420,19 +824,38 @@
     return { ox:ox, oy:oy, w:totalW, h:totalH, unit:unit, floorY:floorY };
   }
 
+  // poops sit spread along the floor, two on each side of the (centered) pet
+  function poopSlotX(){ return [ cw*0.13, cw*0.30, cw*0.70, cw*0.87 ]; }
+
   function drawPoops(box){
-    var floorY=box.floorY, unit=2;
-    var slotX=[ box.ox+box.w+6, box.ox+box.w+24, box.ox+box.w+42, box.ox+box.w+60 ];
-    pctx.fillStyle='#fff';
+    var floorY=box.floorY, unit=2, sx=poopSlotX();
+    var pw=POOP[0].length*unit;
     for(var i=0;i<S.poops.length;i++){
-      var p=S.poops[i], bx=slotX[p.slot]||(box.ox+box.w+6);
-      var by=floorY-POOP.length*unit;
+      var p=S.poops[i], cx=(sx[p.slot]!=null?sx[p.slot]:sx[0]);
+      var bx=Math.round(cx-pw/2), by=floorY-POOP.length*unit;
       var overdue = p.age>POOP_SICK_TIME;
-      pctx.globalAlpha = overdue ? (0.5+0.5*Math.abs(Math.sin(animT*0.006))) : 1;
+      pctx.globalAlpha = overdue ? (0.45+0.55*Math.abs(Math.sin(animT*0.006))) : 1;
       blitMap(POOP, bx, by, unit, 0);
+      if(overdue){ // rising stink to show it's gone bad
+        pctx.globalAlpha=0.55;
+        var ph=(animT*0.05)%7;
+        pctx.fillRect(Math.round(cx-3), Math.round(by-6-ph), 2,2);
+        pctx.fillRect(Math.round(cx+3), Math.round(by-11-ph), 2,2);
+      }
     }
     pctx.globalAlpha=1;
   }
+
+  function drawGrave(){
+    var rows=GRAVE, H=rows.length, W=rows[0].length;
+    var unit=Math.max(3,Math.floor((ch*0.5)/H));
+    var tw=W*unit, th=H*unit;
+    var ox=(cw-tw)/2, oy=ch*0.80-th;
+    blitMap(rows, ox, oy, unit, 0);
+  }
+
+  function fmtMs(ms){ var s=Math.ceil(ms/1000);
+    if(s>=60){ var m=Math.floor(s/60); return m+':'+('0'+(s%60)).slice(-2); } return s+'s'; }
 
   function drawFood(box){
     if(!eating) return;
@@ -461,6 +884,22 @@
 
     simAcc+=dtMs; while(simAcc>=1000){ simulate(1); simAcc-=1000; }
 
+    // active-time event timers (only tick while you're watching)
+    if(!S.dead){
+      idleAcc+=dtMs;
+      if(idleAcc>=IDLE_EVERY){ idleAcc-=IDLE_EVERY; idleActivity(); }
+      if(!S.critical && !eating && !wash){
+        eventAcc+=dtMs;
+        if(eventAcc>=nextEvent){ eventAcc=0; nextEvent=EVENT_EVERY_MIN+Math.random()*(EVENT_EVERY_MAX-EVENT_EVERY_MIN); fireRandomEvent(); }
+      }
+      checkCritical();
+      // live countdown text on the alert
+      if(S.critical){
+        var rem=Math.max(0,S.critical.deadline-Date.now());
+        alertTime.textContent=(S.critical.kind==='sick'?'medicine in ':'react in ')+fmtMs(rem);
+      } else if(S.sick){ alertTime.textContent='give it some medicine'; }
+    }
+
     // eating
     if(eating){ eating.biteTimer-=dtMs; if(eating.biteTimer<=0){ eating.biteTimer=520; bite(); } }
     if(react){ react.t-=dtMs/16; if(react.t<=0) react=null; }
@@ -473,6 +912,9 @@
     pctx.strokeStyle='rgba(255,255,255,0.5)'; pctx.lineWidth=1;
     var fy=Math.round(ch*0.80)+0.5;
     pctx.beginPath(); pctx.moveTo(cw*0.10,fy); pctx.lineTo(cw*0.90,fy); pctx.stroke();
+
+    // dead: show a grave and stop the pet animation
+    if(S.dead){ drawGrave(); setBars(); requestAnimationFrame(frame); return; }
 
     var t=animT/1000, offY=Math.sin(t*2.2)*2, sq=1;
     var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
@@ -495,8 +937,8 @@
       wash.x += dtMs*0.9; // px per ms across the screen
       var wx=wash.x;
       // clear poops the wash has passed
-      var slotX=[ box.ox+box.w+6, box.ox+box.w+24, box.ox+box.w+42, box.ox+box.w+60 ];
-      S.poops = S.poops.filter(function(p){ return (slotX[p.slot]||0) > wx; });
+      var slotX=poopSlotX();
+      S.poops = S.poops.filter(function(p){ return (slotX[p.slot]||0) > wx - 10; });
       // draw wash bar + faint trailing scrub
       pctx.fillStyle='#fff'; pctx.fillRect(wx, 0, 8, ch);
       pctx.fillStyle='rgba(255,255,255,0.12)'; pctx.fillRect(0,0,wx,ch);
@@ -511,10 +953,12 @@
 
   // ── offline catch-up ──
   function catchUp(){
+    if(S.dead) return;
     var elapsed=Math.max(0,(Date.now()-(S.lastSeen||Date.now()))/1000);
     if(elapsed<1) return;
     var capped=Math.min(elapsed,MAX_CATCHUP);
     simulate(capped);
+    if(S.dead) return;
     if(elapsed>capped){ S.age+=(elapsed-capped); checkEvolve(); }
     S.lastSeen=Date.now();
   }
