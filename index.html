@@ -79,13 +79,15 @@
 
   #cycleRow { display:flex; align-items:center; gap:8px; margin:6px 0 2px; }
   #cycleRow .lab { width:54px; font-size:7px; letter-spacing:1px; color:var(--dim); }
-  #cycleSegs { flex:1; display:flex; gap:4px; }
-  #cycleSegs .cseg { flex:1; height:9px; box-shadow:0 0 0 2px var(--faint); background:#000; }
-  #cycleSegs .cseg.on { background:#fff; box-shadow:0 0 0 2px #fff; }
+  #cycleSegs { flex:1; display:flex; gap:5px; }
+  #cycleSegs .cseg { flex:1; height:10px; box-shadow:0 0 0 2px var(--faint); background:#000; }
+  #cycleSegs .cseg.on { background:#fff; box-shadow:0 0 0 2px var(--faint); }
   #cycleAge { font-size:7px; letter-spacing:1px; color:var(--dim); white-space:nowrap; }
   #cycleRow.paused .lab { color:#fff; }
 
   #actions { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin: 10px 0 16px; }
+  #actions.restpick { grid-template-columns: 1fr 1fr auto; }
+  #actions.restpick .sq { width:44px; }
   #actions .pixbtn { padding:11px 3px 13px; font-size:9px; overflow:hidden; color:#fff; background:#000;
     box-shadow: 0 -3px 0 0 #fff,0 3px 0 0 #fff,-3px 0 0 0 #fff,3px 0 0 0 #fff,0 0 0 3px #fff,0 6px 0 0 rgba(255,255,255,0.22); }
   #actions .pixbtn:active { box-shadow: 0 -3px 0 0 #fff,0 3px 0 0 #fff,-3px 0 0 0 #fff,3px 0 0 0 #fff,0 0 0 3px #fff; }
@@ -1021,7 +1023,7 @@
     if((S.stats.energy||0) < a.eCost){ setMessage(niceName()+' is too tired \u2014 rest for energy first.'); blip(180,0.08,'sawtooth'); return; }
     S.stats.energy = clamp((S.stats.energy||0) - a.eCost);
     bumpStat(a.stat, a.gain); if(a.sec) bumpStat(a.sec, 1);
-    react={type:'act', anim:a.anim, t:26}; flashT=Math.max(flashT,8); blip(660,0.05,'triangle');
+    react={type:'act', anim:a.anim, t:155}; flashT=Math.max(flashT,8); blip(660,0.05,'triangle');
     logEvent(niceName()+' trained '+a.label.toUpperCase()+deltaStr([[RPG_NAME[a.stat], a.gain]]));
     if(a.risk && Math.random()<a.risk){
       var dmg=6+Math.floor(Math.random()*8);
@@ -1039,7 +1041,7 @@
       setMessage(niceName()+' rests and recovers energy.'); logEvent(niceName()+' rested for energy (+'+(st.energy-be)+').'); blip(380,0.07,'sine'); }
     else { var bh=st.health; st.health=Math.min(maxHP(), st.health + Math.round(restHeal()*2.6));
       setMessage(niceName()+' rests and heals.'); logEvent(niceName()+' rested to heal (+'+(st.health-bh)+' HP).'); blip(440,0.07,'sine'); }
-    react={type:'rest',t:24}; flashT=Math.max(flashT,6);
+    react={type:'rest',t:150}; flashT=Math.max(flashT,6);
     spendSegment();
   }
   // legacy no-ops kept so older references don't break
@@ -1459,18 +1461,20 @@
     if(S.stage==='egg'){ setMessage("it's still an egg \u2014 give it time to hatch"); return; }
     if(actx && actx.state==='suspended') actx.resume();
     var s=S.stats;
-    // tapping a panel's button while that panel is open closes it (back to the pet)
+    // picker selections (buttons morphed into drills / rest options)
+    if(kind && kind.indexOf('t:')===0){ trainOnce(kind.slice(2)); pickerMode='none'; renderActions(true); return; }
+    if(kind==='r:heal'){ restOnce('heal'); pickerMode='none'; renderActions(true); return; }
+    if(kind==='r:energy'){ restOnce('energy'); pickerMode='none'; renderActions(true); return; }
+    if(kind==='back'){ pickerMode='none'; renderActions(true); return; }
+    // open a picker on the buttons
+    if(kind==='train'){ pickerMode='train'; renderActions(true); return; }
+    if(kind==='rest'){ pickerMode='rest'; renderActions(true); return; }
+    // overlay panels (toggle closed if already open)
     var openK = overlayEl.classList.contains('open') ? ovKind : null;
     var closes = (kind==='explore' && (openK==='biomes'||openK==='stages')) ||
-                 (kind==='train' && openK==='train') || (kind==='rest' && openK==='rest') ||
                  (kind==='spells' && openK==='spells') || (kind==='status' && openK==='status') ||
                  (kind==='inventory' && openK==='inventory');
     if(closes){ closeOverlay(); return; }
-    if(kind==='train' || kind==='rest'){
-      if((S.seg||0)>=SEGMENTS){ return; }   // shouldn't happen (cycle auto-completes at 6)
-      if(kind==='rest'){ openRest(); return; }
-      openSub('train'); return;
-    }
     if(kind==='explore'){
       if(S.stage==='baby'){ setMessage('too young to explore \u2014 grow up first'); return; }
       openBiomes(); return;
@@ -1697,14 +1701,11 @@
     on(actionsEl, !dead && !egg && !qte && !fight);
     on(subPicker, false);
     on(alertWrap, sick && !dead && !egg && !qte && !fight);
-    var DEF_LABEL = { rest:'Rest', train:'Train', explore:'Explore', spells:'Spells', status:'Status', inventory:'Items' };
-    if(actionsEl){
+    if(dead||egg||fight||qte) pickerMode='none';
+    renderActions();   // rebuild the grid only if the picker mode changed
+    if(pickerMode==='none' && actionsEl){
       var btns=actionsEl.querySelectorAll('[data-act]');
-      for(var i=0;i<btns.length;i++){
-        var a=btns[i].getAttribute('data-act');
-        btns[i].classList.remove('active'); btns[i].removeAttribute('disabled');
-        var bl=btns[i].querySelector('.bl'); if(bl) bl.textContent=DEF_LABEL[a]||a;
-      }
+      for(var i=0;i<btns.length;i++){ btns[i].classList.remove('active'); btns[i].removeAttribute('disabled'); }
     }
     if(dead) renderEnd();
     if(qte){
@@ -1731,9 +1732,32 @@
   var msgT=0;
   function setMessage(t){ if(msgEl) msgEl.textContent=t; msgT=160; }
 
-  document.querySelectorAll('[data-act]').forEach(function(b){
-    b.addEventListener('click',function(){ act(b.getAttribute('data-act')); if(b.blur) b.blur(); });
-  });
+  if(actionsEl){
+    actionsEl.addEventListener('click',function(e){
+      var b=e.target && e.target.closest ? e.target.closest('[data-act]') : null;
+      if(!b) return; act(b.getAttribute('data-act')); if(b.blur) b.blur();
+    });
+  }
+  // ── the 6 action buttons morph into a train/rest picker on the buttons themselves ──
+  var pickerMode='none', actionsBuilt=null;
+  var MAIN_BTNS=[['train','Train'],['rest','Rest'],['explore','Explore'],['status','Status'],['spells','Spells'],['inventory','Items']];
+  function renderActions(force){
+    if(!actionsEl) return;
+    if(!force && actionsBuilt===pickerMode) return;
+    actionsBuilt=pickerMode; actionsEl.classList.remove('restpick');
+    var html='';
+    if(pickerMode==='train'){
+      TRAIN.forEach(function(a){ html+='<button class="pixbtn" data-act="t:'+a.id+'"><span class="bl">'+a.label+'</span><i class="prog"></i></button>'; });
+    } else if(pickerMode==='rest'){
+      actionsEl.classList.add('restpick');
+      html+='<button class="pixbtn wide" data-act="r:heal"><span class="bl">Heal HP</span></button>';
+      html+='<button class="pixbtn wide" data-act="r:energy"><span class="bl">Energy</span></button>';
+      html+='<button class="pixbtn sq" data-act="back"><span class="bl">&#10005;</span></button>';
+    } else {
+      MAIN_BTNS.forEach(function(m){ html+='<button class="pixbtn" data-act="'+m[0]+'"><span class="bl">'+m[1]+'</span><i class="prog"></i></button>'; });
+    }
+    actionsEl.innerHTML=html;
+  }
   // tap the egg to hatch faster (mash and it shatters)
   petCanvas.addEventListener('pointerdown',function(e){
     if(S.stage==='egg' && !S.dead){ if(e&&e.preventDefault) e.preventDefault(); eggTap(); }
@@ -2068,14 +2092,18 @@
 
   // ── activity animations (train + play) ──
   function activityMotion(anim,t){
-    var o={ offY:Math.sin(t*2.2)*2, sq:1, shakeX:0 };
+    var o={ offY:Math.sin(t*2.2)*2, sq:1, shakeX:0, flip:null };
     switch(anim){
-      case 'lift':     o.offY=-Math.abs(Math.sin(t*5))*10; o.sq=0.84+Math.abs(Math.sin(t*5))*0.16; break;
-      case 'dash':     o.shakeX=Math.sin(t*22)*6; o.offY=-Math.abs(Math.sin(t*11))*3; o.sq=0.95; break;
-      case 'endure':   o.offY=4+Math.sin(t*30)*1.3; o.sq=0.8; break;
-      case 'study':    o.offY=Math.sin(t*1.6)*1.5; break;
+      case 'lift':     var lp=Math.abs(Math.sin(t*3.4)); o.offY=-lp*7; o.sq=0.82+lp*0.18; break;
+      case 'dash':     o.shakeX=Math.sin(t*3.0)*(cw*0.27); o.offY=-Math.abs(Math.sin(t*20))*3; o.sq=0.96; o.flip=Math.cos(t*3.0)<0; break;
+      case 'endure':   var ep=(t%1.5)/1.5;
+                       if(ep<0.42){ o.sq=1; o.offY=0; }
+                       else if(ep<0.56){ o.sq=0.5; o.offY=7; }          // squished flat under the rock
+                       else { o.sq=1.04; o.offY=-3-(ep-0.56)*5; }       // push back up
+                       break;
+      case 'study':    o.offY=Math.sin(t*2)*1.5; o.sq=0.99; break;
       case 'meditate': o.offY=-7+Math.sin(t*2)*2; o.sq=0.97; break;
-      case 'forage':   o.offY=-Math.abs(Math.sin(t*4))*6; break;
+      case 'forage':   o.shakeX=Math.sin(t*3)*7; o.offY=-Math.abs(Math.sin(t*6))*5; break;
       case 'wrestle':  o.shakeX=Math.sin(t*16)*4; o.offY=Math.sin(t*8)*2; o.sq=0.93; break;
       case 'tag':      o.shakeX=Math.sin(t*14)*5; o.offY=-Math.abs(Math.sin(t*7))*5; break;
       case 'fetch':    o.shakeX=Math.sin(t*6)*8; o.offY=-Math.abs(Math.sin(t*6))*5; break;
@@ -2086,6 +2114,8 @@
     return o;
   }
   function px(x,y,w,h){ pctx.fillRect(Math.round(x),Math.round(y),w||2,h||2); }
+  function blob(x,y,r){ for(var yy=-r;yy<=r;yy++){ var w=Math.floor(Math.sqrt(Math.max(0,r*r-yy*yy))); if(w>0) pctx.fillRect(Math.round(x-w),Math.round(y+yy),w*2,1); } }
+  function drawBush(x,fy){ pctx.fillStyle='#fff'; var by=fy-6; blob(x,by-3,7); blob(x-7,by,5); blob(x+7,by,5); pctx.fillStyle='#000'; px(x-4,by-2,2,2); px(x+3,by,2,2); pctx.fillStyle='#fff'; px(x-1,fy-3,2,3); }
   function drawNote(x,y){ pctx.fillStyle='#fff'; px(x,y,2,5); px(x-2,y+4,4,2); }
   function drawActivity(anim,box,t){
     pctx.save();
@@ -2093,47 +2123,70 @@
     pctx.fillStyle='#fff';
     var p=(animT*0.05)%10;
     switch(anim){
-      case 'lift':
-        pctx.globalAlpha=0.9; // effort marks beside head
-        px(lft-6, top+4+Math.sin(t*5)*2, 2,2); px(lft-9, top+1+Math.sin(t*5)*2, 2,2);
-        px(rgt+4, top+4-Math.sin(t*5)*2, 2,2); px(rgt+7, top+1-Math.sin(t*5)*2, 2,2);
-        break;
-      case 'dash': case 'tag': case 'fetch':
-        pctx.globalAlpha=0.5; // speed streaks behind
-        for(var i=0;i<4;i++){ var sx=(walkDir<0?rgt+2+i*5:lft-4-i*5); px(sx, box.oy+box.h*0.3+i*4, 4,2); }
-        break;
-      case 'endure': // sweat drops
-        pctx.globalAlpha=0.85;
-        px(rgt-1, top+6+p, 2,3); px(lft+2, top+10+((p+4)%10), 2,3);
-        break;
-      case 'study': case 'puzzle': // thought dots + ?
-        pctx.globalAlpha=0.9;
-        px(rgt+2, top-2, 2,2); px(rgt+5, top-6, 3,3);
-        pctx.fillRect(rgt+7, top-15, 4,2); pctx.fillRect(rgt+9, top-13, 2,4); pctx.fillRect(rgt+9, top-7, 2,2);
-        break;
-      case 'meditate': // pulsing aura ring + spirit dots
+      case 'lift': {  // a dumbbell pressed overhead, moving up and down
+        var lp=Math.abs(Math.sin(t*3.4)), bw=box.w*0.95, dy=top-7-lp*9, dcx=cx;
+        pctx.fillRect(Math.round(dcx-bw/2), Math.round(dy), Math.round(bw), 3);          // bar
+        pctx.fillRect(Math.round(dcx-bw/2-5), Math.round(dy-5), 5, 13);                  // left weight
+        pctx.fillRect(Math.round(dcx+bw/2),    Math.round(dy-5), 5, 13);                  // right weight
+        pctx.globalAlpha=0.8; px(lft-5, top+3+Math.sin(t*3.4)*2,2,2); px(rgt+4, top+3+Math.sin(t*3.4)*2,2,2);
+        break; }
+      case 'dash': {  // motion streaks trailing the sweep
+        var dir = Math.cos(t*3.0) < 0 ? 1 : -1;   // trail behind the direction of travel
+        pctx.globalAlpha=0.5;
+        for(var i=0;i<6;i++){ var sx=cx + dir*(box.w*0.55 + i*7); px(sx, box.oy+box.h*0.3+i*3, 6,2); }
+        break; }
+      case 'endure': {  // a boulder falls, squishes the pet, then gets flung away
+        var ep=(t%1.5)/1.5, r=11, rx, ry;
+        if(ep<0.42){ rx=cx; ry=(top-46) + (42)*(ep/0.42); }            // falling
+        else if(ep<0.56){ rx=cx; ry=top-2; }                           // crushing down
+        else { var fp=(ep-0.56)/0.44; rx=cx + fp*70; ry=(top-2) - Math.sin(fp*Math.PI)*46; } // flung up-right
+        blob(rx, ry, r); pctx.fillStyle='#000'; px(rx-4,ry-3,2,2); px(rx+2,ry+1,3,2); pctx.fillStyle='#fff';
+        if(ep>=0.42 && ep<0.62){ pctx.globalAlpha=0.9; for(var k=0;k<5;k++){ var a=k/5*6.28; px(cx+Math.cos(a)*14, top+Math.sin(a)*6, 2,2);} } // impact burst
+        break; }
+      case 'study': {  // a floating, very wrong equation
+        pctx.font='9px "Pixel",monospace'; pctx.textAlign='center'; pctx.globalAlpha=0.95;
+        var phase=Math.floor(t*1.6)%3;
+        var eq = phase===0 ? '1 + 2 = 4?' : phase===1 ? '1 + 2 = ??' : '2 + 2 = 5?';
+        pctx.fillText(eq, cx, top-9 + Math.sin(t*3)*1.5);
+        pctx.textAlign='left';
+        break; }
+      case 'meditate':
         pctx.globalAlpha=0.35+0.25*Math.abs(Math.sin(t*2));
         pctx.lineWidth=2; pctx.strokeStyle='#fff';
         var rad=box.w*0.7+Math.sin(t*2)*4;
         pctx.beginPath(); pctx.arc(cx, box.oy+box.h*0.5, rad, 0, Math.PI*2); pctx.stroke();
         pctx.globalAlpha=0.8;
-        for(var k=0;k<3;k++){ var a=t*1.2+k*2.1; px(cx+Math.cos(a)*rad, box.oy+box.h*0.5+Math.sin(a)*rad, 3,3); }
+        for(var k2=0;k2<3;k2++){ var a2=t*1.2+k2*2.1; px(cx+Math.cos(a2)*rad, box.oy+box.h*0.5+Math.sin(a2)*rad, 3,3); }
         break;
-      case 'forage': case 'explore': // search sparkles near ground
+      case 'forage': {  // pet rummages at a bush
+        drawBush(rgt+10, box.floorY);
+        pctx.globalAlpha=0.7;   // leaves/dirt kicked up
+        px(rgt+4, box.floorY-4-((animT*0.06)%7), 2,2);
+        px(rgt+9, box.floorY-7-((animT*0.06+4)%7), 2,2);
+        break; }
+      case 'explore':
         pctx.globalAlpha=0.85;
         var sxp=(walkDir<0?lft-6:rgt+4);
         px(sxp, box.floorY-6, 2,2); px(sxp+(walkDir<0?-3:3), box.floorY-11, 3,3);
-        pctx.globalAlpha=0.5; px(sxp+(walkDir<0?-6:6), box.floorY-4-((p)%6), 2,2);
         break;
-      case 'sing': // music notes floating up
+      case 'sing':
         drawNote(rgt+3, top-2-((animT*0.03)%14));
         drawNote(rgt+9, top+2-((animT*0.03+7)%14));
         break;
-      case 'wrestle': // impact bursts
+      case 'wrestle':
         pctx.globalAlpha=0.8;
         var bx=(walkDir<0?lft-5:rgt+3);
         px(bx, box.oy+box.h*0.4, 2,2); px(bx+(walkDir<0?-3:3), box.oy+box.h*0.4-3, 2,2);
         px(bx+(walkDir<0?-3:3), box.oy+box.h*0.4+3, 2,2);
+        break;
+      case 'tag': case 'fetch':
+        pctx.globalAlpha=0.5;
+        for(var i2=0;i2<4;i2++){ var sx2=(walkDir<0?rgt+2+i2*5:lft-4-i2*5); px(sx2, box.oy+box.h*0.3+i2*4, 4,2); }
+        break;
+      case 'puzzle':
+        pctx.globalAlpha=0.9;
+        px(rgt+2, top-2, 2,2); px(rgt+5, top-6, 3,3);
+        pctx.fillRect(rgt+7, top-15, 4,2); pctx.fillRect(rgt+9, top-13, 2,4); pctx.fillRect(rgt+9, top-7, 2,2);
         break;
     }
     pctx.globalAlpha=1; pctx.restore();
@@ -2220,13 +2273,13 @@
     if(walkX==null) walkX=cw/2;
     walkX=Math.min(right,Math.max(left,walkX));
 
-    var offY=Math.sin(t*2.2)*2, sq=1, shakeX=0;
+    var offY=Math.sin(t*2.2)*2, sq=1, shakeX=0, animFlip=null;
     var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
     var modeAnim = ((S.mode==='train'||S.mode==='play') && S.modeAct) ? ((findAct(S.mode==='train'?TRAIN:PLAY,S.modeAct)||{}).anim) : null;
     var curAnim = (react && react.type==='act' ? react.anim : null) || modeAnim;
 
     if(curAnim){                                  // training / playing flourish, in place
-      var m=activityMotion(curAnim,t); offY=m.offY; sq=m.sq; shakeX=m.shakeX;
+      var m=activityMotion(curAnim,t); offY=m.offY; sq=m.sq; shakeX=m.shakeX; animFlip=m.flip;
     }
     else if(playing){ var ph=(react.t%16)/16; offY=-Math.abs(Math.sin(ph*Math.PI))*12; sq=0.9; }
     else if(resting){ offY=2; sq=0.86; }                      // stand still & rest
@@ -2252,7 +2305,7 @@
     }
 
     pctx.save(); pctx.translate(shakeX,0);
-    var box=drawSprite(S.form, offY, sq, walkX, walkDir<0);
+    var box=drawSprite(S.form, offY, sq, walkX, animFlip!=null ? animFlip : (walkDir<0));
     if(curAnim) drawActivity(curAnim, box, t);
     pctx.restore();
     if(resting||tired) drawZzz(box);
