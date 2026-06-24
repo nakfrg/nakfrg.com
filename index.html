@@ -689,19 +689,47 @@
   // enemy stats scale with difficulty tier (biome*6 + stage) plus a small within-stage ramp.
   // tuned so early biomes still take several hits and an under-levelled pet walls (must train more).
   var ENEMY_HP0=92, ENEMY_HP_GROW=1.091, ENEMY_ATK0=7, ENEMY_ATK_GROW=1.103, ENEMY_DEF0=3, ENEMY_DEF_GROW=1.055;
+  var BOSS_SPR = {
+    boss_plains:["                      ", "   ###    ###         ", "    #      #          ", "     #    #           ", "      #  #            ", "      #######         ", "      # #####         ", "   ###############    ", "    ###############   ", "   ############### #  ", "        ##########  # ", "        ##########   #", "        ## #######   #", "        ## ## ####    ", "        ## ## ####    ", "        ## ## ####    ", "                      "],
+    boss_forest:["    #  ###   #        ", "     ## #  ##         ", "   #   ## #   #       ", "        ##            ", "        #             ", "     ########         ", "     ########         ", "     ## ## ##         ", "     ########         ", "    ##########        ", "   ############       ", "  # ## #### ## #      ", " #  ## #### ##  #     ", "#   ##########   #    ", "    ##########        ", "     ## ## ##         ", "     ## ## ##         "],
+    boss_lake:["            # #       ", "           # #        ", "         #######      ", "         #### ##      ", "         #######      ", "        ########      ", "        # # ###       ", "        # # ###       ", "            ###       ", "           ##         ", "         ###          ", "   ########           ", "   #######            ", "  ##################  ", "  ##################  ", "  ##################  ", "                      "],
+    boss_cavern:["        #     #       ", "       # #  ##        ", "    #            #    ", "     #  ######  #     ", "      # # ## # #      ", "        ######        ", "  ##################  ", "  ##################  ", "  ########  ########  ", " #########  ######### ", " #################### ", " #################### ", " #################### ", "      ####  ####      ", "      ####  ####      ", "      ####  ####      ", "      ####  ####      "],
+    boss_peaks:["                      ", "           ##         ", "   ##      #      #   ", "    ##  #####    #    ", "     #### ###   #     ", "    ############      ", "    ###############   ", "       # #######      ", "      #  ###### #     ", "     #   ######  #    ", "    #    ######   #   ", "         ######       ", "        # #### #      ", "          ####        ", "          # #         ", "                      ", "                      "],
+    boss_abyss:["   ##            ##   ", "    ##          ##    ", "      #        #      ", "       #      #       ", "        ######        ", "        # ## #        ", "       ########       ", "  #   ##########   #  ", "   # # ######## # #   ", "  # ############## #  ", "   # ############ #   ", "     ############     ", "       ########       ", "        ##  ##        ", "        ##  ##        ", "        ##  ##        ", "        #    #        "],
+    boss_citadel:["       #  ##  #       ", "       #  ##  #       ", "       ########       ", "        ######        ", "        # ## #        ", "        ######        ", "        ######        ", "  ##################  ", "   ################   ", "  ##################  ", " #  ##############  # ", "#   ######  ######   #", "    ######  ######    ", "    ##############    ", " #    ##########    # ", "       ###  ###       ", "       ###  ###       "]
+  };
+  // the true boss of each biome (last combat of its final stage) — themed name + epic sprite
+  var BIOME_BOSS = [
+    { name:'FIELD BEHEMOTH',   spr:'boss_plains'  },
+    { name:'ELDER BRAMBLE',    spr:'boss_forest'  },
+    { name:'MARSH LEVIATHAN',  spr:'boss_lake'    },
+    { name:'STONE COLOSSUS',   spr:'boss_cavern'  },
+    { name:'STORM ROC',        spr:'boss_peaks'   },
+    { name:'ABYSSAL TYRANT',   spr:'boss_abyss'   },
+    { name:'VOID SOVEREIGN',   spr:'boss_citadel' }
+  ];
   function enemyAt(biome, stage, battle){
     var nb=battlesFor(stage), di=stageIndex(biome,stage), lvl=di + battle*0.10;
     var arche=ARCHE[(biome*7 + stage*3 + battle*5) % ARCHE.length];
     var sprite=arche + Math.min(3, Math.floor(biome/2));
-    var boss=(stage===N_STAGES-1) && (battle===nb-1);
+    var atLast=(battle===nb-1);                          // every stage now ENDS in a boss fight
+    var biomeBoss=atLast && (stage===N_STAGES-1);        // the true boss of the biome
+    var elite=atLast && !biomeBoss;                      // stage-end elites (stages 1-5)
+    var boss=atLast, isFinal=isFinalEncounter(biome,stage,battle);
     var hp =Math.round(ENEMY_HP0  * Math.pow(ENEMY_HP_GROW,  lvl));
     var atk=Math.round(ENEMY_ATK0 * Math.pow(ENEMY_ATK_GROW, lvl));
     var def=Math.round(ENEMY_DEF0 * Math.pow(ENEMY_DEF_GROW, lvl));
     var crit=Math.min(0.35, 0.02 + lvl*0.006);
-    if(boss){ hp=Math.round(hp*3.2); atk=Math.round(atk*1.25); crit+=0.05; }
-    var name=BIOME_ADJ[biome]+' '+ARCHE_NAME[arche];
-    if(isFinalEncounter(biome,stage,battle)){ hp=6000; atk=410; def=80; crit=0.15; name='ABYSSAL TYRANT'; boss=true; }
-    return { hp:hp, maxHp:hp, atk:atk, def:def, crit:crit, name:name, sprite:sprite, boss:boss, lvl:lvl };
+    var name=BIOME_ADJ[biome]+' '+ARCHE_NAME[arche], bspr=null;
+    if(elite){            // brutal stat-elite (current boss scaling)
+      hp=Math.round(hp*3.2); atk=Math.round(atk*1.25); crit+=0.05; name='Elite '+name;
+    } else if(biomeBoss){ // the true biome boss — bigger, harder, themed
+      hp=Math.round(hp*4.6); atk=Math.round(atk*1.45); def=Math.round(def*1.18); crit+=0.09;
+      var bb=BIOME_BOSS[biome]; name=bb.name; bspr=bb.spr;
+      if(isFinal){ hp=Math.round(hp*1.22); atk=Math.round(atk*1.12); crit+=0.05; }   // the ultimate
+    }
+    return { hp:hp, maxHp:hp, atk:atk, def:def, crit:crit, name:name, sprite:sprite,
+             boss:boss, elite:elite, biomeBoss:biomeBoss, bspr:bspr, lvl:lvl };
   }
   function biomeUnlocked(b){ return stageIndex(b,0) <= (S.stageProg||0); }
   function exploreCost(b){ return b+1; }   // segments spent per stage attempt (Plains=1 ... Citadel=7)
@@ -710,11 +738,11 @@
   // ── encounter list for a stage: combat gauntlet with positive/negative events woven in ──
   // at least one positive per ~4-5 combats; an occasional negative. boss = last combat of stage 6.
   function buildEncounters(biome, stage){
-    var combats=battlesFor(stage), bossStage=(stage===N_STAGES-1), arr=[], c=0, sincePos=0, sinceNeg=0;
+    var combats=battlesFor(stage), arr=[], c=0, sincePos=0, sinceNeg=0;
     while(c<combats){
       if(sincePos>=4){ arr.push({t:'pos'}); sincePos=0; continue; }       // positive every 4 combats
       if(sinceNeg>=7){ arr.push({t:'neg'}); sinceNeg=0; continue; }       // negative every 7 combats
-      arr.push({t:'combat', n:c, boss:(bossStage && c===combats-1)});
+      arr.push({t:'combat', n:c, boss:(c===combats-1)});                  // every stage ends in a boss
       c++; sincePos++; sinceNeg++;
     }
     return arr;
@@ -942,7 +970,7 @@
   // mana grows with INT + SPI
   function maxMana(){ return Math.round((20 + ST('int')*2 + ST('spi')*2) * bfMul('mana')); }
   function manaRegenTick(){ return 4 + Math.floor(ST('spi')*0.22 + ST('int')*0.12); }   // per cycle (out of stage)
-  function manaRegenRound(){ return 1 + Math.floor(ST('spi')*0.10 + ST('int')*0.05); }   // per combat round \u2014 SPI sustains casting
+  function manaRegenRound(){ return 1 + Math.floor(ST('spi')*0.07 + ST('int')*0.035); }   // per combat round \u2014 SPI sustains casting
   // rest: heal HP (END) or recover energy (SPI); the chosen stat sets amount + speed
   function restHeal(){ return 8 + Math.round(ST('end')*0.8); }
   function restEnergyGain(){ return 9 + Math.round(ST('spi')*0.9); }   // low base; SPI makes resting far more efficient
@@ -953,23 +981,23 @@
   // cost = mana. pow(r) = magnitude given rpg stats r. Stronger spells cost more (need magic spec + mana regen to sustain).
   var SPELLS = [
     // tier 1 — entry spells: cheap, single-stat, modest
-    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:6},          cost:5,  pow:function(r){return Math.round(8+r.int*1.5);},  desc:'a quick fire bolt' },
-    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:8},          cost:4,  pow:function(r){return Math.round(6+r.dex*1.2);},  desc:'cheap, fast wind cut' },
-    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:6},          cost:6,  pow:function(r){return Math.round(18+r.spi*1.2);}, desc:'restore a burst of HP' },
-    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:8},          cost:5,  pow:function(r){return 1;},                          desc:'absorb the next hit' },
+    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:6},          cost:13,  pow:function(r){return Math.round(8+r.int*1.5);},  desc:'a quick fire bolt' },
+    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:8},          cost:11,  pow:function(r){return Math.round(6+r.dex*1.2);},  desc:'cheap, fast wind cut' },
+    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:6},          cost:16,  pow:function(r){return Math.round(18+r.spi*1.2);}, desc:'restore a burst of HP' },
+    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:8},          cost:13,  pow:function(r){return 1;},                          desc:'absorb the next hit' },
     // tier 2 — distinct mechanics
-    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:12},         cost:8,  pow:function(r){return Math.round(r.int*0.7);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 rounds' },
-    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:12},         cost:7,  pow:function(r){return Math.round(10+r.spi*1.7);}, vfx:'holy', desc:'heavy holy strike' },
-    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:10},         cost:6,  pow:function(r){return Math.round(r.lck*0.8);}, weaken:0.25, desc:'damage + saps the foe\u2019s attack 25%' },
-    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:14,spi:10},  cost:9,  pow:function(r){return Math.round(r.int*1.6);}, leech:0.55, desc:'damage, heal for 55% of it' },
-    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:16},         cost:10, pow:function(r){return Math.round(r.spi*0.8);}, rounds:4, desc:'heal-over-time for 4 rounds' },
+    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:12},         cost:21,  pow:function(r){return Math.round(r.int*0.7);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 rounds' },
+    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:12},         cost:18,  pow:function(r){return Math.round(10+r.spi*1.7);}, vfx:'holy', desc:'heavy holy strike' },
+    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:10},         cost:16,  pow:function(r){return Math.round(r.lck*0.8);}, weaken:0.25, desc:'damage + saps the foe\u2019s attack 25%' },
+    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:14,spi:10},  cost:24,  pow:function(r){return Math.round(r.int*1.6);}, leech:0.55, desc:'damage, heal for 55% of it' },
+    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:16},         cost:26, pow:function(r){return Math.round(r.spi*0.8);}, rounds:4, desc:'heal-over-time for 4 rounds' },
     // tier 3 — heavy hitters: expensive, need magic + mana regen to sustain
-    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:18},         cost:9,  pow:function(r){return Math.round(r.int*2.8);}, self:function(r){return Math.round(r.int*0.45);}, desc:'huge hit \u2014 wounds you too' },
-    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:16,spi:14},  cost:11, pow:function(r){return 2;}, desc:'absorb the next 2 hits' },
-    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:18,int:16},  cost:13, pow:function(r){return Math.round((r.dex+r.int)*0.6);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
-    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:16,spi:16},  cost:12, pow:function(r){return Math.round((r.str+r.spi)*1.3);}, exec:0.30, desc:'2\u00d7 damage to foes below 30% HP' },
-    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:20,int:20},  cost:16, pow:function(r){return Math.round((r.str+r.int)*2.1);}, self:function(r){return Math.round((r.str+r.int)*0.30);}, desc:'devastation \u2014 heavy self-cost' },
-    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:26,spi:26},  cost:20, pow:function(r){return Math.round((r.int+r.spi)*2.4);}, vfx:'nuke', desc:'the ultimate nuke' }
+    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:18},         cost:25,  pow:function(r){return Math.round(r.int*2.8);}, self:function(r){return Math.round(r.int*0.45);}, desc:'huge hit \u2014 wounds you too' },
+    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:16,spi:14},  cost:30, pow:function(r){return 2;}, desc:'absorb the next 2 hits' },
+    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:18,int:16},  cost:34, pow:function(r){return Math.round((r.dex+r.int)*0.6);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
+    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:16,spi:16},  cost:32, pow:function(r){return Math.round((r.str+r.spi)*1.3);}, exec:0.30, desc:'2\u00d7 damage to foes below 30% HP' },
+    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:20,int:20},  cost:44, pow:function(r){return Math.round((r.str+r.int)*2.1);}, self:function(r){return Math.round((r.str+r.int)*0.30);}, desc:'devastation \u2014 heavy self-cost' },
+    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:26,spi:26},  cost:56, pow:function(r){return Math.round((r.int+r.spi)*2.4);}, vfx:'nuke', desc:'the ultimate nuke' }
   ];
   function spellById(id){ for(var i=0;i<SPELLS.length;i++) if(SPELLS[i].id===id) return SPELLS[i]; return null; }
   function spellReady(sp){ var r=S.rpg; for(var k in sp.req) if((r[k]||0)<sp.req[k]) return false; return true; }
@@ -1020,9 +1048,11 @@
   function ST(k){ return Math.max(0,(S.rpg[k]||0) + equipBonus(k)); }
   function effRpg(){ var o={}; for(var i=0;i<RPG_KEYS.length;i++){ var k=RPG_KEYS[i]; o[k]=ST(k); } return o; }
   // drops come ONLY from bosses now \u2014 guaranteed, rarity weighted by depth. queued for a chest reveal.
-  function rollDrop(enemy, biome){
+  function rollDrop(enemy, biome, firstClear){
     if(!enemy.boss) return;
-    var r=Math.random(), depth=biome/(N_BIOMES-1), tier;
+    if(!firstClear) return;                              // replaying an already-cleared stage drops nothing
+    if(enemy.elite && Math.random()>=0.10) return;       // elites: only a 10% chance to drop loot
+    var r=Math.random(), depth=biome/(N_BIOMES-1), tier; // biome bosses always reach here \u2014 guaranteed drop
     if(depth>=0.55 && r < 0.10 + depth*0.16) tier='legendary';
     else if(r < 0.30 + depth*0.45) tier='epic';
     else tier='rare';
@@ -1279,11 +1309,11 @@
     var e=f.enc[f.encIdx];
     if(e.t==='combat'){
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n);
-      f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=((f.enemy&&f.enemy.boss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0; f.spellIdx=0;
+      f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0; f.spellIdx=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0; f.castFx=null;
       f.shield=Math.round(bfAdd('shieldPer'))||0;   // a stage boon can grant shields each fight
       f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
-      combatLog('\u2694 '+(e.n+1)+'/'+f.combatsTotal+': '+f.enemy.name+(e.boss?'  \u2605 BOSS':''));
+      combatLog('\u2694 '+(e.n+1)+'/'+f.combatsTotal+': '+f.enemy.name+(f.enemy.biomeBoss?'  \u2605 BOSS':(f.enemy.elite?'  \u25c6 ELITE':'')));
     } else {
       setupEvent(e.t);
     }
@@ -1390,12 +1420,12 @@
     // catch your breath between foes; SPI drives it (so casters can survive long gauntlets), with a small flat floor
     var hpGain=Math.floor(ST('spi')*0.9) + Math.floor(maxHP()*0.012) + Math.round(bfAdd('interHeal'));
     S.stats.health=Math.min(maxHP(), S.stats.health+hpGain);
-    S.mana=Math.min(maxMana(), (S.mana||0) + Math.floor(maxMana()*0.10) + manaRegenTick());
+    S.mana=Math.min(maxMana(), (S.mana||0) + Math.floor(maxMana()*0.15) + manaRegenTick());
   }
   function winBattle(){
     var f=S.fight, e=f.enemy; e.hp=0; f.flashEne=12;
     combatLog('\u2620 '+e.name+' defeated!'); blip(900,0.08,'sine');
-    rollDrop(e, f.biome);
+    rollDrop(e, f.biome, stageIndex(f.biome,f.stage)===(S.stageProg||0));
     interludeRegen();
     f.state='interlude'; f.stateT=INTER_BATTLE_MS;   // interlude -> goNext() advances the gauntlet
   }
@@ -1509,7 +1539,7 @@
       }
     }
     // boss special attack (dramatic; every ~5s)
-    if(e.boss){
+    if(e.biomeBoss){
       f.specialTick=(f.specialTick||0)+dt;
       if(f.specialTick>=3600){ f.specialTick=0; bossSpecial(f); if(f.state!=='fight') return; }
     }
@@ -1523,11 +1553,7 @@
     if(f.state==='won'){
       var isFinal=isFinalEncounter(f.biome,f.stage,f.combatsTotal-1);
       var frontier=(stageIndex(f.biome,f.stage)===(S.stageProg||0));
-      var di=stageIndex(f.biome,f.stage), base=2+Math.floor(di/6), mult=frontier?1:0.5;
-      var picks=2+Math.floor(f.stage/2), gained={};   // longer stages reward a touch more
-      for(var i=0;i<picks;i++){ var k=RPG_KEYS[(Math.random()*RPG_KEYS.length)|0], amt=Math.max(1,Math.round(base*mult)); bumpStat(k,amt); gained[k]=(gained[k]||0)+amt; }
-      var gt=[]; for(var gk in gained) gt.push([RPG_NAME[gk],gained[gk]]);
-      logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1)+deltaStr(gt));
+      logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1)+'  \u2014 stats now come from training, not stages');
       if(frontier) S.stageProg=Math.min(N_TOTAL, (S.stageProg||0)+1);
       // clearing the Cavern (biome index 3) boss grants the Training Goblet (training gives more from now on)
       if(!S.goblet && f.biome===3 && f.stage===N_STAGES-1){
@@ -1551,9 +1577,9 @@
     if(S.dead) return;
     S.ended = result;   // 'win' | 'age'
     S.dead = true; S.mode='idle'; S.modeAct=null; S.fight=null; S.critical=null; S.sick=false;
-    S.deadCause = result==='win' ? 'defeated the Abyssal Tyrant' : 'old age';
+    S.deadCause = result==='win' ? 'defeated the Void Sovereign' : 'old age';
     closeSub();
-    if(result==='win'){ logEvent('\u2605\u2605 the ABYSSAL TYRANT falls \u2014 YOU WIN! \u2605\u2605');
+    if(result==='win'){ logEvent('\u2605\u2605 the VOID SOVEREIGN falls \u2014 YOU WIN! \u2605\u2605');
       blip(700,0.12); setTimeout(function(){blip(900,0.12);},120); setTimeout(function(){blip(1100,0.18);},240); }
     else { logEvent('\u231b '+niceName()+' grew old and passed on, the quest unfinished.');
       blip(200,0.3,'sawtooth',0.07); }
@@ -2513,9 +2539,9 @@
     var eneX=cw*0.70 - eLunge*26 + (1-enter)*(cw*0.55);
     var eneFlash=f.flashEne>0;
     var hop = approaching ? -Math.abs(Math.sin(animT*0.022))*9 : bob;
-    var eneRows=ENE_SPR[e.sprite]||ENE_SPR.slime0;
+    var eneRows=(e.biomeBoss && e.bspr && BOSS_SPR[e.bspr]) ? BOSS_SPR[e.bspr] : (ENE_SPR[e.sprite]||ENE_SPR.slime0);
     var blinkE=eneFlash && (Math.floor(animT/55)%2===0);
-    var eScale = isFinalEncounter(f.biome,f.stage,f.combatNo) ? 1.0 : (e.boss ? 0.82 : 0.5);
+    var eScale = e.biomeBoss ? (isFinalEncounter(f.biome,f.stage,f.combatNo)?1.62:1.36) : (e.boss ? 0.82 : 0.5);
     pctx.save(); if(shake) pctx.translate(shake,0);
     if(!blinkP) drawCreature(petRows, pX, hop-(petFlash?3:0), 0.5, false);
     if(enter>0.02 && !blinkE) drawCreature(eneRows, eneX, -bob-(eneFlash?3:0), eScale, true);
@@ -2538,7 +2564,7 @@
     if(f.shield>0){ pctx.font='7px "Pixel",monospace'; pctx.fillText('\u25C7 shield x'+f.shield, cw*0.245, 52); }
     if(approaching){
       pctx.fillStyle='#fff'; pctx.font='9px "Pixel",monospace'; pctx.textAlign='center';
-      pctx.fillText(e.boss?'\u2605 A BOSS APPROACHES':'\u2192 traveling\u2026', cw*0.5, ch*0.5);
+      pctx.fillText(e.biomeBoss?'\u2605 BIOME BOSS APPROACHES':(e.elite?'\u25c6 AN ELITE BLOCKS THE WAY':'\u2192 traveling\u2026'), cw*0.5, ch*0.5);
     } else if(f.state==='won'||f.state==='lost'||f.state==='interlude'){
       pctx.fillStyle='rgba(0,0,0,0.55)'; pctx.fillRect(0, ch*0.44, cw, 24);
       pctx.fillStyle='#fff'; pctx.font='11px "Pixel",monospace'; pctx.textAlign='center';
