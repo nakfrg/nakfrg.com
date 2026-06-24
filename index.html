@@ -35,7 +35,10 @@
       0 7px 0 0 rgba(255,255,255,0.25);  /* drop shadow block */
     transition: transform .04s;
   }
-  .pixbtn:hover, .pixbtn:focus-visible { background:#fff; color:#000; outline:none; }
+  @media (hover:hover) and (pointer:fine){
+    .pixbtn:hover { background:#fff; color:#000; outline:none; }
+  }
+  .pixbtn:focus { outline:none; }
   .pixbtn:active { transform: translateY(3px);
     box-shadow: 0 -4px 0 0 #fff,0 4px 0 0 #fff,-4px 0 0 0 #fff,4px 0 0 0 #fff,0 0 0 4px #fff; }
   .pixbtn[disabled] { opacity:.28; pointer-events:none; }
@@ -67,19 +70,49 @@
   #rpgRow b { color:#fff; font-weight:normal; }
 
   #questRow { display:flex; justify-content:space-between; align-items:center; gap:8px;
-              font-size:8px; letter-spacing:1px; color:var(--dim); margin:8px 0 2px; }
+              font-size:8px; letter-spacing:1px; color:var(--dim); margin:8px 0 4px; }
   #questRow #questBiome { color:#fff; }
   #questRow #questProg { color:var(--dim); }
   #questRow #questAge { color:#fff; }
 
+  #cycleRow { display:flex; align-items:center; gap:8px; margin:6px 0 2px; }
+  #cycleRow .lab { width:54px; font-size:7px; letter-spacing:1px; color:var(--dim); }
+  #cycleTrack { flex:1; height:6px; position:relative; box-shadow:0 0 0 2px var(--faint); background:#000; }
+  #cycleFill { position:absolute; inset:0; width:0%; background:var(--dim); }
+  #cycleRow.paused .lab { color:#fff; }
+
   #actions { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin: 10px 0 16px; }
-  #actions .pixbtn { padding:11px 3px 13px; font-size:9px; overflow:hidden;
+  #actions .pixbtn { padding:11px 3px 13px; font-size:9px; overflow:hidden; color:#fff; background:#000;
     box-shadow: 0 -3px 0 0 #fff,0 3px 0 0 #fff,-3px 0 0 0 #fff,3px 0 0 0 #fff,0 0 0 3px #fff,0 6px 0 0 rgba(255,255,255,0.22); }
   #actions .pixbtn:active { box-shadow: 0 -3px 0 0 #fff,0 3px 0 0 #fff,-3px 0 0 0 #fff,3px 0 0 0 #fff,0 0 0 3px #fff; }
   #actions .pixbtn .bl { position:relative; z-index:2; }
   #actions .pixbtn .prog { position:absolute; left:0; bottom:0; height:0; width:0%; background:rgba(255,255,255,0.85); z-index:1; transition:width .1s linear; }
-  #actions .pixbtn.active { background:#161616; }
+  #actions .pixbtn.active { background:#161616; color:#fff; }
+  #actions .pixbtn.active .bl { color:#fff; }
   #actions .pixbtn.active .prog { height:6px; }
+
+  /* full-viewport overlay for Spells / Status / biome / stage menus */
+  #overlay { display:none; position:fixed; inset:0; z-index:50; background:#000;
+    padding:16px 14px 20px; overflow-y:auto; }
+  #overlay.open { display:block; }
+  #ovTitle { font-size:13px; letter-spacing:1px; color:#fff; text-align:center; margin:6px 0 14px; }
+  #ovBody { max-width:380px; margin:0 auto; }
+  #overlay #ovClose { display:block; margin:18px auto 0; color:var(--dim); }
+  .ovrow { display:flex; align-items:center; gap:10px; padding:11px 12px; margin:8px 0;
+    box-shadow:0 0 0 2px var(--faint); cursor:pointer; }
+  .ovrow.on { box-shadow:0 0 0 2px #fff; background:#111; }
+  .ovrow.lock { opacity:.34; cursor:default; }
+  .ovdot { width:14px; height:14px; flex:0 0 14px; box-shadow:0 0 0 2px #fff; border-radius:50%; }
+  .ovrow.on .ovdot { background:#fff; }
+  .ovtext { flex:1; min-width:0; }
+  .ovname { font-size:10px; letter-spacing:1px; color:#fff; }
+  .ovsub { font-size:7px; letter-spacing:1px; color:var(--dim); margin-top:4px; line-height:1.5; }
+  .ovgrid { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin:4px 0; }
+  .ovstat { display:flex; justify-content:space-between; font-size:9px; letter-spacing:1px;
+    color:var(--dim); padding:6px 2px; box-shadow:0 1px 0 0 var(--faint); }
+  .ovstat b { color:#fff; font-weight:normal; }
+  .ovhdr { font-size:8px; letter-spacing:1px; color:var(--dim); margin:16px 0 4px; text-transform:uppercase; }
+  .ovhint { font-size:7px; letter-spacing:1px; color:var(--dim); text-align:center; margin-top:10px; line-height:1.6; }
 
   #subPicker { display:none; flex-wrap:wrap; gap:9px 8px; margin:10px 0 16px; }
   #subPicker .pixbtn { flex:1 1 28%; padding:10px 3px 12px; font-size:9px;
@@ -154,22 +187,25 @@
     </div>
 
     <div id="stats">
-      <div class="stat" data-k="full">  <span class="lab pix">FULL</span>  <div class="track"><div class="seg"></div></div></div>
       <div class="stat" data-k="energy"><span class="lab pix">ENERGY</span><div class="track"><div class="seg"></div></div></div>
       <div class="stat" data-k="health"><span class="lab pix">HEALTH</span><div class="track"><div class="seg"></div></div></div>
+      <div class="stat" data-k="mana">  <span class="lab pix">MANA</span>  <div class="track"><div class="seg"></div></div></div>
     </div>
 
-    <div id="rpgRow" class="pix"></div>
+    <div id="questRow" class="pix"><span id="questBiome">PLAINS</span><span id="questProg">0 / 42</span><span id="questAge">AGE 0</span></div>
 
-    <div id="questRow" class="pix"><span id="questBiome">PLAINS</span><span id="questProg">0 / 32</span><span id="questAge">AGE 0</span></div>
+    <div id="cycleRow">
+      <span class="lab pix">CYCLE</span>
+      <div id="cycleTrack"><div id="cycleFill"></div></div>
+    </div>
 
     <div id="actions">
-      <button class="pixbtn" data-act="feed"><span class="bl">Feed</span><i class="prog"></i></button>
       <button class="pixbtn" data-act="rest"><span class="bl">Rest</span><i class="prog"></i></button>
       <button class="pixbtn" data-act="train"><span class="bl">Train</span><i class="prog"></i></button>
       <button class="pixbtn" data-act="play"><span class="bl">Play</span><i class="prog"></i></button>
       <button class="pixbtn" data-act="explore"><span class="bl">Explore</span><i class="prog"></i></button>
-      <button class="pixbtn" data-act="clean"><span class="bl">Clean</span><i class="prog"></i></button>
+      <button class="pixbtn" data-act="spells"><span class="bl">Spells</span><i class="prog"></i></button>
+      <button class="pixbtn" data-act="status"><span class="bl">Status</span><i class="prog"></i></button>
     </div>
 
     <div id="subPicker"></div>
@@ -177,6 +213,12 @@
     <div id="busyRow">
       <span id="busyLabel" class="pix"></span>
       <button class="linkbtn" id="busyCancel">&#10005; stop</button>
+    </div>
+
+    <div id="overlay">
+      <div id="ovTitle" class="pix"></div>
+      <div id="ovBody"></div>
+      <button class="linkbtn" id="ovClose">&#10005; close</button>
     </div>
 
     <div id="qteRow">
@@ -544,24 +586,25 @@
   };
   // ── time model ──
   // AGE clock = game time. It ticks steadily; the pet dies of old age at MAX_AGE.
-  // Each ACTION runs on its OWN timer (the button fills as a progress bar) and repeats.
-  var AGE_TICK_MS = 4500;        // real ms per age tick (decay/regen/events/aging happen here)
-  var CYCLE_SEC   = AGE_TICK_MS/1000;   // (used by offline catch-up)
+  // The cycle is PAUSED during combat. Vitals are HEALTH (HP) and MANA only.
+  var AGE_TICK_MS = 4500;        // real ms per age tick (regen + events + aging)
+  var CYCLE_SEC   = AGE_TICK_MS/1000;
   // action durations (ms). train/play get FASTER as their governing stat grows.
-  var ACT_DUR = { feed:3000, rest:3000, explore:4200, train:5200, play:4000 };
-  var ACT_MIN_MS  = 2600;        // floor for train/play
+  var ACT_DUR = { rest:3200, train:5200, play:4000 };
+  var ACT_MIN_MS  = 2600;        // floor for train/play/rest
   var ACT_STEP_MS = 26;          // ms shaved off a train/play action per governing-stat point
-  var FEED_RATE=26, REST_RATE=28;
-  var PET_SCALE = 0.42;          // smaller pet => more room to roam
-  var POOP_MAX = 4;
-  var POOP_DIRTY = 100/3000;     // extra clean drain per poop per second
-  var POOP_SICK_TIME = 300;      // a poop left this long makes the frog sick (5 min)
-  var NEGLECT_MAX = 3*24*3600;   // sick this long -> hops back to the pond (~3 days)
+  var PET_SCALE = 0.42;
   var MAX_CATCHUP = 3*24*3600 + 3600;
-  var FEED_FULL = 30;            // total fullness per meal (3 bites)
   var SAVE_KEY = 'tamafroggi_save_v2';
 
-  function poopInterval(){ return 110 + Math.random()*90; } // ~2-3 min
+  // ── combat tuning ──
+  var PET_ATK_BASE = 1100;       // ms between our attacks at 0 DEX (faster as DEX grows)
+  var PET_ATK_MIN  = 420;        // fastest our attack cadence can get
+  var ENE_ATK_BASE = 1150;       // ms between enemy attacks
+  var SPELL_TICK_MS = 1600;      // a spell may be cast each "round"
+  var INTER_BATTLE_MS = 1100;    // pause between battles in a multi-battle stage
+  var CRIT_MULT = 1.5;
+  var ENE_CRIT_MULT = 1.7;       // enemies hit a bit harder on a crit
 
   // ── events / criticals / death tuning ──
   var SICK_DEADLINE   = 300000;          // 5 min to give medicine for a critical illness
@@ -641,61 +684,88 @@
 
   // ════════ COMBAT: biomes, 32 enemies, spells ════════
   var BIOMES = ["Plains","Forest","Lake","Cavern","Peaks","Abyss","Citadel"];
-  var ENEMIES = [{n:"Field Slime",s:"slime0",b:0},{n:"Hopper Bug",s:"bug0",b:0},{n:"Dustlark",s:"bird0",b:0},{n:"Meadow Pup",s:"beast0",b:0},{n:"Pond Minnow",s:"fish0",b:0,boss:1},{n:"Mossback",s:"golem0",b:1},{n:"Stagbeetle",s:"wisp0",b:1},{n:"Thorncrow",s:"dragon0",b:1},{n:"Bramble Fox",s:"slime1",b:1},{n:"Sprite",s:"bug1",b:1,boss:1},{n:"Gillscale",s:"bird1",b:2},{n:"Reed Mantis",s:"beast1",b:2},{n:"Marsh Wisp",s:"fish1",b:2},{n:"Bog Blob",s:"golem1",b:2},{n:"Snapfish",s:"wisp1",b:2,boss:1},{n:"Stone Mite",s:"dragon1",b:3},{n:"Cave Bat",s:"slime2",b:3},{n:"Crystal Newt",s:"bug2",b:3},{n:"Shale Golem",s:"bird2",b:3},{n:"Gloom Moth",s:"beast2",b:3,boss:1},{n:"Granite Brute",s:"fish2",b:4},{n:"Cragwyrm",s:"golem2",b:4},{n:"Storm Roc",s:"wisp2",b:4},{n:"Frost Wraith",s:"dragon2",b:4,boss:1},{n:"Venom Crawler",s:"slime3",b:5},{n:"Ash Slime",s:"bug3",b:5},{n:"Magma Toad",s:"bird3",b:5},{n:"Void Lantern",s:"beast3",b:5},{n:"Obsidian Knight",s:"fish3",b:5,boss:1},{n:"Doom Beetle",s:"golem3",b:6},{n:"Eclipse Drake",s:"wisp3",b:6},{n:"ABYSSAL TYRANT",s:"dragon3",b:6,boss:1}];
+  var N_BIOMES = 7, N_STAGES = 6, N_TOTAL = N_BIOMES*N_STAGES;   // 42 stages
+  var ARCHE = ['slime','bug','bird','beast','fish','golem','wisp','dragon'];
+  var ARCHE_NAME = { slime:'Slime', bug:'Beetle', bird:'Lark', beast:'Pup', fish:'Eel', golem:'Golem', wisp:'Wisp', dragon:'Drake' };
+  var BIOME_ADJ = ['Field','Bramble','Marsh','Cave','Storm','Ash','Void'];
+  // battles per stage (by stage index within a biome). stage 6 = a 5-fight gauntlet.
+  function battlesFor(stage){ return [1,1,2,3,4,5][stage]; }
+  function stageIndex(biome,stage){ return biome*N_STAGES + stage; }
+  function isFinalEncounter(biome,stage,battle){ return biome===N_BIOMES-1 && stage===N_STAGES-1 && battle===battlesFor(stage)-1; }
 
-  // enemy combat stats scale with difficulty index d (0..31). final boss (d=31) is the win goal.
-  function enemyStats(i){
-    var d=i, e=ENEMIES[i];
-    var hp  = Math.round(20 * Math.pow(1.165,d));
-    var atk = Math.round(5  * Math.pow(1.095,d));
-    var def = Math.round(2  * Math.pow(1.085,d));
-    if(e.boss){ hp=Math.round(hp*1.5); atk=Math.round(atk*1.15); }
-    if(i===31){ hp=3800; atk=207; def=102; }   // ABYSSAL TYRANT - tuned final boss (~20% min-max margin)
-    return { hp:hp, atk:atk, def:def, name:e.n, sprite:e.s, boss:!!e.boss, biome:e.b, idx:i };
+  // enemy stats scale with a difficulty tier (biome*6 + stage) + within-stage battle.
+  function enemyAt(biome, stage, battle){
+    var nb=battlesFor(stage), di=stageIndex(biome,stage), lvl=di + battle*0.45;
+    var arche=ARCHE[(biome*7 + stage*3 + battle*5) % ARCHE.length];
+    var sprite=arche + Math.min(3, Math.floor(biome/2));
+    var boss=(stage===N_STAGES-1) && (battle===nb-1);
+    var hp =Math.round(16 * Math.pow(1.135, lvl));
+    var atk=Math.round(5  * Math.pow(1.082, lvl));
+    var def=Math.round(2  * Math.pow(1.072, lvl));
+    var crit=Math.min(0.35, 0.02 + lvl*0.006);
+    if(boss){ hp=Math.round(hp*1.5); atk=Math.round(atk*1.12); crit+=0.05; }
+    var name=BIOME_ADJ[biome]+' '+ARCHE_NAME[arche];
+    if(isFinalEncounter(biome,stage,battle)){ hp=4200; atk=210; def=104; crit=0.18; name='ABYSSAL TYRANT'; boss=true; }
+    return { hp:hp, maxHp:hp, atk:atk, def:def, crit:crit, name:name, sprite:sprite, boss:boss, lvl:lvl };
   }
-  var FINAL_BOSS = 31;
+  function biomeUnlocked(b){ return stageIndex(b,0) <= (S.stageProg||0); }
+  function stageUnlocked(b,s){ return stageIndex(b,s) <= (S.stageProg||0); }
 
   // ── pet derived combat stats ──
   function maxHP(){ return 60 + (S.rpg.end||0)*8; }
-  function hpRegen(){ return 3 + Math.floor((S.rpg.end||0)*0.4); }
-  function petATK(){ return (S.rpg.str||0) + Math.floor((S.rpg.dex||0)/2); }
-  function petDEF(){ return Math.floor((S.rpg.end||0)/2) + Math.floor((S.rpg.dex||0)/4); }
-  function petCRIT(){ return Math.min(0.5, (S.rpg.lck||0)*0.012); }
+  function hpRegen(){ return 1 + Math.floor((S.rpg.end||0)*0.12); }      // passive HP per cycle (END)
+  function energyRegen(){ return 1 + Math.floor((S.rpg.spi||0)*0.10); }  // passive energy per cycle (SPI)
+  function petATK(){ return (S.rpg.str||0) + Math.floor((S.rpg.dex||0)/4); }
+  function petDEF(){ return Math.floor((S.rpg.end||0)/2) + Math.floor((S.rpg.dex||0)/6); }
+  function petCritChance(){ return Math.min(0.6, (S.rpg.lck||0)*0.008); }      // LUCK -> crit chance
+  function petCritMult(){ return Math.min(4, 1.5 + (S.rpg.dex||0)*0.01); }      // DEX -> crit damage
+  function petDodge(){ return Math.min(0.5, (S.rpg.lck||0)*0.005); }            // LUCK -> dodge (cap 50%)
+  // attack cadence: more DEX -> faster swings
+  function petAtkInterval(){ return Math.max(PET_ATK_MIN, Math.round(PET_ATK_BASE - (S.rpg.dex||0)*3)); }
+  // mana grows with INT + SPI
+  function maxMana(){ return 20 + (S.rpg.int||0)*2 + (S.rpg.spi||0)*2; }
+  function manaRegenTick(){ return 3 + Math.floor(((S.rpg.int||0)+(S.rpg.spi||0))*0.18); }   // per cycle
+  function manaRegenRound(){ return 1 + Math.floor(((S.rpg.int||0)+(S.rpg.spi||0))*0.05); }  // per combat round
+  // rest: heal HP (END) or recover energy (SPI); the chosen stat sets amount + speed
+  function restHeal(){ return 8 + Math.round((S.rpg.end||0)*0.8); }
+  function restEnergyGain(){ return 12 + Math.round((S.rpg.spi||0)*0.7); }
+  function restDur(stat){ return Math.max(ACT_MIN_MS, ACT_DUR.rest - (S.rpg[stat||'end']||0)*ACT_STEP_MS); }
 
-  // ── spells: learned at stat thresholds, auto-cast in battle ──
-  // dmg(r) returns magic damage given rpg stats r.
+  // ── spells: learned at stat thresholds. Activate up to 3; they cast in order in combat. ──
+  // type: 'dmg' (direct) | 'risky' (big dmg, hurts you) | 'heal' | 'shield' (absorb 1 hit)
+  // cost = mana. pow(r) = magnitude given rpg stats r.
   var SPELLS = [
-    { id:'ember',   name:'Ember',     req:{int:8},          dmg:function(r){return Math.round(r.int*1.3);} },
-    { id:'gust',    name:'Gust',      req:{dex:10},         dmg:function(r){return Math.round(r.dex*1.1);} },
-    { id:'boulder', name:'Boulder',   req:{str:12},         dmg:function(r){return Math.round(r.str*0.9);} },
-    { id:'smite',   name:'Smite',     req:{spi:10},         dmg:function(r){return Math.round(r.spi*1.4);} },
-    { id:'jinx',    name:'Jinx',      req:{lck:10},         dmg:function(r){return Math.round(r.lck*1.2);} },
-    { id:'bulwark', name:'Bulwark',   req:{end:12},         dmg:function(r){return Math.round(r.end*0.7);} },
-    { id:'tempest', name:'Tempest',   req:{dex:16,int:16},  dmg:function(r){return Math.round((r.dex+r.int)*1.1);} },
-    { id:'cataclysm',name:'Cataclysm',req:{str:20,int:20},  dmg:function(r){return Math.round((r.str+r.int)*1.0);} },
-    { id:'providence',name:'Providence',req:{lck:18,spi:18},dmg:function(r){return Math.round((r.lck+r.spi)*1.1);} },
-    { id:'ascend',  name:'Ascendance',req:{str:24,dex:24,end:24,int:24,spi:24,lck:24}, dmg:function(r){return Math.round((r.str+r.dex+r.end+r.int+r.spi+r.lck)*0.5);} }
+    { id:'ember',    name:'Ember',     type:'dmg',    req:{int:8},          cost:6,  pow:function(r){return Math.round(r.int*1.6);} },
+    { id:'gust',     name:'Gust',      type:'dmg',    req:{dex:10},         cost:5,  pow:function(r){return Math.round(r.dex*1.3);} },
+    { id:'mend',     name:'Mend',      type:'heal',   req:{spi:8},          cost:7,  pow:function(r){return Math.round(20+r.spi*1.4);} },
+    { id:'barkskin', name:'Barkskin',  type:'shield', req:{end:10},         cost:6,  pow:function(r){return 1;} },
+    { id:'smite',    name:'Smite',     type:'dmg',    req:{spi:12},         cost:8,  pow:function(r){return Math.round(r.spi*1.8);} },
+    { id:'bloodbolt',name:'Bloodbolt', type:'risky',  req:{int:14},         cost:6,  pow:function(r){return Math.round(r.int*2.6);}, self:function(r){return Math.round(r.int*0.5);} },
+    { id:'jinx',     name:'Jinx',      type:'dmg',    req:{lck:12},         cost:6,  pow:function(r){return Math.round(r.lck*1.5);} },
+    { id:'renew',    name:'Renew',     type:'heal',   req:{spi:18,int:12},  cost:11, pow:function(r){return Math.round(40+(r.spi+r.int)*1.1);} },
+    { id:'aegis',    name:'Aegis',     type:'shield', req:{end:18,spi:14},  cost:9,  pow:function(r){return 1;} },
+    { id:'tempest',  name:'Tempest',   type:'dmg',    req:{dex:18,int:18},  cost:12, pow:function(r){return Math.round((r.dex+r.int)*1.5);} },
+    { id:'cataclysm',name:'Cataclysm', type:'risky',  req:{str:20,int:20},  cost:14, pow:function(r){return Math.round((r.str+r.int)*1.9);}, self:function(r){return Math.round((r.str+r.int)*0.35);} },
+    { id:'ascend',   name:'Ascendance',type:'dmg',    req:{int:26,spi:26},  cost:18, pow:function(r){return Math.round((r.int+r.spi)*2.2);} }
   ];
+  function spellById(id){ for(var i=0;i<SPELLS.length;i++) if(SPELLS[i].id===id) return SPELLS[i]; return null; }
   function spellReady(sp){ var r=S.rpg; for(var k in sp.req) if((r[k]||0)<sp.req[k]) return false; return true; }
   function learnableSpells(){ var out=[]; for(var i=0;i<SPELLS.length;i++) if(spellReady(SPELLS[i])) out.push(SPELLS[i].id); return out; }
-  function bestSpellDmg(){    // strongest currently-castable spell's damage
-    var best=0, name=null, r=S.rpg;
-    for(var i=0;i<SPELLS.length;i++){ if(spellReady(SPELLS[i])){ var d=SPELLS[i].dmg(r); if(d>best){best=d;name=SPELLS[i].name;} } }
-    return { dmg:best, name:name };
-  }
   function checkSpells(){    // call after stat gains; logs newly learned spells
     if(!S.spells) S.spells=[];
     var have={}; for(var i=0;i<S.spells.length;i++) have[S.spells[i]]=1;
     var now=learnableSpells();
     for(var j=0;j<now.length;j++) if(!have[now[j]]){
       S.spells.push(now[j]);
-      var sp=null; for(var k=0;k<SPELLS.length;k++) if(SPELLS[k].id===now[j]) sp=SPELLS[k];
+      var sp=spellById(now[j]);
       logEvent('\u2728 learned a spell: '+(sp?sp.name:now[j])+'!'); blip(900,0.1,'sine');
+      // auto-slot into an empty loadout slot so new players see spells work
+      if(S.loadout && S.loadout.length<3 && S.loadout.indexOf(now[j])<0) S.loadout.push(now[j]);
     }
   }
 
   // ── lifespan / pacing ──
-  var MAX_AGE = 240;             // old age claims the pet at this age
+  var MAX_AGE = 200;            // old age claims the pet at this age (combat pauses the clock)
   var AGE_JUNIOR = 16, AGE_ADULT = 36;   // baby->junior, junior->adult (in age)
 
 
@@ -707,6 +777,7 @@
   var msgEl=$('#msg'), hintEl=$('#hint');
   var questRow=$('#questRow'), questBiome=$('#questBiome'), questProg=$('#questProg'), questAge=$('#questAge');
   var actionsEl=$('#actions'), subPicker=$('#subPicker'), rpgRow=$('#rpgRow');
+  var cycleFill=$('#cycleFill'), cycleRowEl=$('#cycleRow');
   var busyRow=$('#busyRow'), busyLabel=$('#busyLabel'), busyCancel=$('#busyCancel');
   var endScreen=$('#endScreen'), endTitle=$('#endTitle'), endStats=$('#endStats');
   var qteRow=$('#qteRow'), qteMsg=$('#qteMsg'), qteBtns=$('#qteBtns'), qteTime=$('#qteTime');
@@ -719,39 +790,36 @@
   function fresh(){
     var style = EGG_STYLES[(Math.random()*EGG_STYLES.length)|0];
     return { v:2, stage:'egg', form:'egg_'+style, eggStyle:style,
-      stats:{ full:70, energy:70, health:68 }, rpg:freshRpg(),
-      age:0, cycles:0, mode:'idle', modeAct:null, biome:0, cleared:[], spells:[], ended:null,
-      care:{ feed:0, play:0, clean:0, rest:0 }, diet:{ meat:0, veggie:0 },
-      poops:[], poopTimer: poopInterval(), mods:[], busy:null, battle:null,
+      stats:{ health:68, energy:100 }, mana:20, rpg:freshRpg(),
+      age:0, cycles:0, mode:'idle', modeAct:null, spells:[], loadout:[], stageProg:0, ended:null,
+      mods:[], fight:null,
       sick:false, sickT:0, dead:false, deadCause:'', critical:null, log:[],
       lastSeen:Date.now(), born:Date.now() };
   }
   var S = loadSave() || fresh();
-  if (!S.diet) S.diet = { meat:0, veggie:0 };
-  if (!S.poops) S.poops = [];
   if (!S.log) S.log = [];
   if (typeof S.dead === 'undefined') S.dead = false;
   if (typeof S.critical === 'undefined') S.critical = null;
   if (!S.eggStyle){ S.eggStyle='dewy'; if(S.stage==='egg') S.form='egg_dewy'; }
   if (!S.mods) S.mods = [];
-  if (typeof S.busy === 'undefined') S.busy = null;
-  if (typeof S.battle === 'undefined') S.battle = null;
+  S.fight = null;   // combat is transient; never resume a fight from a save
   if (!S.rpg) S.rpg = freshRpg();
   else { var _r=freshRpg(); for(var _k in _r) if(S.rpg[_k]==null) S.rpg[_k]=_r[_k]; }
   if (typeof S.cycles !== 'number') S.cycles = 0;
-  if (!S.mode) S.mode = 'idle';
+  if (!S.mode || S.mode==='feed' || S.mode==='explore') S.mode = 'idle';
   if (typeof S.modeAct === 'undefined') S.modeAct = null;
-  if (typeof S.biome !== 'number') S.biome = 0;
-  if (!S.cleared) S.cleared = [];
-  if (typeof S.progress !== 'number') S.progress = 0;
   if (!S.spells) S.spells = [];
+  if (!S.loadout) S.loadout = [];
+  // migrate old linear progress -> stageProg (cap to total)
+  if (typeof S.stageProg !== 'number') S.stageProg = Math.min(N_TOTAL, S.progress||0);
   if (typeof S.ended === 'undefined') S.ended = null;
-  if (S.stats){
-    if (S.stats.full==null) S.stats.full=70;
-    if (S.stats.energy==null) S.stats.energy=70;
-    // health is now an HP pool; old saves had 0-100 health -> scale up to the HP pool
-    if (S.stats.health==null || S.stats.health<=100) S.stats.health = 60 + (S.rpg.end||1)*8;
-  }
+  if (!S.stats) S.stats = { health:68, energy:100 };
+  if (typeof S.mana !== 'number') S.mana = 20;
+  if (typeof S.stats.energy !== 'number') S.stats.energy = 100;
+  // health is an HP pool; clamp/seed it
+  if (S.stats.health==null || S.stats.health<=0 || (S.stats.full!=null && S.stats.health<=100))
+    S.stats.health = 60 + (S.rpg.end||1)*8;
+  delete S.stats.full;
 
   function loadSave(){
     try { var raw=localStorage.getItem(SAVE_KEY); if(!raw) return null;
@@ -777,39 +845,17 @@
   // ── sim ──
   function clamp(v){ return v<0?0:v>100?100:v; }
   function hpClamp(v){ var m=maxHP(); return v<0?0:(v>m?m:v); }   // health is an HP pool, not 0-100
-  function avgStat(){ var s=S.stats; return (s.full+s.energy+s.health)/3; }
-  function poopOverdue(){ for(var i=0;i<S.poops.length;i++) if(S.poops[i].age>POOP_SICK_TIME) return true; return false; }
-
-  function freeSlot(){
-    var used={}; for(var i=0;i<S.poops.length;i++) used[S.poops[i].slot]=1;
-    for(var k=0;k<POOP_MAX;k++) if(!used[k]) return k; return 0;
-  }
-  function spawnPoop(){ if(S.poops.length>=POOP_MAX) return; S.poops.push({ slot:freeSlot(), age:0 }); }
+  function avgStat(){ var s=S.stats; return ((s.energy||0)+(s.health||0))/2; }
+  function poopOverdue(){ return false; }   // (poop system removed)
 
   function simulate(dt){
     if(S.dead) return;
     if(S.stage==='egg'){ S.age += dt; checkEvolve(); return; } // egg incubates in real time
     var st=S.stats;
-
-    // poop
-    for(var i=0;i<S.poops.length;i++) S.poops[i].age+=dt;
-    if(S.poops.length<POOP_MAX){
-      S.poopTimer-=dt;
-      var guard=0;
-      while(S.poopTimer<=0 && S.poops.length<POOP_MAX && guard++<POOP_MAX){
-        spawnPoop(); S.poopTimer+=poopInterval();
-      }
-      if(S.poopTimer<0) S.poopTimer=poopInterval();
-    }
-
-    // starvation sickness (full/energy at zero) - chronic neglect can kill
-    var anyZero = st.full<=0||st.energy<=0;
-    var dirty = poopOverdue();
+    // chronic illness (from random sick events) can still kill if left untreated
     var critSick = S.critical && S.critical.kind==='sick';
-    if(anyZero||dirty||critSick){ S.sick=true; if(anyZero||dirty) S.sickT+=dt; }
-    else if(S.sick && st.full>25&&st.energy>25){ S.sick=false; S.sickT=0; }
-    if(!S.sick) S.sickT=Math.max(0,S.sickT-dt*0.5);
-    if(S.sickT>=CHRONIC_SICK_DEATH){ die(dirty ? 'living in its own filth' : 'starvation & neglect'); return; }
+    if(critSick || S.sick){ S.sickT+=dt; } else { S.sickT=Math.max(0,S.sickT-dt*0.6); }
+    if(S.sickT>=CHRONIC_SICK_DEATH){ die('an untreated illness'); return; }
     if(st.health<=0){ die('its wounds'); return; }
     checkCritical();
     if(S.dead) return;
@@ -817,8 +863,8 @@
   }
 
   function sumMods(){
-    var o={ full:0, energy:0, health:0 };
-    for(var i=0;i<S.mods.length;i++){ var m=S.mods[i]; o.full+=m.full||0; o.energy+=m.energy||0; o.health+=m.health||0; }
+    var o={ health:0, mana:0, energy:0 };
+    for(var i=0;i<S.mods.length;i++){ var m=S.mods[i]; o.health+=m.health||0; o.mana+=m.mana||0; o.energy+=m.energy||0; }
     return o;
   }
   function tickMods(){ for(var i=S.mods.length-1;i>=0;i--){ if(--S.mods[i].cyc<=0) S.mods.splice(i,1); } }
@@ -828,22 +874,19 @@
     if(S.stats.health<=0) die(cause||'its wounds');
   }
 
-  // ── AGE TICK: the steady game clock. ages the pet, decays/regens vitals, fires ambient
-  //    events, handles growth + old-age death. Runs independently of what action is active.
+  // ── AGE TICK: the steady game clock. PAUSED during combat (S.fight). ──
   function ageTick(){
-    if(S.dead||S.stage==='egg') return;
-    var base=DECAY_BY_SPECIES[species()], st=S.stats, mod=sumMods();
-    st.full   = clamp(st.full   - base.full   + (mod.full||0));
-    st.energy = clamp(st.energy - base.energy + (mod.energy||0));
-    var overdue=0; for(var i=0;i<S.poops.length;i++) if(S.poops[i].age>POOP_SICK_TIME) overdue++;
-    var regen = hpRegen() - overdue*2 + (mod.health||0);
-    st.health = Math.min(maxHP(), Math.max(0, st.health + regen));
+    if(S.dead||S.stage==='egg'||S.fight) return;
+    var st=S.stats, mod=sumMods();
+    st.health = Math.min(maxHP(), Math.max(0, st.health + hpRegen() + (mod.health||0)));
+    st.energy = clamp((st.energy||0) + energyRegen() + (mod.energy||0));
+    S.mana = Math.min(maxMana(), (S.mana||0) + manaRegenTick() + (mod.mana||0));
     tickMods();
     S.age++;
     if(S.age>=MAX_AGE){ endGame('age'); return; }
     checkEvolve();
     if(S.dead) return;
-    if(S.mode!=='explore' && Math.random()<0.45) fireCycleEvent();   // ambient events
+    if(Math.random()<0.45) fireCycleEvent();   // ambient events
     save();
   }
 
@@ -855,6 +898,7 @@
   }
   function actDur(){
     var m=S.mode;
+    if(m==='rest') return restDur(S.modeAct==='energy' ? 'spi' : 'end');
     if((m==='train'||m==='play') && S.modeAct){
       var a=findAct(m==='train'?TRAIN:PLAY, S.modeAct), base=ACT_DUR[m]||4000;
       if(a) return Math.max(ACT_MIN_MS, base - (S.rpg[a.stat]||0)*ACT_STEP_MS);
@@ -862,24 +906,27 @@
     return ACT_DUR[m]||4000;
   }
   function doAction(){     // one completed rep of the current action
-    if(S.dead||S.stage==='egg') return;
+    if(S.dead||S.stage==='egg'||S.fight) return;
     var st=S.stats, m=S.mode;
-    if(m==='feed'){
-      st.full=clamp(st.full+FEED_RATE); S.care.feed++; react={type:'eat',t:18};
-      blip(460,0.05);
-      if(Math.random()<0.4) S.poopTimer=Math.min(S.poopTimer, 8+Math.random()*20);
-      if(st.full>=100) { S.mode='idle'; setMessage(niceName()+' is full.'); }
-    }
-    else if(m==='rest'){
-      st.energy=clamp(st.energy+REST_RATE); S.care.rest++; react={type:'rest',t:24};
-      blip(320,0.06,'sine');
-      if(st.energy>=100){ S.mode='idle'; setMessage(niceName()+' is well-rested.'); }
+    if(m==='rest'){
+      if(S.modeAct==='energy'){
+        var be=st.energy||0; st.energy=clamp(be+restEnergyGain());
+        react={type:'rest',t:24}; blip(380,0.06,'sine');
+        if(st.energy>be) flashT=Math.max(flashT,6);
+        if(st.energy>=100){ S.mode='idle'; setMessage(niceName()+' is fully rested.'); }
+      } else {
+        var before=st.health;
+        st.health=Math.min(maxHP(), st.health+restHeal());
+        react={type:'rest',t:24}; blip(440,0.06,'sine');
+        if(st.health>before) flashT=Math.max(flashT,6);
+        if(st.health>=maxHP()){ S.mode='idle'; setMessage(niceName()+' is fully healed.'); }
+      }
     }
     else if(m==='train' || m==='play'){
       var pool=m==='train'?TRAIN:PLAY, a=findAct(pool,S.modeAct);
       if(!a){ S.mode='idle'; return; }
-      if(st.energy < a.eCost){ S.mode='rest'; actAcc=0; logEvent(niceName()+' is exhausted \u2014 resting.'); updateControls(); return; }
-      st.energy=clamp(st.energy-a.eCost);
+      if((st.energy||0) < a.eCost){ S.mode='idle'; setMessage(niceName()+' is too tired \u2014 rest to recover energy.'); logEvent(niceName()+' ran out of energy.'); updateControls(); return; }
+      st.energy=clamp((st.energy||0)-a.eCost);
       bumpStat(a.stat,a.gain); if(a.sec) bumpStat(a.sec,1);
       react={type:'act', anim:a.anim, t:26}; flashT=Math.max(flashT,8); blip(660,0.05,'triangle');
       if(a.risk && Math.random()<a.risk){
@@ -889,57 +936,130 @@
       }
       checkSpells();
     }
-    else if(m==='explore'){
-      if(st.energy < 6){ S.mode='rest'; actAcc=0; logEvent(niceName()+' is too tired to explore \u2014 resting.'); updateControls(); return; }
-      st.energy=clamp(st.energy-6);
-      doExplore();
-    }
     if(!S.dead) save();
   }
 
-  // ── exploration + auto-battle ──
-  function doExplore(){
-    var idx=Math.min(S.progress||0, FINAL_BOSS);
-    var en=enemyStats(idx);
-    var res=resolveBattle(en);
-    S.battle={ idx:idx, win:res.win, t:0, dur:1600, ename:en.name, esprite:en.sprite, boss:en.boss };
-    if(res.win){
-      // stat rewards (logged so the change is visible)
-      var rk1=RPG_KEYS[(Math.random()*RPG_KEYS.length)|0], rk2=RPG_KEYS[(Math.random()*RPG_KEYS.length)|0];
-      bumpStat(rk1, 2); bumpStat(rk2, 1);
-      var rew = {}; rew[rk1]=(rew[rk1]||0)+2; rew[rk2]=(rew[rk2]||0)+1;
-      var rewChanges=[['HP',-res.dmgTaken]]; for(var rkk in rew) rewChanges.push([RPG_NAME[rkk], rew[rkk]]);
-      logEvent('\u2694 defeated '+en.name+' in '+res.rounds+' rounds'+deltaStr(rewChanges));
-      checkSpells();
-      if(idx===FINAL_BOSS){ endGame('win'); return; }
-      S.progress=idx+1; S.biome=ENEMIES[Math.min(S.progress,FINAL_BOSS)].b;
-      if(en.boss) logEvent('\u2605 cleared the '+BIOMES[en.biome]+'! next: '+BIOMES[Math.min(en.biome+1,6)]+'.');
-      blip(820,0.1,'sine');
-    } else {
-      logEvent('\u2620 fled from '+en.name+deltaStr([['HP',-res.dmgTaken]])+'. train up and try again.');
-      blip(200,0.16,'sawtooth');
-    }
-    save();
+  // ── STAGE COMBAT (tick-based; plays out on screen; cycle is paused while fighting) ──
+  function combatLog(line){ var f=S.fight; if(!f) return; f.log.push(line); if(f.log.length>6) f.log.shift(); }
+
+  function startStage(biome, stage){
+    if(S.dead||S.stage==='egg'||S.fight) return;
+    if(!stageUnlocked(biome,stage)){ setMessage('that stage is locked'); return; }
+    subMode=null; if(subPicker) subPicker.innerHTML='';
+    var bt=battlesFor(stage);
+    S.fight={ biome:biome, stage:stage, battleIdx:0, battlesTotal:bt,
+      enemy:enemyAt(biome,stage,0), petTick:0, eneTick:600, spellTick:850, spellIdx:0,
+      shield:0, log:[], flashPet:0, flashEne:0, lunge:0, state:'fight', stateT:0, died:false };
+    S.mode='idle'; S.modeAct=null; actAcc=0;
+    logEvent('\u2694 entered '+BIOMES[biome]+' \u2014 Stage '+(stage+1)+' ('+bt+(bt>1?' battles':' battle')+').');
+    combatLog('\u2694 1/'+bt+': '+S.fight.enemy.name);
+    blip(520,0.1,'square'); updateControls(); render(); save();
   }
-  function resolveBattle(en){
-    var php=S.stats.health, mx=maxHP(), fleeAt=Math.max(1, Math.round(mx*0.18));
-    var ehp=en.hp, rounds=0, taken=0, atk=petATK(), def=petDEF(), crit=petCRIT(), spell=bestSpellDmg().dmg;
-    while(rounds<60){
-      rounds++;
-      var dmg=Math.max(1, atk-en.def); if(Math.random()<crit) dmg=Math.round(dmg*1.8); dmg+=spell;
-      ehp-=dmg;
-      if(ehp<=0) break;
-      var ed=Math.max(1, en.atk-def); php-=ed; taken+=ed;
-      if(php<=fleeAt) break;
+
+  function castNextSpell(){
+    var f=S.fight, ld=S.loadout||[]; if(!ld.length) return;
+    for(var n=0;n<ld.length;n++){
+      var idx=(f.spellIdx+n)%ld.length, sp=spellById(ld[idx]);
+      if(!sp){ continue; }
+      if((S.mana||0) < sp.cost) continue;
+      S.mana-=sp.cost; f.spellIdx=(idx+1)%ld.length;
+      var r=S.rpg, e=f.enemy;
+      if(sp.type==='dmg'){ var d=sp.pow(r); e.hp-=d; f.flashEne=10; combatLog('\u2728 '+sp.name+' \u2192 '+d); blip(840,0.06,'triangle'); if(e.hp<=0){ winBattle(); } }
+      else if(sp.type==='risky'){ var d2=sp.pow(r), s2=sp.self?sp.self(r):0; e.hp-=d2; S.stats.health=Math.max(1,S.stats.health-s2); f.flashEne=10; f.flashPet=6; combatLog('\u2728 '+sp.name+' \u2192 '+d2+' (-'+s2+' self)'); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
+      else if(sp.type==='heal'){ var h=sp.pow(r), b=S.stats.health; S.stats.health=Math.min(maxHP(),S.stats.health+h); f.flashPet=8; combatLog('\u2728 '+sp.name+' +'+(S.stats.health-b)+' HP'); blip(560,0.08,'sine'); }
+      else if(sp.type==='shield'){ f.shield=(f.shield||0)+1; combatLog('\u2728 '+sp.name+' \u2014 shield up'); blip(620,0.07,'sine'); }
+      return;
     }
-    S.stats.health = Math.max(1, Math.round(php));
-    return { win: ehp<=0, rounds:rounds, dmgTaken:taken };
+    f.spellIdx=(f.spellIdx+1)%ld.length;   // nothing affordable this round
+  }
+
+  function winBattle(){
+    var f=S.fight, e=f.enemy; e.hp=0; f.flashEne=12;
+    combatLog('\u2620 '+e.name+' defeated!'); blip(900,0.08,'sine');
+    if(f.battleIdx >= f.battlesTotal-1){ f.state='won'; f.stateT=1500; }
+    else { f.state='interlude'; f.stateT=INTER_BATTLE_MS; }
+  }
+  function nextBattle(){
+    var f=S.fight; f.battleIdx++;
+    f.enemy=enemyAt(f.biome,f.stage,f.battleIdx);
+    f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.state='fight';
+    combatLog('\u2694 '+(f.battleIdx+1)+'/'+f.battlesTotal+': '+f.enemy.name);
+  }
+  function loseBattle(died){ var f=S.fight; f.state='lost'; f.stateT=1300; f.died=died; }
+
+  function fightTick(dt){
+    var f=S.fight; if(!f) return;
+    if(f.flashPet>0) f.flashPet--; if(f.flashEne>0) f.flashEne--; if(f.lunge>0) f.lunge-=dt/220;
+    if(f.state==='won' || f.state==='lost'){ f.stateT-=dt; if(f.stateT<=0) endFight(); return; }
+    if(f.state==='interlude'){ f.stateT-=dt; if(f.stateT<=0) nextBattle(); return; }
+    var e=f.enemy;
+    // our attack (cadence scales with DEX; crit chance=LUCK, crit dmg=DEX)
+    f.petTick+=dt;
+    if(f.petTick>=petAtkInterval()){
+      f.petTick-=petAtkInterval();
+      var dmg=Math.max(1, petATK()-e.def), crit=Math.random()<petCritChance();
+      if(crit) dmg=Math.round(dmg*petCritMult());
+      e.hp-=dmg; f.flashEne=9; f.lunge=1;
+      combatLog((crit?'\u2726':'\u00b7')+' '+niceName()+' \u2192 '+dmg+(crit?' CRIT':''));
+      blip(crit?900:680,0.04,'square');
+      if(e.hp<=0){ winBattle(); return; }
+    }
+    // spell (one per round; cycles the loadout; costs mana; small in-combat regen)
+    if(S.loadout && S.loadout.length){
+      f.spellTick+=dt;
+      if(f.spellTick>=SPELL_TICK_MS){
+        f.spellTick-=SPELL_TICK_MS;
+        S.mana=Math.min(maxMana(), (S.mana||0)+manaRegenRound());
+        castNextSpell();
+        if(f.state!=='fight') return;
+      }
+    }
+    // enemy attack (we may dodge; they can crit)
+    f.eneTick+=dt;
+    if(f.eneTick>=ENE_ATK_BASE){
+      f.eneTick-=ENE_ATK_BASE;
+      if(Math.random()<petDodge()){
+        f.flashPet=4; combatLog('~ '+niceName()+' dodged!'); blip(700,0.04,'sine');
+      }
+      else if(f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); }
+      else {
+        var edmg=Math.max(1, e.atk-petDEF()), ecrit=Math.random()<e.crit;
+        if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
+        S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=9;
+        combatLog((ecrit?'\u2726':'\u00b7')+' '+e.name+' \u2192 '+edmg+(ecrit?' CRIT':''));
+        blip(ecrit?170:240,0.05,'sawtooth');
+        if(S.stats.health<=0){ loseBattle(true); return; }
+        if(S.stats.health<=Math.max(1,Math.round(maxHP()*0.12))){ loseBattle(false); return; }
+      }
+    }
+  }
+
+  function endFight(){
+    var f=S.fight; if(!f) return;
+    if(f.state==='won'){
+      var isFinal=isFinalEncounter(f.biome,f.stage,f.battlesTotal-1);
+      var frontier=(stageIndex(f.biome,f.stage)===(S.stageProg||0));
+      var di=stageIndex(f.biome,f.stage), base=2+Math.floor(di/6), mult=frontier?1:0.5;
+      var picks=2+(f.stage>=4?1:0), gained={};
+      for(var i=0;i<picks;i++){ var k=RPG_KEYS[(Math.random()*RPG_KEYS.length)|0], amt=Math.max(1,Math.round(base*mult)); bumpStat(k,amt); gained[k]=(gained[k]||0)+amt; }
+      var gt=[]; for(var gk in gained) gt.push([RPG_NAME[gk],gained[gk]]);
+      logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1)+deltaStr(gt));
+      if(frontier) S.stageProg=Math.min(N_TOTAL, (S.stageProg||0)+1);
+      checkSpells();
+      S.fight=null; S.mode='idle';
+      if(isFinal){ endGame('win'); return; }
+      blip(820,0.1,'sine'); save(); updateControls(); render();
+    } else {
+      var died=f.died; S.fight=null; S.mode='idle';
+      if(died){ die('slain in the '+BIOMES[f.biome]); }
+      else { logEvent('\u2620 '+niceName()+' retreated from Stage '+(f.stage+1)+'. heal up and return.'); blip(200,0.16,'sawtooth'); save(); updateControls(); render(); }
+    }
   }
 
   function endGame(result){
     if(S.dead) return;
     S.ended = result;   // 'win' | 'age'
-    S.dead = true; S.mode='idle'; S.modeAct=null; S.battle=null; S.critical=null; S.sick=false;
+    S.dead = true; S.mode='idle'; S.modeAct=null; S.fight=null; S.critical=null; S.sick=false;
     S.deadCause = result==='win' ? 'defeated the Abyssal Tyrant' : 'old age';
     closeSub();
     if(result==='win'){ logEvent('\u2605\u2605 the ABYSSAL TYRANT falls \u2014 YOU WIN! \u2605\u2605');
@@ -1028,7 +1148,8 @@
     if(!S.critical || S.critical.kind!=='sick') return;
     var c=S.critical, s=S.stats;
     S.sick=false; S.sickT=0;
-    s.full=clamp(s.full+10); s.energy=clamp(s.energy+10); s.health=hpClamp(s.health+Math.round(maxHP()*0.15));
+    s.health=hpClamp(s.health+Math.round(maxHP()*0.15));
+    S.mana=Math.min(maxMana(), (S.mana||0)+10);
     react={type:'clean',t:30};
     setMessage('phew - the medicine worked'); logEvent('\u2713 '+niceName()+' recovered from '+c.cause+'.');
     blip(520,0.12,'sine');
@@ -1053,8 +1174,8 @@
     r=r||{}; var s=S.stats, changes=[];
     if(r.win){ var heal=Math.round(maxHP()*0.08); s.health=hpClamp(s.health+heal); }
     if(r.hp){ s.health=hpClamp(s.health+r.hp); changes.push(['HP',r.hp]); }
-    if(r.full){ s.full=clamp(s.full+r.full); changes.push(['FULL',r.full]); }
-    if(r.energy){ s.energy=clamp(s.energy+r.energy); changes.push(['ENERGY',r.energy]); }
+    var enD=(r.full||0)+(r.energy||0); if(enD){ s.energy=clamp((s.energy||0)+enD); changes.push(['ENERGY',enD]); }
+    if(r.mana){ S.mana=Math.min(maxMana(),(S.mana||0)+r.mana); changes.push(['MANA',r.mana]); }
     if(r.stat){ for(var k in r.stat){ bumpStat(k, r.stat[k]); changes.push([RPG_NAME[k]||k.toUpperCase(), r.stat[k]]); } }
     var icon = r.die ? '\u2620 ' : (r.bad ? '\u2639 ' : ((r.good||r.win) ? '\u2728 ' : '\u2022 '));
     var msg = r.log ? fillName(r.log) : '';
@@ -1092,21 +1213,23 @@
 
   function applyStatEvent(e){
     var s=S.stats, net=0, changes=[];
-    if(e.full){ s.full=clamp(s.full+e.full); net+=e.full; changes.push(['FULL',e.full]); }
-    if(e.energy){ s.energy=clamp(s.energy+e.energy); net+=e.energy; changes.push(['ENERGY',e.energy]); }
+    var enD=(e.full||0)+(e.energy||0);   // food/energy events -> energy stat
+    if(enD){ s.energy=clamp((s.energy||0)+enD); net+=enD; changes.push(['ENERGY',enD]); }
     if(e.health){ s.health=hpClamp(s.health+e.health); net+=e.health; changes.push(['HP',e.health]); }
-    net += (e.happy||0)+(e.clean||0);   // legacy mood flavor: tone only, no vital anymore
+    if(e.mana){ S.mana=Math.min(maxMana(),Math.max(0,(S.mana||0)+e.mana)); net+=e.mana; changes.push(['MANA',e.mana]); }
     var m=fillName(e.msg); setMessage(m); logEvent(m+deltaStr(changes));
     blip(net>=0?500:200,0.06,'triangle'); save();
   }
 
   function applyModEvent(e){
     var m=e.mod, mod={ cyc:m.cyc||3 };
-    if(m.full) mod.full=m.full; if(m.energy) mod.energy=m.energy; if(m.health) mod.health=m.health;
+    if(m.health) mod.health=m.health;
+    var enD=(m.full||0)+(m.energy||0); if(enD) mod.energy=enD;
+    if(m.mana) mod.mana=m.mana;
     S.mods.push(mod);
     var parts=[];
-    if(m.full) parts.push((m.full>0?'+':'')+m.full+' FULL');
-    if(m.energy) parts.push((m.energy>0?'+':'')+m.energy+' ENERGY');
+    if(mod.energy) parts.push((mod.energy>0?'+':'')+mod.energy+' ENERGY');
+    if(mod.mana) parts.push((mod.mana>0?'+':'')+mod.mana+' MANA');
     if(m.health) parts.push((m.health>0?'+':'')+m.health+' HP');
     var tail = parts.length ? '  ('+parts.join(', ')+'/cycle \u00d7'+mod.cyc+')' : '';
     var t=fillName(e.msg); setMessage(t); logEvent(t+tail);
@@ -1132,8 +1255,8 @@
 
   // an ambient event may fire on an age tick
   function fireCycleEvent(){
-    if(S.dead||S.stage==='egg') return;
-    var busy = eating||wash||S.critical;
+    if(S.dead||S.stage==='egg'||S.fight) return;
+    var busy = S.critical;
     var r=Math.random();
     if(!busy && S.age>3 && r<0.07){ startSickEvent(); return; }
     if(!busy && S.age>3 && r<0.13){ startQTE(); return; }
@@ -1145,59 +1268,36 @@
   var ageAcc=0;   // ms into the current age tick
   function resetEventTimers(){ ageAcc=0; actAcc=0; S.mods=[]; }
 
-  // ── care actions ──
   var react=null;          // transient anim state
-  var eating=null;         // { type, biteFrac, biteTimer, bitesLeft }
-  function startEat(type){
-    if(eating) return;
-    eating = { type:type, biteFrac:0, biteTimer:520, bitesLeft:3 };
-    blip(420,0.05);
-  }
-  function bite(){
-    S.stats.full = clamp(S.stats.full + FEED_FULL/3);
-    eating.bitesLeft--; eating.biteFrac = (3-eating.bitesLeft)/3;
-    react = { type:'eat', t:10 };
-    blip(460,0.05);
-    if(eating.bitesLeft<=0){
-      S.diet[eating.type]++; S.care.feed++;
-      // digestion: a poop comes sooner
-      S.poopTimer = Math.min(S.poopTimer, 30 + Math.random()*40);
-      setMessage(eating.type==='meat' ? 'chomp - tasty meat' : 'crunch - fresh greens');
-      logEvent(niceName()+(eating.type==='meat' ? ' devoured a bone-in steak.' : ' munched some fresh greens.'));
-      eating=null; save();
-    }
-  }
 
   function act(kind){
     if(S.dead){ return; }
     if(S.stage==='egg'){ setMessage("it's still an egg \u2014 give it time to hatch"); return; }
     if(actx && actx.state==='suspended') actx.resume();
     var s=S.stats;
-    // tapping the already-active action stops it
-    if((kind==='feed'||kind==='rest'||kind==='explore') && S.mode===kind){ setMode('idle'); setMessage(niceName()+' stopped.'); return; }
-    if(kind==='feed'){ setMode('feed'); setMessage(niceName()+' is tucking in.'); logEvent(niceName()+' started eating.'); return; }
-    if(kind==='rest'){ setMode('rest'); react={type:'rest',t:70}; setMessage('zzz \u2014 recharging energy'); logEvent(niceName()+' settled down to rest.'); return; }
+    // lock: while an action is running you can't start a different one (tap the active one or 'stop' to cancel)
+    var running = S.mode && S.mode!=='idle';
+    if(kind==='rest' && S.mode==='rest'){ setMode('idle'); setMessage(niceName()+' stopped.'); return; }
+    if(running && (kind==='rest'||kind==='train'||kind==='play'||kind==='explore')){
+      setMessage(niceName()+' is busy \u2014 stop the current action first.'); return;
+    }
+    if(kind==='rest'){ openRest(); return; }
     if(kind==='train'){ openSub('train'); return; }
     if(kind==='play'){ openSub('play'); return; }
     if(kind==='explore'){
       if(S.stage==='baby'){ setMessage('too young to explore \u2014 grow up first'); return; }
-      setMode('explore'); setMessage('venturing into the '+BIOMES[curBiome()]+'!');
-      logEvent('\u2694 '+niceName()+' set off to explore the '+BIOMES[curBiome()]+'.'); return;
+      openBiomes(); return;
     }
+    if(kind==='spells'){ openSpells(); return; }
+    if(kind==='status'){ openStatus(); return; }
     if(kind==='heal'){
       if(S.critical && S.critical.kind==='sick'){ resolveCritical(); return; }
-      s.full=clamp(s.full+12); s.energy=clamp(s.energy+12); s.health=Math.min(maxHP(),s.health+20);
+      s.health=Math.min(maxHP(),s.health+20); s.energy=clamp((s.energy||0)+12);
       S.sickT=Math.max(0,S.sickT-180);
-      react={type:'clean',t:30}; blip(520,0.1,'sine'); setMessage('feeling a little better');
+      react={type:'rest',t:30}; blip(520,0.1,'sine'); setMessage('feeling a little better');
       logEvent(niceName()+' took some medicine.'); updateAlert(); save(); return;
     }
-    if(kind==='clean'){
-      startWash();
-      S.care.clean++; blip(700,0.05,'sine'); setMessage('splish \u2014 scrubbing the screen');
-      logEvent('you cleaned up after '+niceName()+'.'); save();
-    }
   }
-  function curBiome(){ return ENEMIES[Math.min(S.progress||0,FINAL_BOSS)].b; }
 
   // ── egg: rhythmic tapping to hatch (mash too fast and it shatters) ──
   var eggTapLast=0, eggCrack=0, eggWobble=0, eggPulse=0;
@@ -1260,25 +1360,108 @@
   }
   function closeSub(){ subMode=null; if(subPicker) subPicker.innerHTML=''; updateControls(); }
 
+  function openRest(){
+    subMode='rest'; subPicker.innerHTML='';
+    subPicker.appendChild(makeBtn('Heal HP  END','',function(){ setMode('rest','heal'); setMessage(niceName()+' rests to heal.'); logEvent(niceName()+' is healing up (END).'); }));
+    subPicker.appendChild(makeBtn('Energy  SPI','',function(){ setMode('rest','energy'); setMessage(niceName()+' rests for energy.'); logEvent(niceName()+' is recovering energy (SPI).'); }));
+    subPicker.appendChild(makeBtn('\u2715 back','cancel',function(){ closeSub(); }));
+    updateControls();
+  }
+  function frontierBiome(){ return Math.min(N_BIOMES-1, Math.floor((S.stageProg||0)/N_STAGES)); }
+
+  // ── full-viewport overlays: biome / stage / spells / status ──
+  var overlayEl=$('#overlay'), ovTitle=$('#ovTitle'), ovBody=$('#ovBody'), ovClose=$('#ovClose');
+  function closeOverlay(){ overlayEl.classList.remove('open'); }
+  function openOverlay(title){ ovTitle.textContent=title; ovBody.innerHTML=''; overlayEl.classList.add('open'); }
+  ovClose.addEventListener('click', closeOverlay);
+
+  function openBiomes(){
+    openOverlay('CHOOSE A BIOME');
+    for(var b=0;b<N_BIOMES;b++){ (function(b){
+      var unlocked=biomeUnlocked(b);
+      var cleared=Math.max(0, Math.min(N_STAGES, (S.stageProg||0)-b*N_STAGES));
+      var row=document.createElement('div'); row.className='ovrow'+(unlocked?'':' lock');
+      row.innerHTML='<div class="ovtext"><div class="ovname">'+(b+1)+'. '+BIOMES[b].toUpperCase()+'</div><div class="ovsub">'+
+        (unlocked ? (cleared+'/'+N_STAGES+' stages cleared') : ('locked \u2014 clear '+BIOMES[b-1]))+'</div></div>';
+      if(unlocked) row.addEventListener('click', function(){ openStages(b); });
+      ovBody.appendChild(row);
+    })(b); }
+    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='each biome gets harder \u00b7 beat one to unlock the next'; ovBody.appendChild(hint);
+  }
+  function openStages(biome){
+    openOverlay(BIOMES[biome].toUpperCase()+' \u2014 STAGES');
+    for(var s=0;s<N_STAGES;s++){ (function(s){
+      var unlocked=stageUnlocked(biome,s), cleared=stageIndex(biome,s)<(S.stageProg||0), bt=battlesFor(s);
+      var row=document.createElement('div'); row.className='ovrow'+(unlocked?'':' lock')+(cleared?' on':'');
+      row.innerHTML='<div class="ovdot"></div><div class="ovtext"><div class="ovname">Stage '+(s+1)+(s===N_STAGES-1?'  \u2605 BOSS':'')+'</div><div class="ovsub">'+
+        bt+(bt>1?' battles':' battle')+' \u00b7 '+(cleared?'cleared':(unlocked?'ready':'locked'))+'</div></div>';
+      if(unlocked) row.addEventListener('click', function(){ closeOverlay(); startStage(biome,s); });
+      ovBody.appendChild(row);
+    })(s); }
+    var hint=document.createElement('div'); hint.className='ovhint'; hint.textContent='tap a stage to enter \u00b7 close to pick another biome'; ovBody.appendChild(hint);
+  }
+  function spellTypeName(t){ return {dmg:'direct damage',risky:'big damage \u2014 hurts you',heal:'heal HP',shield:'absorb 1 hit'}[t]||t; }
+  function openSpells(){
+    openOverlay('SPELLS \u2014 EQUIP UP TO 3');
+    if(!S.spells.length){ var e=document.createElement('div'); e.className='ovhint';
+      e.textContent='no spells learned yet \u2014 raise INT, SPI, DEX, END or LCK by training to unlock spells.'; ovBody.appendChild(e); }
+    S.spells.forEach(function(id){
+      var sp=spellById(id); if(!sp) return;
+      var slot=S.loadout.indexOf(id), active=slot>=0;
+      var row=document.createElement('div'); row.className='ovrow'+(active?' on':'');
+      row.innerHTML='<div class="ovdot"></div><div class="ovtext"><div class="ovname">'+sp.name+(active?'  \u00b7 slot '+(slot+1):'')+
+        '</div><div class="ovsub">'+sp.cost+' mana \u00b7 '+spellTypeName(sp.type)+'</div></div>';
+      row.addEventListener('click', function(){ toggleSpell(id); openSpells(); });
+      ovBody.appendChild(row);
+    });
+    var hint=document.createElement('div'); hint.className='ovhint';
+    hint.textContent='active '+S.loadout.length+'/3 \u00b7 they cast in order each combat round, costing mana \u00b7 tap to toggle';
+    ovBody.appendChild(hint);
+  }
+  function toggleSpell(id){
+    var i=S.loadout.indexOf(id);
+    if(i>=0){ S.loadout.splice(i,1); blip(300,0.05,'sine'); }
+    else { if(S.loadout.length>=3){ setMessage('3 spells max \u2014 deactivate one first'); blip(180,0.08,'sawtooth'); return; } S.loadout.push(id); blip(740,0.06,'sine'); }
+    save();
+  }
+  function openStatus(){
+    openOverlay('STATUS \u2014 '+niceName().toUpperCase());
+    var r=S.rpg;
+    function st(l,v){ return '<div class="ovstat"><span>'+l+'</span><b>'+v+'</b></div>'; }
+    var h='<div class="ovhdr">attributes</div><div class="ovgrid">';
+    h+=st('STR',r.str)+st('DEX',r.dex)+st('END',r.end)+st('INT',r.int)+st('SPI',r.spi)+st('LCK',r.lck);
+    h+='</div><div class="ovhdr">combat</div><div class="ovgrid">';
+    h+=st('Attack',petATK())+st('Defense',petDEF());
+    h+=st('Max HP',maxHP())+st('Max Mana',maxMana());
+    h+=st('Crit chance',Math.round(petCritChance()*100)+'%')+st('Crit dmg','\u00d7'+petCritMult().toFixed(2));
+    h+=st('Dodge',Math.round(petDodge()*100)+'%')+st('Atk speed',(1000/petAtkInterval()).toFixed(2)+'/s');
+    h+='</div><div class="ovhdr">progress</div><div class="ovgrid">';
+    h+=st('Stages',Math.min(N_TOTAL,S.stageProg||0)+'/'+N_TOTAL)+st('Age',(S.age||0)+'/'+MAX_AGE);
+    h+=st('Spells',S.spells.length+'/'+SPELLS.length)+st('Form',(FORM_NAMES[S.form]||S.form));
+    h+='</div>';
+    ovBody.innerHTML=h;
+  }
+
   // decides which control block is visible for the current state
-  var MODE_LABEL = { feed:'EATING', rest:'RESTING', train:'TRAINING', play:'PLAYING', explore:'EXPLORING', idle:'' };
+  var MODE_LABEL = { rest:'RESTING', train:'TRAINING', play:'PLAYING', idle:'' };
   var SHOW_DISP = { actions:'grid', subPicker:'flex', busyRow:'flex', qteRow:'block', alertWrap:'block', endScreen:'block', questRow:'flex' };
   function updateControls(){
     function on(el,v){ if(!el) return; el.style.display = v ? (SHOW_DISP[el.id]||'block') : 'none'; }
     var qte = S.critical && S.critical.kind==='qte';
     var sick = !qte && (S.sick || (S.critical && S.critical.kind==='sick'));
-    var dead=S.dead, egg=S.stage==='egg';
+    var dead=S.dead, egg=S.stage==='egg', fight=!!S.fight;
     var activeMode = !egg && !dead && S.mode && S.mode!=='idle';
     on(endScreen, dead);
     on(questRow, !egg && !dead);
-    on(qteRow, qte && !dead && !egg);
-    on(actionsEl, !dead && !egg && !subMode && !qte);
-    on(subPicker, !!subMode && !dead && !egg && !qte);
-    on(busyRow, activeMode && !subMode && !qte);
-    on(alertWrap, sick && !dead && !egg && !qte);
-    if(subMode && !qte) subPicker.style.display='flex';
-    // highlight the active action button + show the activity name on it
-    var DEF_LABEL = { feed:'Feed', rest:'Rest', train:'Train', play:'Play', explore:'Explore', clean:'Clean' };
+    on(qteRow, qte && !dead && !egg && !fight);
+    on(actionsEl, !dead && !egg && !subMode && !qte && !fight);
+    on(subPicker, !!subMode && !dead && !egg && !qte && !fight);
+    on(busyRow, activeMode && !subMode && !qte && !fight);
+    on(alertWrap, sick && !dead && !egg && !qte && !fight);
+    if(subMode && !qte && !fight) subPicker.style.display='flex';
+    // active action button highlight + label + LOCK others while an action runs
+    var DEF_LABEL = { rest:'Rest', train:'Train', play:'Play', explore:'Explore', spells:'Spells', status:'Status' };
+    var ACTION_BTN = { rest:1, train:1, play:1, explore:1 };   // these take time (lockable)
     if(actionsEl){
       var btns=actionsEl.querySelectorAll('[data-act]');
       for(var i=0;i<btns.length;i++){
@@ -1286,12 +1469,16 @@
         var act2 = (S.mode==='train'&&a==='train')||(S.mode==='play'&&a==='play')||(S.mode===a);
         var isOn = !!act2 && activeMode;
         btns[i].classList.toggle('active', isOn);
+        // lock other time-actions while one is running (active one stays tappable to stop)
+        var lock = activeMode && ACTION_BTN[a] && !isOn;
+        if(lock) btns[i].setAttribute('disabled','disabled'); else btns[i].removeAttribute('disabled');
         var bl=btns[i].querySelector('.bl');
         if(bl){
           var txt=DEF_LABEL[a]||a;
           if(isOn && (a==='train'||a==='play') && S.modeAct){
             var aa=findAct(a==='train'?TRAIN:PLAY,S.modeAct); if(aa) txt=aa.label;
           }
+          if(isOn && a==='rest') txt = S.modeAct==='energy' ? 'Energy' : 'Heal';
           bl.textContent=txt;
         }
       }
@@ -1299,8 +1486,8 @@
     if(activeMode && busyLabel){
       var lbl=MODE_LABEL[S.mode]||'';
       if((S.mode==='train'||S.mode==='play') && S.modeAct){
-        var aa=findAct(S.mode==='train'?TRAIN:PLAY,S.modeAct); if(aa) lbl+=': '+aa.label.toUpperCase();
-      }
+        var ab=findAct(S.mode==='train'?TRAIN:PLAY,S.modeAct); if(ab) lbl+=': '+ab.label.toUpperCase();
+      } else if(S.mode==='rest') lbl = (S.modeAct==='energy'?'RECOVERING ENERGY':'HEALING');
       busyLabel.textContent=lbl;
     }
     if(dead) renderEnd();
@@ -1313,11 +1500,11 @@
     if(!endTitle) return;
     var win = S.ended==='win';
     endTitle.textContent = win ? '\u2605 VICTORY \u2605' : 'GAME OVER';
-    var r=S.rpg, biome=BIOMES[curBiome()];
+    var r=S.rpg;
     var lines = [];
-    lines.push(win ? niceName()+' vanquished the Abyssal Tyrant!' : niceName()+' '+(S.ended==='age'?'lived a full life.':'fell: '+S.deadCause));
-    lines.push('reached age '+(S.age||0)+(win?' (victorious)':S.ended==='age'?' (a full life)':''));
-    lines.push('reached: '+(win?'CITADEL (cleared)':biome)+'  \u2022  '+Math.min(S.progress||0,32)+'/32 foes');
+    lines.push(win ? niceName()+' conquered the Citadel and felled the Abyssal Tyrant!' : niceName()+' '+(S.ended==='age'?'lived a full life.':'fell: '+S.deadCause));
+    lines.push('reached age '+(S.age||0)+' / '+MAX_AGE);
+    lines.push('cleared '+Math.min(N_TOTAL,S.stageProg||0)+' / '+N_TOTAL+' stages \u00b7 reached '+BIOMES[frontierBiome()]);
     lines.push('form: '+(FORM_NAMES[S.form]||S.form));
     lines.push('STR '+r.str+'  DEX '+r.dex+'  END '+r.end);
     lines.push('INT '+r.int+'  SPI '+r.spi+'  LCK '+r.lck);
@@ -1329,7 +1516,7 @@
   function setMessage(t){ if(msgEl) msgEl.textContent=t; msgT=160; }
 
   document.querySelectorAll('[data-act]').forEach(function(b){
-    b.addEventListener('click',function(){ act(b.getAttribute('data-act')); });
+    b.addEventListener('click',function(){ act(b.getAttribute('data-act')); if(b.blur) b.blur(); });
   });
   // tap the egg to hatch faster (mash and it shatters)
   petCanvas.addEventListener('pointerdown',function(e){
@@ -1375,16 +1562,18 @@
   window.addEventListener('resize',sizeCanvas);
 
   function setBars(){
-    var mxhp=maxHP();
+    var mxhp=maxHP(), mxmana=maxMana();
     document.querySelectorAll('.stat').forEach(function(el){
       var k=el.getAttribute('data-k'), v=S.stats[k];
-      var pct = (k==='health') ? (v/mxhp*100) : v;
+      var pct = k==='health' ? ((S.stats.health||0)/mxhp*100)
+              : k==='mana'   ? ((S.mana||0)/mxmana*100)
+              : (v||0);
       pct=Math.max(0,Math.min(100,pct));
       el.querySelector('.seg').style.width=pct+'%';
-      el.classList.toggle('low', pct<=18);
+      el.classList.toggle('low', pct<=18 && k!=='mana');
     });
     // active action's button fills as a progress bar
-    var activeMode = !S.dead && S.stage!=='egg' && S.mode && S.mode!=='idle';
+    var activeMode = !S.dead && S.stage!=='egg' && S.mode && S.mode!=='idle' && !S.fight;
     var ap = activeMode ? Math.max(0,Math.min(100, actAcc/actDur()*100)) : 0;
     if(actionsEl){
       var abtns=actionsEl.querySelectorAll('[data-act]');
@@ -1395,30 +1584,29 @@
         if(pr) pr.style.width = isActive ? ap+'%' : '0%';
       }
     }
+    // cycle bar = passage of game time. paused during combat.
+    if(cycleFill){
+      var paused = S.fight || S.dead || S.stage==='egg';
+      var cp = paused ? cycleFill._lastPct||0 : Math.max(0,Math.min(100, ageAcc/AGE_TICK_MS*100));
+      cycleFill._lastPct = cp; cycleFill.style.width = cp+'%';
+      if(cycleRowEl) cycleRowEl.classList.toggle('paused', !!S.fight);
+    }
     // quest readout
     if(questRow && !S.dead && S.stage!=='egg'){
-      questBiome.textContent = BIOMES[curBiome()].toUpperCase();
-      questProg.textContent = Math.min(S.progress||0,32)+' / 32';
+      questBiome.textContent = BIOMES[frontierBiome()].toUpperCase();
+      questProg.textContent = Math.min(N_TOTAL, S.stageProg||0)+' / '+N_TOTAL;
       questAge.textContent = 'AGE '+(S.age||0);
     }
-    renderRpg();   // keep stat counter live every frame (fixes stale display after gains)
-  }
-  function renderRpg(){
-    if(!rpgRow) return;
-    if(S.stage==='egg' || S.dead){ rpgRow.innerHTML=''; return; }
-    var r=S.rpg, h='';
-    for(var i=0;i<RPG_KEYS.length;i++){ var k=RPG_KEYS[i]; h+='<span>'+RPG_NAME[k]+' <b>'+(r[k]||0)+'</b></span>'; }
-    rpgRow.innerHTML=h;
   }
 
   function render(){
     if(S.dead){
       nameTag.textContent='RIP '+niceName();
-      updateControls(); setBars(); renderRpg(); renderLog(); return;
+      updateControls(); setBars(); renderLog(); return;
     }
-    nameTag.textContent=FORM_NAMES[S.form];
-    if(S.stage==='egg'){ updateControls(); setBars(); renderRpg(); renderLog(); return; }
-    updateAlert(); updateControls(); setBars(); renderRpg(); renderLog();
+    nameTag.textContent = S.fight ? ('VS '+(S.fight.enemy?S.fight.enemy.name:'?')) : FORM_NAMES[S.form];
+    if(S.stage==='egg'){ updateControls(); setBars(); renderLog(); return; }
+    updateAlert(); updateControls(); setBars(); renderLog();
   }
 
   function blitMap(map, ox, oy, unit, eatenFrac){
@@ -1502,48 +1690,52 @@
       if(rows[y][src]==='#') pctx.fillRect(Math.round(ox+x*unit),Math.round(oy+y*unit),Math.ceil(unit),Math.ceil(unit)); }
     return { ox:ox, oy:oy, w:totalW, h:totalH, cx:xc, cy:oy+totalH/2 };
   }
-  function drawBattle(){
-    var b=S.battle, prog=Math.min(1, b.t/b.dur);
-    // lunge: sprites rush toward center, meet ~mid, then recoil
-    var lunge = Math.sin(Math.min(prog,0.6)/0.6*Math.PI)*1; // 0..1..0 over first 60%
-    var petX = cw*0.30 + lunge*(cw*0.10);
-    var eneX = cw*0.70 - lunge*(cw*0.10);
-    var bob = Math.sin(animT*0.02)*2;
-    var petRows = SPR[S.form]||SPR.springer;
-    var eneRows = ENE_SPR[b.esprite] || ENE_SPR.slime0;
-    var eScale = b.boss ? 1.25 : 1.0;
-    drawCreature(petRows, petX, bob, 1.0, false);
-    drawCreature(eneRows, eneX, bob*-1, eScale, true);
-    // clash sparks at center on impact beats
-    if(prog>0.25 && prog<0.7){
-      pctx.fillStyle='#fff';
-      var cx=cw*0.5, cy=ch*0.55;
-      for(var i=0;i<6;i++){ var a=animT*0.05+i; var rr=6+((animT*0.06+i*4)%10);
-        pctx.fillRect(Math.round(cx+Math.cos(a)*rr), Math.round(cy+Math.sin(a)*rr), 2,2); }
+  function drawBar(x,y,w,frac,dim){
+    frac=Math.max(0,Math.min(1,frac));
+    pctx.strokeStyle='rgba(255,255,255,0.55)'; pctx.lineWidth=1;
+    pctx.strokeRect(Math.round(x)+0.5, Math.round(y)+0.5, Math.round(w), 5);
+    pctx.fillStyle=dim?'rgba(255,255,255,0.45)':'#fff';
+    pctx.fillRect(Math.round(x), Math.round(y), Math.round(w*frac), 6);
+  }
+  function drawFight(){
+    var f=S.fight; if(!f) return; var e=f.enemy;
+    var lunge=Math.max(0,f.lunge||0);
+    var petX=cw*0.27 + lunge*12, eneX=cw*0.74;
+    var petFlash=f.flashPet>0, eneFlash=f.flashEne>0;
+    var bob=Math.sin(animT*0.02)*2;
+    var petRows=SPR[S.form]||SPR.springer, eneRows=ENE_SPR[e.sprite]||ENE_SPR.slime0;
+    var blinkP=petFlash && (Math.floor(animT/55)%2===0), blinkE=eneFlash && (Math.floor(animT/55)%2===0);
+    if(!blinkP) drawCreature(petRows, petX, bob-(petFlash?3:0), 1.0, false);
+    if(!blinkE) drawCreature(eneRows, eneX, -bob-(eneFlash?3:0), e.boss?1.3:1.0, true);
+    // header
+    pctx.fillStyle='#fff'; pctx.textAlign='center';
+    pctx.font='8px "Pixel",monospace';
+    pctx.fillText('STAGE '+(f.stage+1)+'  \u00b7  '+(f.battleIdx+1)+'/'+f.battlesTotal, cw*0.5, 11);
+    pctx.fillText((e.boss?'\u2605 ':'')+e.name.toUpperCase(), cw*0.5, 22);
+    // bars: pet HP + MP (left), enemy HP (right)
+    drawBar(cw*0.06, 28, cw*0.37, (S.stats.health||0)/maxHP());
+    drawBar(cw*0.06, 38, cw*0.37, (S.mana||0)/maxMana(), true);
+    drawBar(cw*0.57, 28, cw*0.37, Math.max(0,e.hp)/e.maxHp);
+    if(f.shield>0){ pctx.font='7px "Pixel",monospace'; pctx.fillText('\u25C7 shield x'+f.shield, cw*0.245, 52); }
+    // combat log (most recent at bottom, fading up)
+    pctx.textAlign='left'; pctx.font='7px "Pixel",monospace';
+    var lines=f.log.slice(-5), ly=ch-8-(lines.length-1)*9;
+    for(var i=0;i<lines.length;i++){
+      pctx.fillStyle='rgba(255,255,255,'+(0.35+0.65*(i+1)/lines.length).toFixed(2)+')';
+      pctx.fillText(lines[i], cw*0.06, ly+i*9);
     }
-    // label + result banner
-    pctx.fillStyle='#fff'; pctx.font='8px "Pixel", monospace'; pctx.textAlign='center';
-    pctx.fillText('VS '+b.ename, cw*0.5, ch*0.16);
-    if(prog>0.62){ pctx.font='10px "Pixel", monospace';
-      pctx.fillText(b.win?'WIN!':'FLED!', cw*0.5, ch*0.30); }
+    // state banner
+    if(f.state==='won'||f.state==='lost'||f.state==='interlude'){
+      pctx.fillStyle='rgba(0,0,0,0.55)'; pctx.fillRect(0, ch*0.42, cw, 24);
+      pctx.fillStyle='#fff'; pctx.font='11px "Pixel",monospace'; pctx.textAlign='center';
+      var txt = f.state==='won'?'STAGE CLEAR!' : f.state==='lost'?(f.died?'DEFEATED':'RETREAT!') : 'NEXT FOE\u2026';
+      pctx.fillText(txt, cw*0.5, ch*0.42+17);
+    }
     pctx.textAlign='left';
   }
 
   function fmtMs(ms){ var s=Math.ceil(ms/1000);
     if(s>=60){ var m=Math.floor(s/60); return m+':'+('0'+(s%60)).slice(-2); } return s+'s'; }
-
-  function drawFood(box){
-    if(!eating) return;
-    var map = eating.type==='meat'?MEAT:VEG, unit=3, mapW=map[0].length;
-    var fx = Math.max(2, box.ox - mapW*unit - 8), fy = box.floorY-map.length*unit;
-    blitMap(map, fx, fy, unit, eating.biteFrac);
-    // tongue flick toward the food on each bite
-    if(react && react.type==='eat'){
-      pctx.strokeStyle='#fff'; pctx.lineWidth=1;
-      var sy=box.oy+box.h*0.45;
-      pctx.beginPath(); pctx.moveTo(box.ox+2, sy); pctx.lineTo(fx+mapW*unit, fy+map.length*unit*0.4); pctx.stroke();
-    }
-  }
 
   function drawZzz(box){
     pctx.fillStyle='rgba(255,255,255,0.7)';
@@ -1634,19 +1826,22 @@
 
     simAcc+=dtMs; while(simAcc>=1000){ simulate(1); simAcc-=1000; }
 
-    // AGE clock (steady) + ACTION timer (per-action). egg phase ages via simulate above.
-    if(!S.dead && S.stage!=='egg'){
+    // COMBAT: pauses the cycle clock; plays out in real time tick-by-tick
+    if(!S.dead && S.fight){
+      fightTick(dtMs);
+      checkCritical();
+    }
+    // AGE clock (steady) + ACTION timer (per-action). egg ages via simulate above.
+    else if(!S.dead && S.stage!=='egg'){
       ageAcc+=dtMs;
       var ag=0;
-      while(ageAcc>=AGE_TICK_MS && ag++<8){ ageAcc-=AGE_TICK_MS; ageTick(); if(S.dead) break; }
+      while(ageAcc>=AGE_TICK_MS && ag++<8){ ageAcc-=AGE_TICK_MS; ageTick(); if(S.dead||S.fight) break; }
       // active action runs on its own timer; the button fills as a progress bar
-      if(!S.dead && S.mode && S.mode!=='idle'){
+      if(!S.dead && !S.fight && S.mode && S.mode!=='idle'){
         actAcc+=dtMs;
         var ac=0;
-        while(actAcc>=actDur() && ac++<8){ actAcc-=actDur(); doAction(); if(S.dead||S.mode==='idle') break; }
+        while(actAcc>=actDur() && ac++<8){ actAcc-=actDur(); doAction(); if(S.dead||S.mode==='idle'||S.fight) break; }
       } else { actAcc=0; }
-      // battle animation timer
-      if(S.battle){ S.battle.t+=dtMs; if(S.battle.t>=S.battle.dur) S.battle=null; }
       checkCritical();
       // live countdowns
       if(S.critical){
@@ -1656,8 +1851,6 @@
       } else if(S.sick){ alertTime.textContent='give it some medicine'; }
     }
 
-    // eating
-    if(eating){ eating.biteTimer-=dtMs; if(eating.biteTimer<=0){ eating.biteTimer=520; bite(); } }
     if(react){ react.t-=dtMs/16; if(react.t<=0) react=null; }
     if(msgT>0){ msgT-=dtMs/16; if(msgT<=0 && msgEl) msgEl.textContent=''; }
 
@@ -1694,9 +1887,9 @@
       requestAnimationFrame(frame); return;
     }
 
-    // active battle: show the clash instead of roaming
-    if(S.battle){
-      drawBattle();
+    // active battle: tick-based fight plays out on screen
+    if(S.fight){
+      drawFight();
       if(flashT>0){ pctx.fillStyle='rgba(255,255,255,'+(flashT/22*0.6)+')'; pctx.fillRect(0,0,cw,ch); flashT--; }
       setBars();
       requestAnimationFrame(frame); return;
@@ -1718,7 +1911,6 @@
     if(curAnim){                                  // training / playing flourish, in place
       var m=activityMotion(curAnim,t); offY=m.offY; sq=m.sq; shakeX=m.shakeX;
     }
-    else if(eating){ sq=0.95; offY=Math.sin(t*9)*1.2; }       // stand still & eat
     else if(playing){ var ph=(react.t%16)/16; offY=-Math.abs(Math.sin(ph*Math.PI))*12; sq=0.9; }
     else if(resting){ offY=2; sq=0.86; }                      // stand still & rest
     else if(S.sick){ offY=Math.sin(t*8)*2; sq=0.95; }         // shiver in place
@@ -1746,23 +1938,8 @@
     var box=drawSprite(S.form, offY, sq, walkX, walkDir<0);
     if(curAnim) drawActivity(curAnim, box, t);
     pctx.restore();
-    drawPoops(box);
-    drawFood(box);
     if(resting||tired) drawZzz(box);
     if(S.sick){ pctx.fillStyle='#fff'; pctx.fillRect(box.ox+box.w-2, box.oy+4+(Math.sin(t*6)+1)*2, 2,3); }
-
-    // wash sweep
-    if(wash){
-      wash.x += dtMs*0.9; // px per ms across the screen
-      var wx=wash.x;
-      // clear poops the wash has passed
-      var slotX=poopSlotX();
-      S.poops = S.poops.filter(function(p){ return (slotX[p.slot]||0) > wx - 10; });
-      // draw wash bar + faint trailing scrub
-      pctx.fillStyle='#fff'; pctx.fillRect(wx, 0, 8, ch);
-      pctx.fillStyle='rgba(255,255,255,0.12)'; pctx.fillRect(0,0,wx,ch);
-      if(wx>cw+8){ wash=null; S.poopTimer=poopInterval(); save(); }
-    }
 
     if(flashT>0){ pctx.fillStyle='rgba(255,255,255,'+(flashT/22*0.6)+')'; pctx.fillRect(0,0,cw,ch); flashT--; }
 
@@ -1779,13 +1956,13 @@
     if(S.stage==='egg'){
       simulate(capped);   // egg keeps incubating while away (and may hatch)
     } else {
-      var base=DECAY_BY_SPECIES[species()], ticks=Math.floor(capped/CYCLE_SEC), st=S.stats;
-      st.full  =clamp(st.full   - base.full*ticks);
-      st.energy=clamp(st.energy - base.energy*ticks);
-      st.health=Math.min(maxHP(), st.health + hpRegen()*ticks);   // HP regenerates while away
+      var ticks=Math.floor(capped/CYCLE_SEC), st=S.stats;
+      st.health=Math.min(maxHP(), (st.health||0) + hpRegen()*ticks);     // HP regenerates while away
+      st.energy=clamp((st.energy||0) + energyRegen()*ticks);             // energy too
+      S.mana=Math.min(maxMana(), (S.mana||0) + manaRegenTick()*ticks);
       S.age=(S.age||0)+ticks;
       if(S.age>=MAX_AGE){ endGame('age'); return; }
-      simulate(capped);   // poop + sickness accrue (no events; modes paused while away)
+      simulate(capped);   // sickness accrues (no events fire while away)
       if(S.dead) return;
       checkEvolve();
     }
@@ -1796,7 +1973,7 @@
   document.addEventListener('visibilitychange',function(){ if(document.hidden) save(); else { catchUp(); render(); } });
   window.addEventListener('beforeunload',save);
 
-  catchUp(); sizeCanvas(); render(); requestAnimationFrame(frame);
+  catchUp(); sizeCanvas(); render(); save(); requestAnimationFrame(frame);
 })();
 </script>
 </body>
