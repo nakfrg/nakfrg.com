@@ -100,6 +100,7 @@
   .linkbtn { background:none; border:none; color:var(--dim); cursor:pointer; padding:6px;
              font:10px/1 ui-monospace, monospace; letter-spacing:1px; text-transform:uppercase; }
   .linkbtn:hover { color:#fff; }
+  .linkbtn.confirm { color:#fff; animation: blinkfill .5s steps(2) infinite; }
 
   .secret { position:fixed; right:10px; bottom:8px; font:11px/1 ui-monospace, monospace;
             color:rgba(255,255,255,0.05); text-decoration:none; transition:color .3s; z-index:5; }
@@ -116,10 +117,10 @@
     <div class="title pix">TAMAFROGGI</div>
 
     <div id="screen">
-      <span id="stageTag" class="pix">BABY</span>
+      <span id="stageTag" class="pix">EGG</span>
       <span id="ageTag" class="pix">0M</span>
       <canvas id="pet"></canvas>
-      <span id="nameTag" class="pix">PADPOLE</span>
+      <span id="nameTag" class="pix">DEWY EGG</span>
     </div>
 
     <div id="stats">
@@ -162,7 +163,7 @@
     </div>
 
     <div id="footer">
-      <button class="linkbtn" id="newBtn">&#8634; new padpole</button>
+      <button class="linkbtn" id="newBtn">&#8634; new egg</button>
       <button class="linkbtn" id="muteBtn">&#9834; sound</button>
     </div>
   </div>
@@ -184,9 +185,16 @@
     bullhorn:["    ##      ##  ","   #  #    #  # ","  ## ## #### ## ","  #  #      #  #"," ###############"," ##           ##"," # ########### #"," ##           ##","  ############# ","   ###      ### ","    ##########  ","     ########   ","      ######    "],
     toadsage:["                ","   ##########   ","  ############  ","  ### #### ###  ","  ## #    # ##  ","  #          #  ","  # ######## #  ","  ############  ","  # ## ## ## #  ","  ############  ","   ##########   ","   ##      ##   ","                "],
     canopy:["    ##    ##    ","   #  #  #  #   ","   # #    # #   ","    ## #### ##  ","   ##########   ","  ### #### ###  "," ############## ","##  ########  ##","#    ######    #","##  ##    ##  ##"," # #        # # ","## #        # ##","#            # #"],
-    lotus:["       ##       ","   #   ##   #   ","  # #  ##  # #  ","  #  ######  #  "," ## ##    ## ## "," #  # #### #  # "," ## ##    ## ## ","  #  ######  #  ","   ########     ","  ############  "," ############## ","  #  #    #  #  ","   ###    ###   "]
+    lotus:["       ##       ","   #   ##   #   ","  # #  ##  # #  ","  #  ######  #  "," ## ##    ## ## "," #  # #### #  # "," ## ##    ## ## ","  #  ######  #  ","   ########     ","  ############  "," ############## ","  #  #    #  #  ","   ###    ###   "],
+    egg_dewy:["      ####      ","    ########    ","   ##########   ","  ### #### ###  ","  ##### ######  "," ############## "," ### #### ##### "," ##### #### ### "," ############## ","  ### #### ###  ","  ###### #####  ","   ##########   ","    ########    "],
+    egg_mossy:["      ####      ","    ########    ","   ##########   ","  ############  ","  ## # # # ###  "," ############## "," ## # # # # ### "," ############## "," ## # # # # ### ","  ############  ","  ## # # # ###  ","   ##########   ","    ########    "],
+    egg_stony:["      ####      ","    ########    ","   #### #####   ","  #####  #####  ","  ####  ######  "," ######  ###### "," #####  ####### "," ######  ###### "," #####  ####### ","  #####  #####  ","  ##### ######  ","   #### #####   ","    ########    "],
+    sproutling:["     #    #     ","    ##    ##    ","   ###    ###   ","    ###  ###    ","      ####      ","    ########    ","   ##########   ","  ### #### ###  ","  ## #    # ##  ","  ##  ####  ##  ","   ##########   ","     ##  ##     ","    ##    ###   "],
+    pebblet:["                ","     ######     ","   ##########   ","  ############  "," ###  ####  ### "," ##  #    #  ## "," ##  #    #  ## "," ##   ####   ## "," ############## "," ############## ","  ############  ","  ##  ##  ##  # ","                "]
   };
-  var FORM_NAMES = { padpole:"PADPOLE",hoplet:"HOPLET",chubbin:"CHUBBIN",dewdrop:"DEWDROP",
+  var FORM_NAMES = { egg_dewy:"DEWY EGG",egg_mossy:"MOSSY EGG",egg_stony:"STONY EGG",
+    padpole:"PADPOLE",sproutling:"SPROUTLING",pebblet:"PEBBLET",
+    hoplet:"HOPLET",chubbin:"CHUBBIN",dewdrop:"DEWDROP",
     springer:"SPRINGER",dartling:"DARTLING",bullhorn:"BULLHORN",toadsage:"TOADSAGE",canopy:"CANOPY",lotus:"LOTUS" };
 
   // food + poop pixel art
@@ -408,6 +416,9 @@
   ];
 
   // ── tuning ──
+  var EGG_DUR   = 120;    // 2min: egg -> hatches into a baby
+  var EGG_STYLES = ['dewy','mossy','stony'];
+  var EGG_TO_BABY = { dewy:'padpole', mossy:'sproutling', stony:'pebblet' };
   var BABY_DUR  = 3600;   // 1h: baby -> junior
   var ADULT_AGE = 7200;   // 2h: junior -> adult
   var DECAY = { full:100/2700, happy:100/2400, energy:100/5400, clean:100/3600 }; // per second
@@ -441,7 +452,8 @@
 
   // ── state ──
   function fresh(){
-    return { v:2, stage:'baby', form:'padpole',
+    var style = EGG_STYLES[(Math.random()*EGG_STYLES.length)|0];
+    return { v:2, stage:'egg', form:'egg_'+style, eggStyle:style,
       stats:{ full:70, happy:70, energy:70, clean:70 },
       age:0, care:{ feed:0, play:0, clean:0, rest:0 }, diet:{ meat:0, veggie:0 },
       poops:[], poopTimer: poopInterval(),
@@ -454,6 +466,7 @@
   if (!S.log) S.log = [];
   if (typeof S.dead === 'undefined') S.dead = false;
   if (typeof S.critical === 'undefined') S.critical = null;
+  if (S.stage==='egg' && !S.eggStyle){ S.eggStyle='dewy'; S.form='egg_dewy'; }
 
   function loadSave(){
     try { var raw=localStorage.getItem(SAVE_KEY); if(!raw) return null;
@@ -490,6 +503,7 @@
   function simulate(dt){
     if(S.dead) return;
     S.age += dt;
+    if(S.stage==='egg'){ checkEvolve(); return; } // an egg just quietly incubates
     var st=S.stats;
     var cleanDrain = DECAY.clean*dt + S.poops.length*POOP_DIRTY*dt;
     st.full=clamp(st.full-DECAY.full*dt);
@@ -529,6 +543,11 @@
   }
 
   function checkEvolve(){
+    if(S.stage==='egg' && S.age>=EGG_DUR){
+      var baby = EGG_TO_BABY[S.eggStyle] || 'padpole';
+      evolveTo('baby', baby, true);
+      return;
+    }
     if(S.stage==='baby' && S.age>=BABY_DUR){
       var c=S.care;
       var f = (c.play>=c.feed && c.play>=c.clean) ? 'hoplet' : (c.feed>=c.clean) ? 'chubbin' : 'dewdrop';
@@ -544,10 +563,17 @@
   }
 
   var flashT=0;
-  function evolveTo(stage,form){
+  function evolveTo(stage,form,hatched){
     S.stage=stage; S.form=form; flashT=22;
     blip(660,0.12,'triangle',0.07); setTimeout(function(){ blip(880,0.14,'triangle',0.07); },130);
-    setMessage(FORM_NAMES[form]+'! it evolved'); logEvent('\u2605 evolved into '+niceName()+'!'); save();
+    if(hatched){
+      setMessage('crack! the egg hatched into '+FORM_NAMES[form]);
+      logEvent('the egg hatched into '+niceName()+'! hello!');
+    } else {
+      setMessage(FORM_NAMES[form]+'! it evolved');
+      logEvent('\u2605 evolved into '+niceName()+'!');
+    }
+    save(); render();
   }
   // ── death ──
   function die(cause){
@@ -650,7 +676,7 @@
   }
 
   function fireRandomEvent(){
-    if(S.dead||S.critical||eating||wash) return;
+    if(S.dead||S.stage==='egg'||S.critical||eating||wash) return;
     var r=Math.random();
     if(S.age>60 && r<0.13){ startSickEvent(); return; }
     if(S.age>60 && r<0.24){ startQTE(); return; }
@@ -658,7 +684,7 @@
   }
 
   function idleActivity(){
-    if(S.dead||S.critical) return;
+    if(S.dead||S.stage==='egg'||S.critical) return;
     logEvent(fillName(IDLE[(Math.random()*IDLE.length)|0]));
   }
 
@@ -691,6 +717,7 @@
 
   function act(kind){
     if(S.dead) return;
+    if(S.stage==='egg'){ setMessage("it's still an egg \u2014 give it time to hatch"); return; }
     if(actx && actx.state==='suspended') actx.resume();
     var s=S.stats;
     if(kind==='feed'){ showPicker(true); return; }
@@ -740,11 +767,24 @@
     if(S.critical){ resolveCritical(); }
     else if(S.sick){ act('heal'); }
   });
-  $('#newBtn').addEventListener('click',function(){
-    if(confirm('Start over with a fresh padpole? Your current frog is lost.')){
-      S=fresh(); resetEventTimers(); save(); showPicker(false);
-      setMessage('a new padpole appears'); logEvent('a fresh padpole hatched. hello!');
-      updateAlert(); render(); }
+  var newBtn=$('#newBtn'), newBtnLabel=newBtn.innerHTML, newConfirmT=0;
+  function hatchFresh(){
+    S=fresh(); resetEventTimers(); save(); showPicker(false);
+    setMessage('a fresh egg appears'); logEvent('a new egg was laid. shhh, it is incubating...');
+    newBtn.innerHTML=newBtnLabel; newBtn.classList.remove('confirm'); newConfirmT=0;
+    updateAlert(); render();
+  }
+  newBtn.addEventListener('click',function(){
+    // dead frog: nothing to lose, hatch right away
+    if(S.dead){ hatchFresh(); return; }
+    // living frog: inline two-tap confirm (native confirm() is blocked in sandboxes)
+    if(newConfirmT>0){ hatchFresh(); return; }
+    newBtn.innerHTML='&#9888; tap again to reset';
+    newBtn.classList.add('confirm');
+    newConfirmT=1;
+    setTimeout(function(){
+      if(newConfirmT){ newBtn.innerHTML=newBtnLabel; newBtn.classList.remove('confirm'); newConfirmT=0; }
+    },2600);
   });
 
   // ── wash animation ──
@@ -765,7 +805,8 @@
       el.classList.toggle('low', v<=18);
     });
     var prog;
-    if(S.stage==='baby') prog=S.age/BABY_DUR;
+    if(S.stage==='egg') prog=S.age/EGG_DUR;
+    else if(S.stage==='baby') prog=(S.age-EGG_DUR)/(BABY_DUR-EGG_DUR);
     else if(S.stage==='junior') prog=(S.age-BABY_DUR)/(ADULT_AGE-BABY_DUR);
     else prog=1;
     growthFill.style.width = Math.max(0,Math.min(100,prog*100))+'%';
@@ -774,7 +815,12 @@
     var h=Math.floor(m/60); if(h<24) return h+'H'+(m%60)+'M'; return Math.floor(h/24)+'D'; }
 
   var HINTS = {
-    padpole:'PADPOLE - what you do most in the first hour sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
+    egg_dewy:'A DEWY EGG. keep it cozy - it hatches in about 2 minutes.',
+    egg_mossy:'A MOSSY EGG. keep it cozy - it hatches in about 2 minutes.',
+    egg_stony:'A STONY EGG. keep it cozy - it hatches in about 2 minutes.',
+    padpole:'PADPOLE - what you do most as a baby sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
+    sproutling:'SPROUTLING - what you do most as a baby sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
+    pebblet:'PEBBLET - what you do most as a baby sets the junior:  PLAY -> Hoplet . FEED -> Chubbin . CLEAN -> Dewdrop',
     hoplet:'HOPLET - diet decides the adult:  mostly MEAT -> Springer . mostly VEGGIES -> Dartling',
     chubbin:'CHUBBIN - diet decides the adult:  mostly MEAT -> Bullhorn . mostly VEGGIES -> Toadsage',
     dewdrop:'DEWDROP - diet decides the adult:  mostly MEAT -> Canopy . mostly VEGGIES -> Lotus',
@@ -791,11 +837,20 @@
       stageTag.textContent='GONE';
       ageTag.textContent=fmtAge(S.age);
       nameTag.textContent='RIP '+niceName();
-      hintEl.textContent='your frog has passed on ('+S.deadCause+"). press 'new padpole' below to hatch another.";
+      hintEl.textContent='your frog has passed on ('+S.deadCause+"). press 'new egg' below to start over.";
       actionsEl.style.display='none'; pickerEl.style.display='none';
       updateAlert(); setBars(); renderLog(); return;
     }
     actionsEl.style.display='grid';
+    if(S.stage==='egg'){
+      stageTag.textContent='EGG';
+      ageTag.textContent=fmtAge(S.age);
+      nameTag.textContent=FORM_NAMES[S.form];
+      actionsEl.style.display='none'; pickerEl.style.display='none';
+      alertWrap.style.display='none'; alertWrap.classList.remove('crit');
+      hintEl.textContent=HINTS[S.form]||'a mystery egg. keep it cozy and wait...';
+      setBars(); renderLog(); return;
+    }
     stageTag.textContent = S.stage.toUpperCase() + (S.sick?' SICK':'');
     ageTag.textContent = fmtAge(S.age);
     nameTag.textContent = FORM_NAMES[S.form];
@@ -884,8 +939,8 @@
 
     simAcc+=dtMs; while(simAcc>=1000){ simulate(1); simAcc-=1000; }
 
-    // active-time event timers (only tick while you're watching)
-    if(!S.dead){
+    // active-time event timers (only tick while you're watching, and not while incubating)
+    if(!S.dead && S.stage!=='egg'){
       idleAcc+=dtMs;
       if(idleAcc>=IDLE_EVERY){ idleAcc-=IDLE_EVERY; idleActivity(); }
       if(!S.critical && !eating && !wash){
@@ -915,6 +970,22 @@
 
     // dead: show a grave and stop the pet animation
     if(S.dead){ drawGrave(); setBars(); requestAnimationFrame(frame); return; }
+
+    // egg: rock gently in place, shivering harder as hatch approaches
+    if(S.stage==='egg'){
+      var et=animT/1000, togo=Math.max(0, EGG_DUR - S.age);
+      var soon = togo<12;
+      var bob = Math.sin(et*2)*2;
+      var shake = soon ? Math.sin(animT*0.05)*3
+                       : (Math.sin(et*1.6)>0.9 ? Math.sin(animT*0.06)*2 : 0);
+      pctx.save(); pctx.translate(shake,0);
+      drawSprite(S.form, bob, 1);
+      pctx.restore();
+      hintEl.textContent = 'incubating... hatches in '+fmtMs(togo*1000);
+      if(flashT>0){ pctx.fillStyle='rgba(255,255,255,'+(flashT/22*0.6)+')'; pctx.fillRect(0,0,cw,ch); flashT--; }
+      setBars();
+      requestAnimationFrame(frame); return;
+    }
 
     var t=animT/1000, offY=Math.sin(t*2.2)*2, sq=1;
     var resting=react&&react.type==='rest', playing=react&&react.type==='play', tired=react&&react.type==='tired';
