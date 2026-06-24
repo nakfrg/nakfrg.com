@@ -653,7 +653,7 @@
   ];
   var ADULTS = [
     // apex: the pinnacle - every stat high (checked before everything)
-    { form:'godfrog',   apex:true, req:{ str:25, dex:25, end:25, int:25, spi:25, lck:25 } },
+    { form:'godfrog',   apex:true, req:{ str:20, dex:20, end:20, int:20, spi:20, lck:20 } },
     // rare: need two strong stats pushed hard - checked before commons
     { form:'titan',     rare:true, req:{ str:40, end:40 } },
     { form:'trickster', rare:true, req:{ dex:40, lck:40 } },
@@ -763,6 +763,7 @@
         else if(emech==='berserk') atk=Math.round(atk*0.88);   // starts gentle, ramps up
         else if(emech==='volatile') hp=Math.round(hp*0.9);
       }
+      if(biome===0 && stage<=2){ hp=Math.round(hp*0.85); atk=Math.round(atk*0.85); }   // gentler Plains stage 1-3 elites (-15%)
     } else if(biomeBoss){ // the true biome boss — bigger, harder, themed, with a signature mechanic
       hp=Math.round(hp*4.6); atk=Math.round(atk*1.45); def=Math.round(def*1.18); crit+=0.09;
       emech=BOSS_MECH[biome]; var bb=BIOME_BOSS[biome]; bspr=bb.spr;
@@ -1022,24 +1023,24 @@
   // types: dmg | multi | execute | drain | burn | weaken | risky | heal | regen | shield
   // cost = mana. pow(r) = magnitude given rpg stats r. Stronger spells cost more (need magic spec + mana regen to sustain).
   var SPELLS = [
-    // tier 1 — entry spells: cheap, single-stat, modest
-    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:6},          cost:13,  pow:function(r){return Math.round(8+r.int*1.5);},  desc:'a quick fire bolt' },
-    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:8},          cost:11,  pow:function(r){return Math.round(6+r.dex*1.2);},  desc:'cheap, fast wind cut' },
-    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:6},          cost:16,  pow:function(r){return Math.round(18+r.spi*1.2);}, desc:'restore a burst of HP' },
-    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:8},          cost:13,  pow:function(r){return 1;},                          desc:'absorb the next hit' },
-    // tier 2 — distinct mechanics
-    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:12},         cost:21,  pow:function(r){return Math.round(r.int*0.7);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 rounds' },
-    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:12},         cost:18,  pow:function(r){return Math.round(10+r.spi*1.7);}, vfx:'holy', desc:'heavy holy strike' },
-    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:10},         cost:16,  pow:function(r){return Math.round(r.lck*0.8);}, weaken:0.25, desc:'damage + saps the foe\u2019s attack 25%' },
-    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:14,spi:10},  cost:24,  pow:function(r){return Math.round(r.int*1.6);}, leech:0.55, desc:'damage, heal for 55% of it' },
-    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:16},         cost:26, pow:function(r){return Math.round(r.spi*0.8);}, rounds:4, desc:'heal-over-time for 4 rounds' },
-    // tier 3 — heavy hitters: expensive, need magic + mana regen to sustain
-    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:18},         cost:25,  pow:function(r){return Math.round(r.int*2.8);}, self:function(r){return Math.round(r.int*0.45);}, desc:'huge hit \u2014 wounds you too' },
-    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:16,spi:14},  cost:30, pow:function(r){return 2;}, desc:'absorb the next 2 hits' },
-    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:18,int:16},  cost:34, pow:function(r){return Math.round((r.dex+r.int)*0.6);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
-    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:16,spi:16},  cost:32, pow:function(r){return Math.round((r.str+r.spi)*1.3);}, exec:0.30, desc:'2\u00d7 damage to foes below 30% HP' },
-    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:20,int:20},  cost:44, pow:function(r){return Math.round((r.str+r.int)*2.1);}, self:function(r){return Math.round((r.str+r.int)*0.30);}, desc:'devastation \u2014 heavy self-cost' },
-    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:26,spi:26},  cost:56, pow:function(r){return Math.round((r.int+r.spi)*2.4);}, vfx:'nuke', desc:'the ultimate nuke' }
+    // tier 1 — SIGNATURE spells: every stat mastery has one of its own (solo-gated, early-game)
+    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:20},         cost:13,  pow:function(r){return Math.round(8+r.int*1.5);},  desc:'a quick fire bolt' },
+    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:20},         cost:11,  pow:function(r){return Math.round(6+r.dex*1.2);},  desc:'cheap, fast wind cut' },
+    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:20},         cost:16,  pow:function(r){return Math.round(18+r.spi*1.2);}, desc:'restore a burst of HP' },
+    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:22},         cost:13,  pow:function(r){return 1;},                          desc:'absorb the next hit' },
+    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:25},         cost:16,  pow:function(r){return Math.round(r.lck*0.8);}, weaken:0.25, desc:'damage + saps the foe\u2019s attack 25%' },
+    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:30},         cost:32, pow:function(r){return Math.round((r.str+r.spi)*1.3);}, exec:0.30, desc:'2\u00d7 damage to foes below 30% HP \u2014 a STR finisher' },
+    // tier 2 — mid-game: deeper investment, the second rung of INT / SPI
+    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:40},         cost:21,  pow:function(r){return Math.round(r.int*0.7);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 rounds' },
+    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:40},         cost:18,  pow:function(r){return Math.round(10+r.spi*1.7);}, vfx:'holy', desc:'heavy holy strike' },
+    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:50,spi:40},  cost:24,  pow:function(r){return Math.round(r.int*1.6);}, leech:0.55, desc:'damage, heal for 55% of it' },
+    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:45,spi:40},  cost:30, pow:function(r){return 2;}, desc:'absorb the next 2 hits' },
+    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:50,int:45},  cost:34, pow:function(r){return Math.round((r.dex+r.int)*0.6);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
+    // tier 3 — late-game heavy hitters: deep INT / SPI mastery, unlocked well into a run
+    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:60,int:60},  cost:44, pow:function(r){return Math.round((r.str+r.int)*2.1);}, self:function(r){return Math.round((r.str+r.int)*0.30);}, desc:'devastation \u2014 heavy self-cost' },
+    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:80},         cost:25,  pow:function(r){return Math.round(r.int*2.8);}, self:function(r){return Math.round(r.int*0.45);}, desc:'huge hit \u2014 wounds you too' },
+    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:80},         cost:26, pow:function(r){return Math.round(r.spi*0.8);}, rounds:4, desc:'heal-over-time for 4 rounds' },
+    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:90,spi:90},  cost:56, pow:function(r){return Math.round((r.int+r.spi)*2.4);}, vfx:'nuke', desc:'the ultimate nuke \u2014 mastery of INT & SPI' }
   ];
   function spellById(id){ for(var i=0;i<SPELLS.length;i++) if(SPELLS[i].id===id) return SPELLS[i]; return null; }
   function spellReady(sp){ var r=S.rpg; for(var k in sp.req) if((r[k]||0)<sp.req[k]) return false; return true; }
@@ -1753,8 +1754,15 @@
     if(f.state==='won'){
       var isFinal=(f.biome===N_BIOMES-1 && f.stage===N_STAGES-1);
       var frontier=(stageIndex(f.biome,f.stage)===(S.stageProg||0));
-      logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1)+'  \u2014 stats now come from training, not stages');
-      if(frontier) S.stageProg=Math.min(N_TOTAL, (S.stageProg||0)+1);
+      logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1));
+      if(frontier){
+        S.stageProg=Math.min(N_TOTAL, (S.stageProg||0)+1);
+        // first-clear reward: rotate str\u2192dex\u2192end\u2192int\u2192spi\u2192lck per stage, points scale with biome (Plains 1 ... Citadel 7)
+        var sk=RPG_KEYS[f.stage], pts=f.biome+1;
+        bumpStat(sk, pts);
+        logEvent('\u2728 first clear \u2014 +'+pts+' '+RPG_NAME[sk]+'!');
+        setMessage('first clear! +'+pts+' '+RPG_NAME[sk]); blip(960,0.1,'triangle');
+      }
       // clearing the Cavern (biome index 3) boss grants the Training Goblet (training gives more from now on)
       if(!S.goblet && f.biome===3 && f.stage===N_STAGES-1){
         S.goblet=true; react={type:'goblet', t:260}; flashT=22;
