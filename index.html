@@ -1532,9 +1532,9 @@
     else if(sp.type==='burn'){ f.burn={ dmg:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' sets '+e.name+' ablaze with '+sp.name+' \u2014 it\u2019s burning! ('+f.burn.dmg+'/tick)'); blip(780,0.07,'sawtooth'); }
     else if(sp.type==='weaken'){ var wd=sp.pow(r); e.hp-=wd; if(!e._weak){ e._weak=1; e.atk=Math.max(1,Math.round(e.atk*(1-(sp.weaken||0.25)))); } f.flashEne=8; combatLog(spellHitLine(pn,e.name,sp,wd)); blip(520,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
     else if(sp.type==='risky'){ var d2=sp.pow(r), s2=sp.self?sp.self(r):0; e.hp-=d2; S.stats.health=Math.max(1,S.stats.health-s2); f.flashEne=10; f.flashPet=6; combatLog(spellHitLine(pn,e.name,sp,d2)+' (\u2212'+s2+' self)'); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; combatLog('\u2728 '+pn+' casts '+sp.name+', knitting its wounds shut (+'+got2+' HP)!'); blip(560,0.08,'sine'); }
+    else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; combatLog(got2>0 ? ('\u2728 '+pn+' casts '+sp.name+', knitting its wounds shut (+'+got2+' HP)!') : ('\u2728 '+pn+' casts '+sp.name+' \u2014 already in fine fettle!')); blip(560,0.08,'sine'); }
     else if(sp.type==='regen'){ f.regen={ amt:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' weaves '+sp.name+' \u2014 a soft healing glow settles in (+'+f.regen.amt+'/tick).'); blip(600,0.08,'sine'); }
-    else if(sp.type==='shield'){ f.shield=(f.shield||0)+(sp.pow(r)||1); combatLog('\u2728 '+pn+' raises '+sp.name+' \u2014 a shimmering ward springs up (\u00d7'+f.shield+')!'); blip(620,0.07,'sine'); }
+    else if(sp.type==='shield'){ var sv=(sp.pow(r)||1); f.shield=Math.max(f.shield||0, sv); combatLog('\u2728 '+pn+' raises '+sp.name+' \u2014 a shimmering ward holds (\u00d7'+f.shield+')!'); blip(620,0.07,'sine'); }   // top-up, never stacks past its value
     if(f.state==='fight' && f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); }
     return true;
   }
@@ -1763,10 +1763,7 @@
       var sid=ld[sj]; if(!sid) continue; var sp=spellById(sid); if(!sp) continue;
       if((f.cdT[sj]||0) < spellCd(sp)) continue;                  // still charging
       if(f.silence){ f.silence=false; f.cdT[sj]=0; combatLog('\u2014 silenced! '+sp.name+' fizzles'); blip(220,0.06,'sawtooth'); break; }
-      var hpFrac=S.stats.health/maxHP();
-      if(sp.type==='heal'  && hpFrac>=0.92) continue;             // hold the charge until actually hurt
-      if(sp.type==='regen' && (f.regen || hpFrac>=0.92)) continue;
-      if(sp.type==='shield'&& (f.shield||0)>0) continue;          // shield already up \u2014 wait
+      // no mana cost any more \u2014 a ready spell always fires, so cooldowns cycle (heals top you off, shields refresh)
       doCast(sp, f); f.cdT[sj]=0;
       if(f.state!=='fight') return;
       break;
