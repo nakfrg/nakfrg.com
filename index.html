@@ -586,7 +586,7 @@
   ];
 
   // ── tuning ──
-  var EGG_DUR   = 30;     // egg incubates, then hatches into a baby
+  var EGG_DUR   = 20;     // egg incubates ~20s (real seconds), then hatches into a baby
   var EGG_TAP_BOOST  = 2.4;   // sim-seconds of hatching added per good rhythmic tap
   var EGG_CRACK_MAX  = 4;     // cracks the shell can take before it breaks fatally
   var EGG_TAP_MIN    = 210;   // tap faster than this (ms apart) and the shell starts cracking
@@ -1148,7 +1148,7 @@
   function rollDrop(enemy, biome, firstClear){
     if(!enemy.boss) return;
     if(!firstClear) return;                              // replaying an already-cleared stage drops nothing
-    if(enemy.elite && Math.random()>=0.10) return;       // elites: only a 10% chance to drop loot
+    if(enemy.elite && Math.random()>=0.20) return;       // elites: a 20% chance to drop loot
     var r=Math.random(), depth=biome/(N_BIOMES-1), tier; // biome bosses always reach here \u2014 guaranteed drop
     if(depth>=0.55 && r < 0.10 + depth*0.16) tier='legendary';
     else if(r < 0.30 + depth*0.45) tier='epic';
@@ -3151,6 +3151,23 @@
       var eInt2=ENE_ATK_BASE; if(e.mech==='berserk') eInt2=Math.max(620, Math.round(ENE_ATK_BASE*(1-Math.min(0.45,(e.rage||0)/16000))));
       drawActBar(pX, (f.petTick||0)/petInt);
       if(enter>0.98 && !e.submerged) drawActBar(eneX, (f.eneTick||0)/eInt2);
+      // caster telegraph: a cast-cooldown ring (fireball/heal/plague) or a ticking fuse (Boomling) under the foe
+      if(e.caster && enter>0.98 && !e.submerged){
+        var ecy=gy+17;
+        if(e.caster==='bomb'){
+          var ffr=Math.min(1,(f.fuseT||0)/BOMB_FUSE), urgent=ffr>0.66 && (Math.floor(animT/90)%2===0);
+          var fw=28, fh=4, fbx=Math.round(eneX-fw/2), fby=ecy-2;
+          pctx.fillStyle='rgba(255,255,255,0.16)'; pctx.fillRect(fbx,fby,fw,fh);
+          pctx.fillStyle=urgent?'#fff':'rgba(255,255,255,0.72)'; pctx.fillRect(fbx,fby,Math.round(fw*ffr),fh);
+          pctx.strokeStyle='rgba(255,255,255,0.5)'; pctx.lineWidth=1; pctx.strokeRect(fbx+0.5,fby+0.5,fw-1,fh-1);
+          pctx.fillStyle=urgent?'#fff':'rgba(255,255,255,0.6)'; pctx.font='6px "Pixel",monospace'; pctx.textAlign='center';
+          pctx.fillText(urgent?'\u2737 FUSE \u2737':'FUSE', eneX, ecy+9);
+        } else {
+          drawCdRing(eneX, ecy, Math.min(1,(f.castTick||0)/(e.castInt||4000)), true);
+          pctx.fillStyle='rgba(255,255,255,0.5)'; pctx.font='6px "Pixel",monospace'; pctx.textAlign='center';
+          pctx.fillText('CAST', eneX, ecy+11);
+        }
+      }
       // 3 spell-cooldown rings under the pet's bar (shown once any slot is equipped)
       var ld2=S.loadout||[], anyLd=false; for(var li=0;li<3;li++) if(ld2[li]) anyLd=true;
       if(anyLd){ var cy=gy+17, gap=11, x0=Math.round(pX)-gap;
