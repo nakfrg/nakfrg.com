@@ -92,659 +92,468 @@
   "use strict";
 
   // ─────────────────────────────────────────────────────────────
-  //  nakfrg // breaker  — a tiny frog-themed brick breaker.
-  //  Pure black, white line work, pixel frog. No dependencies.
+  //  nakfrg // breaker — frog brick-breaker with 10 levels + power-ups
   // ─────────────────────────────────────────────────────────────
-
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d');
 
-  // Virtual play field — everything is drawn in these units, then
-  // the whole thing is scaled to fit the viewport (crisp pixels).
   var VW = 320, VH = 440;
-
-  // Layout
-  var HUD_H   = 26;                 // top strip for score / lives / level
-  var WALL    = 8;                  // inset border thickness from the frame
-  var BRICK_TOP = HUD_H + 22;       // y where the brick field begins
-  var COLS = 9, ROWS = 6;
-  var BRICK_GAP = 3;
-  var BRICK_W, BRICK_H = 13;        // BRICK_W computed from field width
-  var PADDLE_W = 56, PADDLE_H = 7;
+  var HUD_H = 26, WALL = 8;
+  var BRICK_TOP = HUD_H + 22;
+  var COLS = 9;
+  var BRICK_GAP = 3, BRICK_H = 13;
+  var PADDLE_W_BASE = 56, PADDLE_W = 56, PADDLE_H = 7;
   var PADDLE_Y = VH - 34;
-  var BALL_R  = 6;                  // collision radius for the frog
+  var BALL_R_BASE = 6, BALL_R = 6;
+  var BRICK_W = 0;
 
-  // ── Brick layouts. '#': brick, '.': gap. Frog face, diamond, full. ──
-  var PATTERNS = [
-    [ // a little frog face
-      "..#...#..",
-      ".#O#.#O#.",
-      ".#######.",
-      "#########",
-      "#.#####.#",
-      "..#...#.."
-    ],
-    [ // diamond
-      "....#....",
-      "...###...",
-      "..#####..",
-      ".#######.",
-      "#########",
-      ".#######."
-    ],
-    [ // brick wall
-      "#########",
-      "#########",
-      "#########",
-      "#########",
-      "#########",
-      ".........",
-    ]
+  // ── 10 levels.  '#': brick  '*': power brick  '=': tough (2-hit)  '.': gap ──
+  var LEVELS = [
+    [ "#########", "#########", "###***###" ],
+    [ "..#...#..", ".#*#.#*#.", ".#######.", "#########", "#.#####.#", "..#...#.." ],
+    [ "....#....", "...#*#...", "..#####..", ".#**#**#.", "#########", ".#######." ],
+    [ "#.#.#.#.#", "#.#.#.#.#", "*.#.#.#.*", "#.#.#.#.#", "#.*.#.*.#" ],
+    [ "#.#.#.#.#", ".#.*.*.#.", "#.#.#.#.#", ".#.*.*.#.", "#.#.#.#.#" ],
+    [ "=========", "=#######=", "=#*###*#=", "=#######=", "==#####==" ],
+    [ "#=#####=#", "#.......#", "*.#=#=#.*", "#.......#", "#=#***#=#" ],
+    [ "....#....", "...#=#...", "..#=*=#..", ".#=###=#.", "#=#*#*#=#", ".#=###=#.", "..#===#.." ],
+    [ "=#=#*#=#=", "#=#=#=#=#", "=#*#=#*#=", "#=#=#=#=#", "=#=#*#=#=", "#=#=#=#=#" ],
+    [ "=========", "=*=*=*=*=", "#=#=#=#=#", "=#*#*#*#=", "#=#=#=#=#", "=*=*=*=*=", "=========" ]
   ];
 
-  // ── Pixel frog sprite (drawn as the ball). '#': white, 'O': eye (gap). ──
-  var FROG = [
-    "..#...#..",
-    ".#O#.#O#.",
-    ".#######.",
-    "#########",
-    "#########",
-    "#.#####.#",
-    ".#.....#."
-  ];
+  // ── pixel frog ball ──
+  var FROG = [ "..#...#..", ".#O#.#O#.", ".#######.", "#########", "#########", "#.#####.#", ".#.....#." ];
   var FROG_W = FROG[0].length, FROG_H = FROG.length;
 
-  // ── Game state ──
-  var STATE = { TITLE:0, READY:1, PLAY:2, DEAD:3, CLEAR:4, OVER:5, WIN:6 };
-  var game = {
-    state: STATE.TITLE,
-    score: 0,
-    lives: 3,
-    level: 0,
-    bricks: [],
-    remaining: 0,
-    flashT: 0,        // brief white flash timer (level clear etc.)
-    msgT: 0
+  // ── power-up definitions ──
+  var PWR = {
+    sticky:  { tag:'ST', label:'STICKY BALL', good:true,  dur:900 },
+    double:  { tag:'x2', label:'DOUBLE BALL', good:true,  dur:0   },
+    pierce:  { tag:'PR', label:'PIERCE',      good:true,  dur:600 },
+    slow:    { tag:'SL', label:'SLOW BALL',   good:true,  dur:780 },
+    bigball: { tag:'O+', label:'BIG BALL',    good:true,  dur:780 },
+    bigpad:  { tag:'W+', label:'WIDE PADDLE', good:true,  dur:840 },
+    fast:    { tag:'F!', label:'FAST BALL',   good:false, dur:600 },
+    shortpad:{ tag:'W-', label:'SHORT PADDLE',good:false, dur:600 }
   };
+  var DROP_TABLE = [
+    'sticky','sticky','sticky','double','double','double','pierce','pierce','pierce',
+    'slow','slow','slow','bigball','bigball','bigball','bigpad','bigpad','bigpad',
+    'fast','fast','shortpad','shortpad'
+  ];
+  var FXKEYS = ['sticky','pierce','slow','bigball','bigpad','fast','shortpad'];
 
-  var paddle = { x: VW/2, targetX: VW/2 };
+  // ── state ──
+  var STATE = { TITLE:0, READY:1, PLAY:2, OVER:5, WIN:6, CLEAR:4 };
+  var game = { state:STATE.TITLE, score:0, lives:3, level:0, bricks:[], remaining:0,
+               flashT:0, msgT:0, msgFx:'', msgFxT:0 };
+  var paddle = { x:VW/2, targetX:VW/2 };
+  var balls = [];
+  var drops = [];
+  var particles = [];
+  var tongue = null;
+  var levelSpeed = 3.3, speedMul = 1, prevSpeedMul = 1;
+  var fx = { sticky:0, pierce:0, slow:0, bigball:0, bigpad:0, fast:0, shortpad:0 };
 
-  var ball = {
-    x: VW/2, y: PADDLE_Y - BALL_R - 1,
-    vx: 0, vy: 0,
-    speed: 3.4,
-    spin: 0,
-    squash: 0, sqx: 0, sqy: 1,   // squash animation on impact
-    trail: []
-  };
-
-  var particles = [];   // brick break dust
-  var tongue = null;    // { x,y, tx,ty, t } flick toward a caught fly
-
-  // ── Input ──
   var keys = {};
-  var pointerX = null;  // virtual-x of pointer, if controlling paddle
+  var pointerX = null;
 
-  // ── Audio (tiny WebAudio blips, muted toggle persists if possible) ──
+  // ── audio ──
   var muted = false;
   try { muted = localStorage.getItem('nakfrg_breaker_mute') === '1'; } catch (e) {}
   var actx = null;
-  function audio() {
-    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-    return actx;
-  }
-  function blip(freq, dur, type, vol) {
-    if (muted) return;
-    var a = audio(); if (!a) return;
-    try {
-      var o = a.createOscillator(), g = a.createGain();
-      o.type = type || 'square'; o.frequency.value = freq;
-      g.gain.value = (vol == null ? 0.06 : vol);
-      o.connect(g); g.connect(a.destination);
-      var t = a.currentTime;
-      g.gain.setValueAtTime(g.gain.value, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.06));
-      o.start(t); o.stop(t + (dur || 0.06));
-    } catch (e) {}
-  }
-  function setMute(m) {
-    muted = m;
-    try { localStorage.setItem('nakfrg_breaker_mute', m ? '1' : '0'); } catch (e) {}
-  }
+  function audio(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+  function blip(freq,dur,type,vol){ if(muted) return; var a=audio(); if(!a) return;
+    try{ var o=a.createOscillator(),g=a.createGain(); o.type=type||'square'; o.frequency.value=freq;
+      g.gain.value=(vol==null?0.06:vol); o.connect(g); g.connect(a.destination); var t=a.currentTime;
+      g.gain.setValueAtTime(g.gain.value,t); g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.06));
+      o.start(t); o.stop(t+(dur||0.06)); }catch(e){} }
+  function setMute(m){ muted=m; try{ localStorage.setItem('nakfrg_breaker_mute',m?'1':'0'); }catch(e){} }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Setup / scaling
-  // ─────────────────────────────────────────────────────────────
-  var scale = 1, dpr = 1;
-  var wrap = document.getElementById('wrap');
-  function resize() {
-    dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    var rect = wrap.getBoundingClientRect();
-    scale = Math.min(rect.width / VW, rect.height / VH);
-    scale = Math.max(1, scale * 0.96);
-    canvas.style.width  = (VW * scale) + 'px';
-    canvas.style.height = (VH * scale) + 'px';
-    canvas.width  = Math.round(VW * scale * dpr);
-    canvas.height = Math.round(VH * scale * dpr);
-  }
-  window.addEventListener('resize', resize);
-  resize();
+  // ── scaling ──
+  var scale=1, dpr=1, wrap=document.getElementById('wrap');
+  function resize(){ dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
+    var rect=wrap.getBoundingClientRect(); scale=Math.min(rect.width/VW, rect.height/VH);
+    scale=Math.max(1, scale*0.96);
+    canvas.style.width=(VW*scale)+'px'; canvas.style.height=(VH*scale)+'px';
+    canvas.width=Math.round(VW*scale*dpr); canvas.height=Math.round(VH*scale*dpr); }
+  window.addEventListener('resize',resize); resize();
+  function toVirtualX(clientX){ var r=canvas.getBoundingClientRect(); return ((clientX-r.left)/r.width)*VW; }
 
-  // Map a client coordinate to virtual-x.
-  function toVirtualX(clientX) {
-    var r = canvas.getBoundingClientRect();
-    return ((clientX - r.left) / r.width) * VW;
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  //  Level / brick building
-  // ─────────────────────────────────────────────────────────────
-  function fieldWidth() { return VW - WALL*2 - 10; }
-  function fieldX() { return WALL + 5; }
-
-  function buildLevel(n) {
-    var pat = PATTERNS[n % PATTERNS.length];
-    BRICK_W = (fieldWidth() - (COLS - 1) * BRICK_GAP) / COLS;
-    game.bricks = [];
-    game.remaining = 0;
-    for (var r = 0; r < ROWS; r++) {
-      for (var c = 0; c < COLS; c++) {
-        var ch = (pat[r] && pat[r][c]) || '.';
-        if (ch === '#' || ch === 'O') {
-          var bx = fieldX() + c * (BRICK_W + BRICK_GAP);
-          var by = BRICK_TOP + r * (BRICK_H + BRICK_GAP);
-          game.bricks.push({ x: bx, y: by, w: BRICK_W, h: BRICK_H, row: r, alive: true });
-          game.remaining++;
-        }
+  // ── levels ──
+  function fieldWidth(){ return VW - WALL*2 - 10; }
+  function fieldX(){ return WALL + 5; }
+  function buildLevel(n){
+    var pat = LEVELS[n];
+    BRICK_W = (fieldWidth() - (COLS-1)*BRICK_GAP) / COLS;
+    game.bricks = []; game.remaining = 0;
+    for(var r=0;r<pat.length;r++){
+      for(var c=0;c<COLS;c++){
+        var ch=(pat[r]&&pat[r][c])||'.';
+        if(ch==='.') continue;
+        var tough = (ch==='='), power = (ch==='*');
+        var bx=fieldX()+c*(BRICK_W+BRICK_GAP), by=BRICK_TOP+r*(BRICK_H+BRICK_GAP);
+        game.bricks.push({ x:bx, y:by, w:BRICK_W, h:BRICK_H, row:r, alive:true,
+          hits: tough?2:1, tough:tough, power:power });
+        game.remaining++;
       }
     }
   }
 
-  function resetBall() {
-    ball.x = paddle.x;
-    ball.y = PADDLE_Y - BALL_R - 1;
-    ball.vx = 0; ball.vy = 0;
-    ball.trail.length = 0;
-    ball.squash = 0;
-  }
+  // ── balls ──
+  function makeBall(stuck){ return { x:paddle.x, y:PADDLE_Y-BALL_R-1, vx:0, vy:0,
+    squash:0, sqx:0, sqy:1, trail:[], stuck:!!stuck, offset:0 }; }
+  function resetServe(){ balls=[ makeBall(true) ]; tongue=null; }
 
-  function launchBall() {
-    var ang = (-Math.PI/2) + (Math.random() * 0.6 - 0.3); // mostly up, slight angle
-    ball.vx = Math.cos(ang) * ball.speed;
-    ball.vy = Math.sin(ang) * ball.speed;
-    game.state = STATE.PLAY;
-    blip(560, 0.05, 'square');
+  function launchAll(){
+    var any=false;
+    for(var i=0;i<balls.length;i++){ var b=balls[i]; if(b.stuck){
+      var hit=Math.max(-0.8,Math.min(0.8, b.offset/(PADDLE_W/2)));
+      var ang=-Math.PI/2 + hit*(Math.PI/3), sp=levelSpeed*speedMul;
+      b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; b.stuck=false; any=true;
+    }}
+    if(any){ game.state=STATE.PLAY; blip(560,0.05,'square'); }
   }
+  function anyStuck(){ for(var i=0;i<balls.length;i++) if(balls[i].stuck) return true; return false; }
 
-  function startGame() {
-    game.score = 0;
-    game.lives = 3;
-    game.level = 0;
-    ball.speed = 3.4;
-    buildLevel(game.level);
-    paddle.x = paddle.targetX = VW/2;
-    resetBall();
-    game.state = STATE.READY;
-    flash(8);
+  function splitBalls(){
+    var moving=balls.filter(function(b){ return !b.stuck; });
+    if(moving.length===0){ launchAll(); moving=balls.filter(function(b){ return !b.stuck; }); }
+    var add=[];
+    for(var i=0;i<moving.length;i++){ var b=moving[i];
+      for(var k=0;k<2;k++){ if(balls.length+add.length>=6) break;
+        var ang=Math.atan2(b.vy,b.vx)+(k===0?0.42:-0.42), sp=levelSpeed*speedMul;
+        add.push({ x:b.x, y:b.y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp,
+          squash:0, sqx:0, sqy:1, trail:[], stuck:false, offset:0 }); } }
+    balls=balls.concat(add); blip(720,0.08,'triangle',0.06);
   }
+  function rescaleBalls(){ for(var i=0;i<balls.length;i++){ var b=balls[i]; if(b.stuck) continue;
+    var m=Math.hypot(b.vx,b.vy); if(m<0.001) continue; var sp=levelSpeed*speedMul;
+    b.vx=b.vx/m*sp; b.vy=b.vy/m*sp; } }
 
-  function nextLevel() {
+  // ── flow ──
+  function flash(f){ game.flashT=f; }
+  function clearEffects(){ for(var i=0;i<FXKEYS.length;i++) fx[FXKEYS[i]]=0; speedMul=1; prevSpeedMul=1; }
+
+  function startGame(){
+    game.score=0; game.lives=3; game.level=0; levelSpeed=3.3;
+    clearEffects(); drops=[]; buildLevel(0);
+    paddle.x=paddle.targetX=VW/2; resetServe();
+    game.state=STATE.READY; flash(8);
+  }
+  function nextLevel(){
     game.level++;
-    ball.speed = Math.min(6.0, 3.4 + game.level * 0.45);
-    buildLevel(game.level);
-    paddle.x = paddle.targetX = VW/2;
-    resetBall();
-    game.state = STATE.READY;
-    game.msgT = 60;
-    flash(10);
+    if(game.level>=LEVELS.length){ game.state=STATE.WIN; flash(16); blip(880,0.2,'triangle',0.07); return; }
+    levelSpeed=Math.min(5.8, 3.3+game.level*0.30);
+    clearEffects(); drops=[]; buildLevel(game.level);
+    paddle.x=paddle.targetX=VW/2; resetServe();
+    game.state=STATE.READY; game.msgT=60; flash(10);
+  }
+  function levelCleared(){
+    game.state=STATE.CLEAR; game.msgT=70; flash(12); blip(740,0.12,'triangle',0.07);
+    setTimeout(function(){ if(game.state===STATE.CLEAR) nextLevel(); }, 1000);
+  }
+  function loseLife(){
+    game.lives--; blip(200,0.25,'sawtooth',0.06);
+    clearEffects(); drops=[];
+    if(game.lives<=0){ game.state=STATE.OVER; flash(14); }
+    else { resetServe(); game.state=STATE.READY; }
   }
 
-  function flash(frames) { game.flashT = frames; }
+  // ── effects ──
+  function spawnDust(x,y,n){ for(var i=0;i<n;i++){ var a=Math.random()*Math.PI*2, s=0.6+Math.random()*1.8;
+    particles.push({ x:x,y:y, vx:Math.cos(a)*s, vy:Math.sin(a)*s-0.4, life:18+Math.random()*14, max:32, size:1+(Math.random()<0.4?1:0) }); } }
+  function updateParticles(){ for(var i=particles.length-1;i>=0;i--){ var p=particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.12; p.vx*=0.98; if(--p.life<=0) particles.splice(i,1); } }
+  function impact(b,nx,ny){ b.squash=1; if(Math.abs(nx)>Math.abs(ny)){ b.sqx=0.65; b.sqy=1.3; } else { b.sqx=1.3; b.sqy=0.65; } }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Effects
-  // ─────────────────────────────────────────────────────────────
-  function spawnDust(x, y, n) {
-    for (var i = 0; i < n; i++) {
-      var a = Math.random() * Math.PI * 2;
-      var s = 0.6 + Math.random() * 1.8;
-      particles.push({
-        x: x, y: y,
-        vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.4,
-        life: 18 + Math.random() * 14, max: 32, size: 1 + (Math.random() < 0.4 ? 1 : 0)
-      });
+  function spawnDrop(x,y){ drops.push({ x:x, y:y, vy:1.05, type:DROP_TABLE[(Math.random()*DROP_TABLE.length)|0], t:0 }); }
+  function activate(type){
+    var meta=PWR[type];
+    blip(meta.good?660:300, 0.09, meta.good?'square':'sawtooth', 0.06);
+    if(type==='double'){ splitBalls(); }
+    else {
+      if(type==='bigpad') fx.shortpad=0; if(type==='shortpad') fx.bigpad=0;
+      if(type==='slow') fx.fast=0; if(type==='fast') fx.slow=0;
+      fx[type]=meta.dur;
     }
-  }
-  function updateParticles() {
-    for (var i = particles.length - 1; i >= 0; i--) {
-      var p = particles[i];
-      p.x += p.vx; p.y += p.vy;
-      p.vy += 0.12; p.vx *= 0.98;
-      if (--p.life <= 0) particles.splice(i, 1);
-    }
+    game.msgFx=meta.label; game.msgFxT=70; flash(5);
   }
 
-  function impact(nx, ny) {
-    // squash perpendicular to the impact normal
-    ball.squash = 1;
-    if (Math.abs(nx) > Math.abs(ny)) { ball.sqx = 0.65; ball.sqy = 1.3; }
-    else { ball.sqx = 1.3; ball.sqy = 0.65; }
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  //  Physics step (fixed 60Hz, sub-stepped to avoid tunnelling)
-  // ─────────────────────────────────────────────────────────────
-  function update() {
-    game.flashT = Math.max(0, game.flashT - 1);
-    game.msgT = Math.max(0, game.msgT - 1);
+  // ── physics ──
+  function update(){
+    game.flashT=Math.max(0,game.flashT-1);
+    game.msgT=Math.max(0,game.msgT-1);
+    game.msgFxT=Math.max(0,game.msgFxT-1);
     updateParticles();
-    if (tongue) { tongue.t--; if (tongue.t <= 0) tongue = null; }
+    if(tongue){ tongue.t--; if(tongue.t<=0) tongue=null; }
 
-    // ease squash back to rest
-    if (ball.squash > 0) ball.squash = Math.max(0, ball.squash - 0.12);
+    // derived sizes / speed
+    BALL_R = BALL_R_BASE * (fx.bigball>0?1.6:1);
+    PADDLE_W = PADDLE_W_BASE * (fx.bigpad>0?1.55:1) * (fx.shortpad>0?0.6:1);
+    speedMul = (fx.slow>0?0.72:1) * (fx.fast>0?1.4:1);
+    if(speedMul!==prevSpeedMul){ rescaleBalls(); prevSpeedMul=speedMul; }
+    for(var i=0;i<FXKEYS.length;i++){ if(fx[FXKEYS[i]]>0) fx[FXKEYS[i]]--; }
 
-    // ── Paddle control ──
-    var target = paddle.targetX;
-    if (pointerX !== null) target = pointerX;
-    if (keys.left)  target -= 7;
-    if (keys.right) target += 7;
-    paddle.targetX = target;
-    var half = PADDLE_W/2 + WALL;
-    paddle.targetX = Math.max(half, Math.min(VW - half, paddle.targetX));
-    paddle.x += (paddle.targetX - paddle.x) * 0.55;
+    // paddle
+    var target=paddle.targetX;
+    if(pointerX!==null) target=pointerX;
+    if(keys.left) target-=7; if(keys.right) target+=7;
+    var half=PADDLE_W/2+WALL;
+    paddle.targetX=Math.max(half,Math.min(VW-half,target));
+    paddle.x+=(paddle.targetX-paddle.x)*0.55;
 
-    if (game.state === STATE.READY) {
-      // ball rides the paddle until launch
-      ball.x = paddle.x;
-      ball.y = PADDLE_Y - BALL_R - 1;
-      return;
-    }
-    if (game.state !== STATE.PLAY) return;
-
-    // trail
-    ball.trail.push({ x: ball.x, y: ball.y });
-    if (ball.trail.length > 7) ball.trail.shift();
-    ball.spin += ball.vx * 0.04;
-
-    // sub-step so the ball never skips a brick
-    var sp = Math.hypot(ball.vx, ball.vy);
-    var steps = Math.max(1, Math.ceil(sp / (BALL_R * 0.5)));
-    for (var s = 0; s < steps; s++) {
-      ball.x += ball.vx / steps;
-      ball.y += ball.vy / steps;
-      collideWalls();
-      collidePaddle();
-      if (collideBricks()) break; // one brick per frame keeps it readable
+    // ball squash easing + stuck follow
+    for(i=0;i<balls.length;i++){ var b=balls[i];
+      if(b.squash>0) b.squash=Math.max(0,b.squash-0.12);
+      if(b.stuck){ b.x=Math.max(WALL+BALL_R,Math.min(VW-WALL-BALL_R, paddle.x+b.offset)); b.y=PADDLE_Y-BALL_R-1; }
     }
 
-    // fell below the floor → lose a life
-    if (ball.y - BALL_R > VH) loseLife();
+    // falling power-ups
+    for(i=drops.length-1;i>=0;i--){ var d=drops[i]; d.y+=d.vy; d.t++;
+      if(game.state===STATE.PLAY && d.y>=PADDLE_Y-6 && d.y<=PADDLE_Y+PADDLE_H+6 && Math.abs(d.x-paddle.x)<=PADDLE_W/2+7){
+        activate(d.type); drops.splice(i,1); continue; }
+      if(d.y>VH+10) drops.splice(i,1);
+    }
+
+    if(game.state===STATE.READY || game.state!==STATE.PLAY) return;
+
+    // move balls
+    for(i=0;i<balls.length;i++){ var bb=balls[i]; if(bb.stuck) continue;
+      bb.trail.push({x:bb.x,y:bb.y}); if(bb.trail.length>7) bb.trail.shift();
+      var sp=Math.hypot(bb.vx,bb.vy), steps=Math.max(1,Math.ceil(sp/(BALL_R*0.5)));
+      for(var s=0;s<steps;s++){ bb.x+=bb.vx/steps; bb.y+=bb.vy/steps;
+        collideWalls(bb); collidePaddle(bb); if(collideBricks(bb)) break; }
+    }
+
+    // remove fallen balls
+    for(i=balls.length-1;i>=0;i--){ if(balls[i].y-BALL_R>VH){ spawnDust(balls[i].x,VH-10,8); balls.splice(i,1); } }
+    if(game.state===STATE.PLAY && balls.length===0) loseLife();
   }
 
-  function collideWalls() {
-    if (ball.x - BALL_R < WALL) { ball.x = WALL + BALL_R; ball.vx = Math.abs(ball.vx); impact(1,0); blip(320,0.03,'square',0.04); }
-    else if (ball.x + BALL_R > VW - WALL) { ball.x = VW - WALL - BALL_R; ball.vx = -Math.abs(ball.vx); impact(1,0); blip(320,0.03,'square',0.04); }
-    if (ball.y - BALL_R < HUD_H) { ball.y = HUD_H + BALL_R; ball.vy = Math.abs(ball.vy); impact(0,1); blip(360,0.03,'square',0.04); }
+  function collideWalls(b){
+    if(b.x-BALL_R<WALL){ b.x=WALL+BALL_R; b.vx=Math.abs(b.vx); impact(b,1,0); blip(320,0.03,'square',0.04); }
+    else if(b.x+BALL_R>VW-WALL){ b.x=VW-WALL-BALL_R; b.vx=-Math.abs(b.vx); impact(b,1,0); blip(320,0.03,'square',0.04); }
+    if(b.y-BALL_R<HUD_H){ b.y=HUD_H+BALL_R; b.vy=Math.abs(b.vy); impact(b,0,1); blip(360,0.03,'square',0.04); }
   }
-
-  function collidePaddle() {
-    if (ball.vy <= 0) return;
-    var px = paddle.x - PADDLE_W/2, py = PADDLE_Y;
-    if (ball.x + BALL_R > px && ball.x - BALL_R < px + PADDLE_W &&
-        ball.y + BALL_R > py && ball.y - BALL_R < py + PADDLE_H) {
-      ball.y = py - BALL_R;
-      // deflection angle from where it hit the pad (centre = straight up)
-      var hit = (ball.x - paddle.x) / (PADDLE_W/2);   // -1 .. 1
-      hit = Math.max(-1, Math.min(1, hit));
-      var ang = (-Math.PI/2) + hit * (Math.PI/3);     // up ± 60°
-      var sp = Math.max(ball.speed, Math.hypot(ball.vx, ball.vy));
-      ball.vx = Math.cos(ang) * sp;
-      ball.vy = Math.sin(ang) * sp;
-      impact(0,1);
-      blip(480, 0.05, 'square');
+  function collidePaddle(b){
+    if(b.vy<=0) return;
+    var px0=paddle.x-PADDLE_W/2, py=PADDLE_Y;
+    if(b.x+BALL_R>px0 && b.x-BALL_R<px0+PADDLE_W && b.y+BALL_R>py && b.y-BALL_R<py+PADDLE_H){
+      b.y=py-BALL_R;
+      if(fx.sticky>0){ b.stuck=true; b.offset=b.x-paddle.x; b.vx=0; b.vy=0; impact(b,0,1); blip(440,0.05,'sine'); return; }
+      var hit=Math.max(-1,Math.min(1,(b.x-paddle.x)/(PADDLE_W/2)));
+      var ang=-Math.PI/2 + hit*(Math.PI/3), sp=Math.max(levelSpeed*speedMul, Math.hypot(b.vx,b.vy));
+      b.vx=Math.cos(ang)*sp; b.vy=Math.sin(ang)*sp; impact(b,0,1); blip(480,0.05,'square');
     }
   }
-
-  function collideBricks() {
-    for (var i = 0; i < game.bricks.length; i++) {
-      var b = game.bricks[i];
-      if (!b.alive) continue;
-      var nearestX = Math.max(b.x, Math.min(ball.x, b.x + b.w));
-      var nearestY = Math.max(b.y, Math.min(ball.y, b.y + b.h));
-      var dx = ball.x - nearestX, dy = ball.y - nearestY;
-      if (dx*dx + dy*dy <= BALL_R*BALL_R) {
-        // reflect on the shallower-penetration axis
-        if (Math.abs(dx) > Math.abs(dy)) { ball.vx = -ball.vx; impact(1,0); }
-        else { ball.vy = -ball.vy; impact(0,1); }
-        b.alive = false;
-        game.remaining--;
-        game.score += 10 + b.row * 2;
-        spawnDust(b.x + b.w/2, b.y + b.h/2, 7);
-        // tongue flicks out to catch the fly
-        tongue = { x: ball.x, y: ball.y, tx: b.x + b.w/2, ty: b.y + b.h/2, t: 7 };
-        blip(620 + (ROWS - b.row) * 60, 0.05, 'square');
-
-        if (game.remaining <= 0) {
-          game.state = STATE.CLEAR;
-          game.msgT = 70;
-          flash(12);
-          blip(740, 0.12, 'triangle', 0.07);
-          setTimeout(function () {
-            if (game.state === STATE.CLEAR) nextLevel();
-          }, 1100);
-        }
-        return true;
+  function collideBricks(b){
+    for(var i=0;i<game.bricks.length;i++){ var br=game.bricks[i]; if(!br.alive) continue;
+      var nx=Math.max(br.x,Math.min(b.x,br.x+br.w)), ny=Math.max(br.y,Math.min(b.y,br.y+br.h));
+      var dx=b.x-nx, dy=b.y-ny;
+      if(dx*dx+dy*dy<=BALL_R*BALL_R){
+        var pierce=fx.pierce>0;
+        if(!pierce){ if(Math.abs(dx)>Math.abs(dy)){ b.vx=-b.vx; impact(b,1,0); } else { b.vy=-b.vy; impact(b,0,1); } }
+        hitBrick(br,b,pierce);
+        if(!pierce) return true;
       }
     }
     return false;
   }
-
-  function loseLife() {
-    game.lives--;
-    spawnDust(ball.x, VH - 10, 12);
-    blip(200, 0.25, 'sawtooth', 0.06);
-    if (game.lives <= 0) {
-      game.state = STATE.OVER;
-      flash(14);
-    } else {
-      resetBall();
-      game.state = STATE.READY;
-    }
+  function hitBrick(br,b,instant){
+    br.hits -= instant ? br.hits : 1;
+    spawnDust(br.x+br.w/2, br.y+br.h/2, 6);
+    tongue={ x:b.x, y:b.y, tx:br.x+br.w/2, ty:br.y+br.h/2, t:7 };
+    blip(620+(7-br.row)*55, 0.05, 'square');
+    if(br.hits<=0){
+      br.alive=false; game.remaining--;
+      game.score += 10 + br.row*2 + (br.tough?10:0);
+      if(br.power) spawnDrop(br.x+br.w/2, br.y+br.h/2);
+      if(game.remaining<=0) levelCleared();
+    } else { game.score += 3; blip(300,0.03,'square',0.04); }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Rendering
-  // ─────────────────────────────────────────────────────────────
-  function px(v) { return Math.round(v); }
+  // ── rendering ──
+  function px(v){ return Math.round(v); }
+  function pad(n,w){ n=''+n; while(n.length<w) n='0'+n; return n; }
 
-  function drawFrame() {
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    // outer frame
-    ctx.strokeRect(px(WALL) + 0.5, px(WALL) + 0.5, VW - WALL*2 - 1, VH - WALL*2 - 1);
-    // HUD divider
-    ctx.beginPath();
-    ctx.moveTo(WALL, HUD_H + 0.5);
-    ctx.lineTo(VW - WALL, HUD_H + 0.5);
-    ctx.stroke();
+  function drawFrame(){
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1;
+    ctx.strokeRect(px(WALL)+0.5, px(WALL)+0.5, VW-WALL*2-1, VH-WALL*2-1);
+    ctx.beginPath(); ctx.moveTo(WALL,HUD_H+0.5); ctx.lineTo(VW-WALL,HUD_H+0.5); ctx.stroke();
   }
-
-  function drawHUD() {
-    ctx.fillStyle = '#fff';
-    ctx.textBaseline = 'middle';
-    // score
-    ctx.font = '11px ui-monospace, monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('SCORE ' + pad(game.score, 5), WALL + 6, HUD_H/2 + 1);
-    // level (centre)
-    ctx.textAlign = 'center';
-    ctx.fillText('LV ' + (game.level + 1), VW/2, HUD_H/2 + 1);
-    // lives — little frog heads
-    var lx = VW - WALL - 8;
-    for (var i = 0; i < game.lives; i++) {
-      drawFrogHead(lx - i * 13, HUD_H/2, 0.9);
-    }
-    // mute glyph
-    ctx.textAlign = 'right';
-    ctx.globalAlpha = 0.5;
-    ctx.fillText(muted ? '♪̶' : '♪', VW - WALL - 6, HUD_H/2 + 1);
-    ctx.globalAlpha = 1;
+  function drawFrogHead(cx,cy,sc){ ctx.fillStyle='#fff'; var u=sc;
+    ctx.fillRect(px(cx-4*u),px(cy-1*u),8*u,5*u);
+    ctx.fillRect(px(cx-4*u),px(cy-3*u),2*u,2*u); ctx.fillRect(px(cx+2*u),px(cy-3*u),2*u,2*u);
+    ctx.fillStyle='#000'; ctx.fillRect(px(cx-4*u),px(cy-3*u),1*u,1*u); ctx.fillRect(px(cx+3*u),px(cy-3*u),1*u,1*u); }
+  function drawHUD(){
+    ctx.fillStyle='#fff'; ctx.textBaseline='middle';
+    ctx.font='11px ui-monospace, monospace'; ctx.textAlign='left';
+    ctx.fillText('SCORE '+pad(game.score,5), WALL+6, HUD_H/2+1);
+    ctx.textAlign='center';
+    ctx.fillText('LV '+(game.level+1)+'/'+LEVELS.length, VW/2, HUD_H/2+1);
+    var lx=VW-WALL-8; for(var i=0;i<game.lives;i++) drawFrogHead(lx-i*13, HUD_H/2, 0.9);
+    ctx.textAlign='right'; ctx.globalAlpha=0.5;
+    ctx.fillText(muted?'\u266a\u0336':'\u266a', VW-WALL-6, HUD_H/2+1); ctx.globalAlpha=1;
   }
+  function capsule(x,y,w,h){ var r=h/2; ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 
-  function pad(n, w) { n = '' + n; while (n.length < w) n = '0' + n; return n; }
-
-  function drawFrogHead(cx, cy, sc) {
-    // tiny 2-eye frog mark for the lives counter
-    ctx.fillStyle = '#fff';
-    var u = sc;
-    ctx.fillRect(px(cx - 4*u), px(cy - 1*u), 8*u, 5*u); // body
-    ctx.fillRect(px(cx - 4*u), px(cy - 3*u), 2*u, 2*u); // eye L
-    ctx.fillRect(px(cx + 2*u), px(cy - 3*u), 2*u, 2*u); // eye R
-    ctx.fillStyle = '#000';
-    ctx.fillRect(px(cx - 4*u), px(cy - 3*u), 1*u, 1*u);
-    ctx.fillRect(px(cx + 3*u), px(cy - 3*u), 1*u, 1*u);
-  }
-
-  function drawBricks() {
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    for (var i = 0; i < game.bricks.length; i++) {
-      var b = game.bricks[i];
-      if (!b.alive) continue;
-      ctx.strokeRect(px(b.x) + 0.5, px(b.y) + 0.5, px(b.w) - 1, px(b.h) - 1);
-      // a little fly inside each brick — the frog's lunch
-      var fx = b.x + b.w/2, fy = b.y + b.h/2;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(px(fx) - 1, px(fy) - 1, 2, 2);              // body
-      ctx.fillRect(px(fx) - 4, px(fy) - 2, 2, 1);              // wing L
-      ctx.fillRect(px(fx) + 2, px(fy) - 2, 2, 1);              // wing R
-    }
-  }
-
-  function drawPaddle() {
-    var px0 = paddle.x - PADDLE_W/2;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    // lily-pad pill
-    roundedRect(px(px0) + 0.5, px(PADDLE_Y) + 0.5, PADDLE_W - 1, PADDLE_H - 1, 3);
-    ctx.stroke();
-    // pad notch (the lily-pad slit)
-    ctx.beginPath();
-    ctx.moveTo(px(paddle.x) + 0.5, PADDLE_Y + 1);
-    ctx.lineTo(px(paddle.x) + 0.5, PADDLE_Y + PADDLE_H - 1);
-    ctx.stroke();
-  }
-
-  function roundedRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-  }
-
-  function drawFrogBall() {
-    // trail
-    for (var i = 0; i < ball.trail.length; i++) {
-      var t = ball.trail[i];
-      ctx.globalAlpha = (i / ball.trail.length) * 0.18;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(px(t.x) - 1, px(t.y) - 1, 2, 2);
-    }
-    ctx.globalAlpha = 1;
-
-    // tongue (catching a fly)
-    if (tongue) {
-      var k = tongue.t / 7;
-      var ex = ball.x + (tongue.tx - ball.x) * (1 - k);
-      var ey = ball.y + (tongue.ty - ball.y) * (1 - k);
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(px(ball.x) + 0.5, px(ball.y) + 0.5);
-      ctx.lineTo(px(ex) + 0.5, px(ey) + 0.5);
-      ctx.stroke();
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(px(ex) - 1, px(ey) - 1, 2, 2);
-    }
-
-    // squashed pixel frog
-    var sx = 1 + (ball.sqx - 1) * ball.squash;
-    var sy = 1 + (ball.sqy - 1) * ball.squash;
-    var unit = (BALL_R * 2) / FROG_W;
-    ctx.save();
-    ctx.translate(ball.x, ball.y);
-    ctx.scale(sx, sy);
-    ctx.fillStyle = '#fff';
-    var ox = -(FROG_W * unit) / 2, oy = -(FROG_H * unit) / 2;
-    for (var r = 0; r < FROG_H; r++) {
-      for (var c = 0; c < FROG_W; c++) {
-        if (FROG[r][c] === '#') {
-          ctx.fillRect(Math.round(ox + c * unit), Math.round(oy + r * unit),
-                       Math.ceil(unit), Math.ceil(unit));
-        }
+  function drawBricks(){
+    ctx.lineWidth=1;
+    for(var i=0;i<game.bricks.length;i++){ var b=game.bricks[i]; if(!b.alive) continue;
+      ctx.strokeStyle='#fff';
+      ctx.strokeRect(px(b.x)+0.5, px(b.y)+0.5, px(b.w)-1, px(b.h)-1);
+      if(b.tough && b.hits>1){ ctx.strokeRect(px(b.x)+2.5, px(b.y)+2.5, px(b.w)-5, px(b.h)-5); }
+      var cx=b.x+b.w/2, cy=b.y+b.h/2;
+      if(b.power){
+        ctx.strokeStyle='#fff'; capsule(px(cx-5)+0.5, px(cy-2.5)+0.5, 10, 5); ctx.stroke();
+        ctx.fillStyle='#fff'; ctx.fillRect(px(cx)-0, px(cy)-1, 1, 2);
+      } else {
+        ctx.fillStyle='#fff';
+        ctx.fillRect(px(cx)-1,px(cy)-1,2,2);
+        ctx.fillRect(px(cx)-4,px(cy)-2,2,1); ctx.fillRect(px(cx)+2,px(cy)-2,2,1);
       }
     }
+  }
+  function drawPaddle(){
+    var x0=paddle.x-PADDLE_W/2;
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1;
+    capsule(px(x0)+0.5, px(PADDLE_Y)+0.5, PADDLE_W-1, PADDLE_H-1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(paddle.x)+0.5, PADDLE_Y+1); ctx.lineTo(px(paddle.x)+0.5, PADDLE_Y+PADDLE_H-1); ctx.stroke();
+  }
+  function drawOneBall(b){
+    for(var i=0;i<b.trail.length;i++){ var t=b.trail[i];
+      ctx.globalAlpha=(i/b.trail.length)*0.16; ctx.fillStyle='#fff'; ctx.fillRect(px(t.x)-1,px(t.y)-1,2,2); }
+    ctx.globalAlpha=1;
+    var sx=1+(b.sqx-1)*b.squash, sy=1+(b.sqy-1)*b.squash, unit=(BALL_R*2)/FROG_W;
+    ctx.save(); ctx.translate(b.x,b.y); ctx.scale(sx,sy); ctx.fillStyle='#fff';
+    var ox=-(FROG_W*unit)/2, oy=-(FROG_H*unit)/2;
+    for(var r=0;r<FROG_H;r++) for(var c=0;c<FROG_W;c++)
+      if(FROG[r][c]==='#') ctx.fillRect(Math.round(ox+c*unit),Math.round(oy+r*unit),Math.ceil(unit),Math.ceil(unit));
     ctx.restore();
   }
-
-  function drawParticles() {
-    ctx.fillStyle = '#fff';
-    for (var i = 0; i < particles.length; i++) {
-      var p = particles[i];
-      ctx.globalAlpha = Math.max(0, p.life / p.max);
-      ctx.fillRect(px(p.x), px(p.y), p.size, p.size);
-    }
-    ctx.globalAlpha = 1;
+  function drawBalls(){
+    if(tongue){ var b0=balls[0]||{x:tongue.x,y:tongue.y};
+      var k=tongue.t/7, ex=tongue.x+(tongue.tx-tongue.x)*(1-k), ey=tongue.y+(tongue.ty-tongue.y)*(1-k);
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.beginPath();
+      ctx.moveTo(px(tongue.x)+0.5,px(tongue.y)+0.5); ctx.lineTo(px(ex)+0.5,px(ey)+0.5); ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.fillRect(px(ex)-1,px(ey)-1,2,2); }
+    for(var i=0;i<balls.length;i++) drawOneBall(balls[i]);
   }
-
-  // Big centred title frog used on the start / over screens.
-  function drawBigFrog(cx, cy, unit) {
-    ctx.fillStyle = '#fff';
-    var ox = cx - (FROG_W * unit) / 2, oy = cy - (FROG_H * unit) / 2;
-    for (var r = 0; r < FROG_H; r++) {
-      for (var c = 0; c < FROG_W; c++) {
-        if (FROG[r][c] === '#') ctx.fillRect(px(ox + c*unit), px(oy + r*unit), Math.ceil(unit), Math.ceil(unit));
-      }
+  function drawDrops(){
+    for(var i=0;i<drops.length;i++){ var d=drops[i], meta=PWR[d.type];
+      var w=20,h=12, x=d.x-w/2, y=d.y-h/2, bob=Math.sin(d.t*0.25)*0.6;
+      ctx.lineWidth=1;
+      if(meta.good){ ctx.strokeStyle='#fff'; capsule(px(x)+0.5,px(y+bob)+0.5,w-1,h-1); ctx.stroke();
+        ctx.fillStyle='#fff'; }
+      else { ctx.fillStyle='#fff'; capsule(px(x)+0.5,px(y+bob)+0.5,w-1,h-1); ctx.fill(); ctx.fillStyle='#000'; }
+      ctx.font='8px ui-monospace, monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(meta.tag, px(d.x), px(d.y+bob)+1);
     }
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   }
-
-  function drawOverlay() {
-    ctx.fillStyle = 'rgba(0,0,0,0.72)';
-    ctx.fillRect(WALL, HUD_H, VW - WALL*2, VH - HUD_H - WALL);
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    if (game.state === STATE.TITLE) {
-      drawBigFrog(VW/2, VH*0.34, 7);
-      ctx.font = 'bold 22px ui-monospace, monospace';
-      ctx.fillText('FROG BREAKER', VW/2, VH*0.50);
-      ctx.font = '10px ui-monospace, monospace';
-      ctx.globalAlpha = 0.6;
-      ctx.fillText('nakfrg', VW/2, VH*0.50 + 18);
-      ctx.globalAlpha = blink();
-      ctx.font = '11px ui-monospace, monospace';
-      ctx.fillText('click / tap / space to start', VW/2, VH*0.66);
-      ctx.globalAlpha = 0.4;
-      ctx.font = '9px ui-monospace, monospace';
-      ctx.fillText('move: mouse · touch · ← →', VW/2, VH*0.66 + 18);
-      ctx.globalAlpha = 1;
-    } else if (game.state === STATE.OVER) {
-      ctx.font = 'bold 20px ui-monospace, monospace';
-      ctx.fillText('GAME OVER', VW/2, VH*0.40);
-      ctx.font = '12px ui-monospace, monospace';
-      ctx.fillText('score  ' + game.score, VW/2, VH*0.40 + 26);
-      ctx.globalAlpha = blink();
-      ctx.font = '11px ui-monospace, monospace';
-      ctx.fillText('click / tap / space to retry', VW/2, VH*0.58);
-      ctx.globalAlpha = 1;
+  function drawEffects(){
+    var active=[]; for(var i=0;i<FXKEYS.length;i++){ var k=FXKEYS[i]; if(fx[k]>0) active.push(k); }
+    if(active.length===0) return;
+    var tw=26, gap=6, total=active.length*tw+(active.length-1)*gap, sx=VW/2-total/2, y=PADDLE_Y-18;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(i=0;i<active.length;i++){ var key=active[i], meta=PWR[key], x=sx+i*(tw+gap);
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(px(x)+0.5,px(y)+0.5,tw-1,11);
+      ctx.fillStyle='#fff'; ctx.font='8px ui-monospace, monospace';
+      ctx.fillText(meta.tag, px(x+tw/2), px(y+6));
+      var frac=meta.dur>0?Math.max(0,Math.min(1,fx[key]/meta.dur)):1;
+      ctx.fillRect(px(x)+1, px(y)+12, Math.round((tw-2)*frac), 1);
     }
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   }
+  function drawParticles(){ ctx.fillStyle='#fff';
+    for(var i=0;i<particles.length;i++){ var p=particles[i]; ctx.globalAlpha=Math.max(0,p.life/p.max);
+      ctx.fillRect(px(p.x),px(p.y),p.size,p.size); } ctx.globalAlpha=1; }
+  function drawBigFrog(cx,cy,unit){ ctx.fillStyle='#fff';
+    var ox=cx-(FROG_W*unit)/2, oy=cy-(FROG_H*unit)/2;
+    for(var r=0;r<FROG_H;r++) for(var c=0;c<FROG_W;c++)
+      if(FROG[r][c]==='#') ctx.fillRect(px(ox+c*unit),px(oy+r*unit),Math.ceil(unit),Math.ceil(unit)); }
 
-  function drawMessage() {
-    if (game.msgT <= 0) return;
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = Math.min(1, game.msgT / 30);
-    ctx.font = 'bold 16px ui-monospace, monospace';
-    if (game.state === STATE.CLEAR) ctx.fillText('CLEARED', VW/2, VH*0.42);
-    else ctx.fillText('LEVEL ' + (game.level + 1), VW/2, VH*0.42);
-    ctx.globalAlpha = 1;
-  }
+  var blinkT=0; function blink(){ return 0.35+0.45*(0.5+0.5*Math.sin(blinkT*0.09)); }
 
-  var blinkT = 0;
-  function blink() { return 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(blinkT * 0.09)); }
-
-  function render() {
-    // clear to black
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
-    ctx.clearRect(0, 0, VW, VH);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, VW, VH);
-
-    drawFrame();
-    drawHUD();
-    drawBricks();
-    drawPaddle();
-    if (game.state === STATE.PLAY || game.state === STATE.READY ||
-        game.state === STATE.CLEAR || game.state === STATE.DEAD) {
-      drawFrogBall();
-    }
-    drawParticles();
-    drawMessage();
-
-    if (game.state === STATE.TITLE || game.state === STATE.OVER) drawOverlay();
-
-    // global flash on big moments
-    if (game.flashT > 0) {
-      ctx.fillStyle = 'rgba(255,255,255,' + (game.flashT / 14 * 0.25) + ')';
-      ctx.fillRect(0, 0, VW, VH);
+  function drawOverlay(){
+    ctx.fillStyle='rgba(0,0,0,0.72)'; ctx.fillRect(WALL,HUD_H,VW-WALL*2,VH-HUD_H-WALL);
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(game.state===STATE.TITLE){
+      drawBigFrog(VW/2,VH*0.30,7);
+      ctx.font='bold 22px ui-monospace, monospace'; ctx.fillText('FROG BREAKER', VW/2, VH*0.46);
+      ctx.font='10px ui-monospace, monospace'; ctx.globalAlpha=0.6;
+      ctx.fillText('10 levels . power-ups', VW/2, VH*0.46+18); ctx.globalAlpha=blink();
+      ctx.font='11px ui-monospace, monospace'; ctx.fillText('click / tap / space to start', VW/2, VH*0.63);
+      ctx.globalAlpha=0.4; ctx.font='9px ui-monospace, monospace';
+      ctx.fillText('move: mouse . touch . left/right', VW/2, VH*0.63+18);
+      ctx.fillText('catch capsules . avoid F! and W-', VW/2, VH*0.63+32);
+      ctx.globalAlpha=1;
+    } else if(game.state===STATE.OVER){
+      ctx.font='bold 20px ui-monospace, monospace'; ctx.fillText('GAME OVER', VW/2, VH*0.40);
+      ctx.font='12px ui-monospace, monospace'; ctx.fillText('score  '+game.score, VW/2, VH*0.40+26);
+      ctx.fillText('reached LV '+(game.level+1), VW/2, VH*0.40+44);
+      ctx.globalAlpha=blink(); ctx.font='11px ui-monospace, monospace';
+      ctx.fillText('click / tap / space to retry', VW/2, VH*0.62); ctx.globalAlpha=1;
+    } else if(game.state===STATE.WIN){
+      drawBigFrog(VW/2,VH*0.30,7);
+      ctx.font='bold 22px ui-monospace, monospace'; ctx.fillText('YOU WIN!', VW/2, VH*0.46);
+      ctx.font='12px ui-monospace, monospace'; ctx.fillText('all 10 levels cleared', VW/2, VH*0.46+22);
+      ctx.fillText('score  '+game.score, VW/2, VH*0.46+40);
+      ctx.globalAlpha=blink(); ctx.font='11px ui-monospace, monospace';
+      ctx.fillText('click / tap / space to play again', VW/2, VH*0.66); ctx.globalAlpha=1;
     }
   }
-
-  // ─────────────────────────────────────────────────────────────
-  //  Main loop — fixed-step updates, render each frame
-  // ─────────────────────────────────────────────────────────────
-  var last = performance.now(), acc = 0;
-  var STEP = 1000 / 60;
-  function loop(now) {
-    var dt = Math.min(100, now - last); last = now;
-    acc += dt; blinkT++;
-    var guard = 0;
-    while (acc >= STEP && guard++ < 5) { update(); acc -= STEP; }
-    render();
-    requestAnimationFrame(loop);
+  function drawMessage(){
+    if(game.msgT>0){ ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.globalAlpha=Math.min(1,game.msgT/30); ctx.font='bold 16px ui-monospace, monospace';
+      if(game.state===STATE.CLEAR) ctx.fillText('CLEARED', VW/2, VH*0.42);
+      else ctx.fillText('LEVEL '+(game.level+1), VW/2, VH*0.42); ctx.globalAlpha=1; }
+    if(game.msgFxT>0){ ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.globalAlpha=Math.min(1,game.msgFxT/30); ctx.font='bold 12px ui-monospace, monospace';
+      ctx.fillText(game.msgFx, VW/2, PADDLE_Y-34); ctx.globalAlpha=1; }
   }
+
+  function render(){
+    ctx.setTransform(scale*dpr,0,0,scale*dpr,0,0);
+    ctx.clearRect(0,0,VW,VH); ctx.fillStyle='#000'; ctx.fillRect(0,0,VW,VH);
+    drawFrame(); drawHUD(); drawBricks(); drawDrops(); drawPaddle();
+    if(game.state!==STATE.TITLE) drawBalls();
+    drawEffects(); drawParticles(); drawMessage();
+    if(game.state===STATE.TITLE||game.state===STATE.OVER||game.state===STATE.WIN) drawOverlay();
+    if(game.flashT>0){ ctx.fillStyle='rgba(255,255,255,'+(game.flashT/14*0.25)+')'; ctx.fillRect(0,0,VW,VH); }
+  }
+
+  // ── loop ──
+  var last=performance.now(), acc=0, STEP=1000/60;
+  function loop(now){ var dt=Math.min(100,now-last); last=now; acc+=dt; blinkT++;
+    var guard=0; while(acc>=STEP && guard++<5){ update(); acc-=STEP; } render(); requestAnimationFrame(loop); }
   requestAnimationFrame(loop);
 
-  // ─────────────────────────────────────────────────────────────
-  //  Input handlers
-  // ─────────────────────────────────────────────────────────────
-  function primaryAction() {
-    // resume audio context on first gesture
-    var a = audio(); if (a && a.state === 'suspended') a.resume();
-    if (game.state === STATE.TITLE) { startGame(); }
-    else if (game.state === STATE.READY) { launchBall(); }
-    else if (game.state === STATE.OVER) { startGame(); }
+  // ── input ──
+  function primaryAction(){ var a=audio(); if(a&&a.state==='suspended') a.resume();
+    if(game.state===STATE.TITLE) startGame();
+    else if(game.state===STATE.READY) launchAll();
+    else if(game.state===STATE.PLAY){ if(anyStuck()) launchAll(); }
+    else if(game.state===STATE.OVER||game.state===STATE.WIN) startGame();
   }
-
-  // Pointer (mouse + touch) — move paddle + act.
-  canvas.addEventListener('pointerdown', function (e) {
-    pointerX = toVirtualX(e.clientX);
-    // tapping the mute glyph toggles sound
-    if (e.clientY !== undefined) {
-      var r = canvas.getBoundingClientRect();
-      var vy = ((e.clientY - r.top) / r.height) * VH;
-      var vx = toVirtualX(e.clientX);
-      if (vy < HUD_H && vx > VW - WALL - 20) { setMute(!muted); return; }
-    }
-    primaryAction();
-  });
-  window.addEventListener('pointermove', function (e) {
-    if (e.pointerType === 'mouse' && e.buttons === 0 && game.state === STATE.TITLE) return;
-    pointerX = toVirtualX(e.clientX);
-  });
-  // keep mouse steering even without a button held
-  window.addEventListener('mousemove', function (e) { pointerX = toVirtualX(e.clientX); });
-
-  window.addEventListener('keydown', function (e) {
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { keys.left = true; pointerX = null; }
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') { keys.right = true; pointerX = null; }
-    if (e.code === 'Space') { e.preventDefault(); primaryAction(); }
-    if (e.code === 'KeyM') { setMute(!muted); }
-    if (e.code === 'KeyP' && game.state === STATE.PLAY) { /* simple pause: stop ball motion */ }
-  });
-  window.addEventListener('keyup', function (e) {
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
-  });
-
-  // Don't let the page scroll on touch.
-  document.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+  canvas.addEventListener('pointerdown', function(e){ pointerX=toVirtualX(e.clientX);
+    if(e.clientY!==undefined){ var r=canvas.getBoundingClientRect(); var vy=((e.clientY-r.top)/r.height)*VH; var vx=toVirtualX(e.clientX);
+      if(vy<HUD_H && vx>VW-WALL-20){ setMute(!muted); return; } }
+    primaryAction(); });
+  window.addEventListener('pointermove', function(e){ if(e.pointerType==='mouse'&&e.buttons===0&&game.state===STATE.TITLE) return; pointerX=toVirtualX(e.clientX); });
+  window.addEventListener('mousemove', function(e){ pointerX=toVirtualX(e.clientX); });
+  window.addEventListener('keydown', function(e){
+    if(e.code==='ArrowLeft'||e.code==='KeyA'){ keys.left=true; pointerX=null; }
+    if(e.code==='ArrowRight'||e.code==='KeyD'){ keys.right=true; pointerX=null; }
+    if(e.code==='Space'){ e.preventDefault(); primaryAction(); }
+    if(e.code==='KeyM'){ setMute(!muted); } });
+  window.addEventListener('keyup', function(e){
+    if(e.code==='ArrowLeft'||e.code==='KeyA') keys.left=false;
+    if(e.code==='ArrowRight'||e.code==='KeyD') keys.right=false; });
+  document.addEventListener('touchmove', function(e){ e.preventDefault(); }, { passive:false });
 
 })();
 </script>
