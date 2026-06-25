@@ -376,7 +376,23 @@
     "fish3":["      # # #     ","    #  ###      ","    #      #    ","    # # #  #    ","###  ###### ####","###  ###########","###  # #########","###  ###########","###  ###########","     ########   ","     #####   #  ","                ","                "],
     "golem3":["      # # #     ","    #  ###      ","    # # # ##    ","    #########   ","################","###### ### #####","################","################","################","     #######    ","     #######    ","     ### ###    ","     ### ###    "],
     "wisp3":["      # # #     ","    #  ###      ","    #   #  #    ","    # ######    ","###   #####  ###","###  ## # ## ###","###   #####  ###","###    ###   ###","###    ###   ###","        #       ","       # #      ","        #       ","                "],
-    "dragon3":["      # # #     ","    #  ###      ","    #  ### #    ","    #   #  ##   ","  #####   ##### ","  ############# ","  #### ### #### ","  ############# ","      #####     ","      #####     ","       ###      ","       ###      ","                "]
+    "dragon3":["      # # #     ","    #  ###      ","    #  ### #    ","    #   #  ##   ","  #####   ##### ","  ############# ","  #### ### #### ","  ############# ","      #####     ","      #####     ","       ###      ","       ###      ","                "],
+    "pyro0":["       ##       ","      ####      ","      ####      ","     ######     ","    ########    ","    ## ## ##    ","    ########    ","   ##########   ","   ##########   ","   ### ## ###   ","   ##########   ","    ########    ","    ##    ##    "],
+    "pyro1":["      ####      ","     ######     ","      ####      ","     ######     ","    ########    ","    ## ## ##    ","    ########    ","   ##########   ","   ##########   ","   ### ## ###   ","   ##########   ","    ########    ","    ##    ##    "],
+    "pyro2":["  #   ####   #  ","  #  ######  #  ","      ####      ","     ######     ","    ########    ","    ## ## ##    ","    ########    ","   ##########   ","   ##########   ","   ### ## ###   ","   ##########   ","    ########    ","    ##    ##    "],
+    "pyro3":["  ##  ####  ##  ","   ###########  ","  #   ####   #  ","     ######     ","### ###### # ###","#   ## ## ##   #","    ########    ","   ##########   ","#  ### ## ###  #","   ##########   ","    ########    ","    ##    ##    ","                "],
+    "mender0":["                ","      ####      ","     # ## #     ","     ######     ","   ##########   ","   ####  ####   ","   ###    ###   ","   ##      ##   ","   ###    ###   ","   ####  ####   ","   ##########   ","    ##    ##    ","                "],
+    "mender1":["     #    #     ","      ####      ","     # ## #     ","     ######     ","   ##########   ","   ####  ####   ","   ###    ###   ","   ##      ##   ","   ###    ###   ","   ####  ####   ","   ##########   ","    ##    ##    ","                "],
+    "mender2":["    #      #    ","    # #### #    ","     # ## #     ","     ######     ","   ##########   ","   ####  ####   ","   ###    ###   ","   ##      ##   ","   ###    ###   ","   ####  ####   ","   ##########   ","    ##    ##    ","                "],
+    "mender3":["    # #### #    ","   ##########   ","     # ## #     ","     ######     ","## ########## ##","#  ####  ####  #","   ###    ###   ","#  ##      ##  #","   ###    ###   ","#  ####  ####  #","   ##########   ","    ##    ##    ","                "],
+    "plague0":["                ","     ######     ","    ########    ","    ########    ","    ########    ","    ##    ##    ","    # #  # #    ","    ########    ","    ## ## ##    ","   ##########   ","   ##########   ","   # #  # # #   ","    #  #  #     "],
+    "plague1":["     #    #     ","     ######     ","    ########    ","    ########    ","    ########    ","    ##    ##    ","    # #  # #    ","    ########    ","    ## ## ##    ","   ##########   ","   ##########   ","   # #  # # #   ","    #  #  #     "],
+    "plague2":["    #  ##  #    ","     ######     ","    ########    ","    ########    ","    ########    ","    ##    ##    ","    # #  # #    ","    ########    ","    ## ## ##    ","   ##########   ","   ##########   ","   # #  # # #   ","    #  #  #     "],
+    "plague3":["   #  ####  #   ","    ########    ","   ##########   ","    ########    ","### ######## ###","#   ##    ##   #","    # #  # #    ","#   ########   #","    ## ## ##    ","   ##########   ","   ##########   ","   # #  # # #   ","    #  #  #     "],
+    "bomb0":["         ##     ","        ##      ","       ##       ","     #####      ","    ########    ","   ##########   ","  ############  ","  ############  ","  ############  ","  ############  ","   ##########   ","    ########    ","                "],
+    "bomb1":["        ####    ","        ##      ","       ##       ","     #####      ","    ########    ","   ##########   ","  ############  ","  ############  ","  ############  ","  ############  ","   ##########   ","    ########    ","                "],
+    "bomb2":["      # ## #    ","        ##      ","      ####      ","     #####      ","  # ######## #  ","   ##########   ","  ############  ","  ## ###### ##  ","  ############  ","  ## ###### ##  ","   ##########   ","    ########    ","                "],
+    "bomb3":["    # #### #    ","      ####      ","      ####      ","     ######     ","### ######## ###","#  ##########  #","  ############  ","  ## ###### ##  ","  ############  ","#  ##########  #","   ##########   ","    ########    ","                "]
   };
 
   // food + poop pixel art
@@ -684,8 +700,14 @@
   // ════════ COMBAT: biomes, 32 enemies, spells ════════
   var BIOMES = ["Plains","Forest","Lake","Cavern","Peaks","Abyss","Citadel"];
   var N_BIOMES = 7, N_STAGES = 6, N_TOTAL = N_BIOMES*N_STAGES;   // 42 stages
-  var ARCHE = ['slime','bug','bird','beast','fish','golem','wisp','dragon'];
-  var ARCHE_NAME = { slime:'Slime', bug:'Beetle', bird:'Lark', beast:'Pup', fish:'Eel', golem:'Golem', wisp:'Wisp', dragon:'Drake' };
+  var ARCHE = ['slime','bug','bird','beast','fish','golem','wisp','dragon','pyro','mender','plague','bomb'];
+  var ARCHE_NAME = { slime:'Slime', bug:'Beetle', bird:'Lark', beast:'Pup', fish:'Eel', golem:'Golem', wisp:'Wisp', dragon:'Drake', pyro:'Pyromancer', mender:'Acolyte', plague:'Plaguecaster', bomb:'Boomling' };
+  // caster archetypes carry a combat ability (regular waves only); cadence + tag for the wave banner
+  var CASTER_OF = { pyro:'fireball', mender:'selfheal', plague:'dot', bomb:'bomb' };
+  var CAST_INT  = { fireball:4000, selfheal:3800, dot:4600 };   // ms between casts (bomb uses a fuse instead)
+  var BOMB_FUSE = 11000;                                        // ms before a Boomling overloads
+  var CASTER_TAG = { fireball:'a caster \u2014 it hurls fireballs between swings', selfheal:'it mends its own wounds \u2014 out-damage the healing',
+    dot:'it afflicts you with a creeping plague (damage over time)', bomb:'it EXPLODES when it dies \u2014 and overloads far worse if left alive too long' };
   var BIOME_ADJ = ['Field','Bramble','Marsh','Cave','Storm','Ash','Void'];
   // each stage is a gauntlet of COMBAT encounters; count grows +5 per stage: 10,15,20,25,30,35.
   // positive/negative events are interspersed between them (see buildEncounters).
@@ -774,8 +796,15 @@
       name=(MECH_ADJ[emech]?MECH_ADJ[emech].toUpperCase()+' ':'')+bb.name;
       if(isFinal){ hp=Math.round(hp*1.22); atk=Math.round(atk*1.12); crit+=0.05; }   // the ultimate
     }
+    // caster abilities are an identity of REGULAR enemies of these archetypes (elites/bosses keep their own gimmick)
+    var caster=(!biomeBoss && !elite) ? (CASTER_OF[arche]||null) : null;
+    if(caster==='fireball'){ hp=Math.round(hp*0.85); }                          // glass caster \u2014 kill it before it nukes
+    else if(caster==='selfheal'){ hp=Math.round(hp*1.18); atk=Math.round(atk*0.9); }  // sustainer
+    else if(caster==='dot'){ atk=Math.round(atk*0.85); }                        // its threat is the plague, not the swing
+    else if(caster==='bomb'){ hp=Math.round(hp*0.7); atk=Math.round(atk*0.5); } // fragile fuse \u2014 pop it fast
     return { hp:hp, maxHp:hp, atk:atk, def:def, crit:crit, name:name, sprite:sprite,
              boss:boss, elite:elite, biomeBoss:biomeBoss, isFinal:isFinal, bspr:bspr, lvl:lvl,
+             caster:caster, castInt:(caster&&CAST_INT[caster])||0,
              mech:emech, evade:(emech==='phantom'?(biomeBoss?0.30:0.42):0) };
   }
   function biomeUnlocked(b){ return stageIndex(b,0) <= (S.stageProg||0); }
@@ -1389,7 +1418,7 @@
     var e=f.enc[f.encIdx];
     if(e.t==='combat'){
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n,e.boss);
-      f.petTick=0; f.eneTick=500; f.cdT=[0,0,0]; f.burnTick=0; f.regenTick=0; f.manaTick=0; f.shield=0; f.revived=false; f.evadeStacks=0; f.lifelineUsed=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0;
+      f.petTick=0; f.eneTick=500; f.cdT=[0,0,0]; f.burnTick=0; f.regenTick=0; f.manaTick=0; f.shield=0; f.revived=false; f.evadeStacks=0; f.lifelineUsed=false; f.castTick=0; f.fuseT=0; f.edot=null; f.edotTick=0; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0; f.castFx=null;
       f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0; f.sparkN=0;
       f.venom=null; f.venomTick=0; f.silence=false; f.curseAtk=1;   // elite-mechanic pet-side state
@@ -1397,6 +1426,7 @@
       f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
       combatLog('\u2694 Wave '+(f.encIdx+1)+'/'+f.wavesTotal+': '+f.enemy.name+(f.enemy.biomeBoss?'  \u2605 BOSS':(f.enemy.elite?'  \u25c6 ELITE':'')));
       if(f.enemy.mech && MECH_TAG[f.enemy.mech]) combatLog('\u26A0 '+MECH_TAG[f.enemy.mech]);
+      if(f.enemy.caster && CASTER_TAG[f.enemy.caster]) combatLog('\u26A0 '+CASTER_TAG[f.enemy.caster]);
     } else {
       setupEvent(e.t);
     }
@@ -1611,6 +1641,12 @@
       if(blast>0){ S.stats.health-=blast; f.flashPet=14; f.fx={ type:'nova', t:900, dur:900 };
         combatLog('\u2737 '+e.name+' DETONATES \u2192 '+blast+'!'); blip(120,0.25,'sawtooth',0.08); }
     }
+    // Boomling: bursts when killed (capped so popping it in time can't itself kill you)
+    if(e.caster==='bomb' && !e.detonated){
+      e.detonated=true; var bb=Math.max(0, Math.min((S.stats.health||0)-1, Math.round(maxHP()*0.16)));
+      if(bb>0){ S.stats.health-=bb; f.flashPet=14; f.fx={ type:'nova', t:850, dur:850 };
+        combatLog('\u2737 '+e.name+' EXPLODES \u2192 '+bb+'!'); blip(120,0.24,'sawtooth',0.08); }
+    }
     e.hp=0; f.flashEne=12;
     combatLog('\u2620 '+e.name+' defeated!'); blip(900,0.08,'sine');
     rollDrop(e, f.biome, stageIndex(f.biome,f.stage)===(S.stageProg||0));
@@ -1666,6 +1702,23 @@
     }
   }
   // pick a boss special by biome for flavour
+  // caster-archetype abilities: fireball burst, self-heal, or a damage-over-time plague
+  function enemyCast(f){
+    var e=f.enemy; if(!e) return;
+    if(e.caster==='fireball'){
+      combatLog('\u2737 '+e.name+' hurls a FIREBALL!'); f.fx={ type:'meteor', t:850, dur:850 }; blip(150,0.16,'sawtooth',0.06);
+      enemyStrike(1.3, true); return;
+    }
+    if(e.caster==='selfheal'){
+      if(e.hp>0 && e.hp<e.maxHp){ var h=Math.max(1,Math.round(e.maxHp*0.07)); e.hp=Math.min(e.maxHp, e.hp+h); f.flashEne=6;
+        combatLog('\u2728 '+e.name+' mends itself (+'+h+')'); blip(560,0.07,'sine'); }
+      return;
+    }
+    if(e.caster==='dot'){
+      var dd=Math.max(1, Math.round(e.atk*0.20)); f.edot={ dmg:dd, rounds:4 };
+      combatLog('\u2620 '+e.name+' spreads a CREEPING PLAGUE \u2014 '+dd+'/tick'); blip(300,0.1,'sawtooth'); return;
+    }
+  }
   function bossSpecial(f){
     var b=f.biome, types = b===6?['laser','nova']:b===4?['meteor','quake']:b===3?['quake','meteor']:b===5?['nova','laser']:b===2?['nova']:['meteor','laser'];
     if(f.enemy && f.enemy.isFinal) types=['meteor','laser','nova','quake'];
@@ -1786,6 +1839,26 @@
       if(f.venomTick>=DOT_TICK_MS){ f.venomTick-=DOT_TICK_MS; S.stats.health=Math.max(0,S.stats.health-f.venom.dmg); f.flashPet=5; f.venom.rounds--; combatLog('\u2620 venom \u2192 '+f.venom.dmg);
         if(f.venom.rounds<=0) f.venom=null;
         if(S.stats.health<=0){ if(!tryDeathSave(f)){ loseBattle(false); return; } } }
+    }
+    if(f.edot && f.edot.rounds>0){                                          // Plaguecaster: creeping plague over time
+      f.edotTick=(f.edotTick||0)+dt;
+      if(f.edotTick>=DOT_TICK_MS){ f.edotTick-=DOT_TICK_MS; S.stats.health=Math.max(0,S.stats.health-f.edot.dmg); f.flashPet=5; f.edot.rounds--; combatLog('\u2620 plague \u2192 '+f.edot.dmg);
+        if(f.edot.rounds<=0) f.edot=null;
+        if(S.stats.health<=0){ if(!tryDeathSave(f)){ loseBattle(false); return; } } }
+    }
+    // caster archetypes cast on their own timer; the Boomling instead counts down a fuse to a big overload
+    if(e.caster==='bomb'){
+      f.fuseT=(f.fuseT||0)+dt;
+      if(!e.detonated && f.fuseT>=BOMB_FUSE){
+        e.detonated=true; var big=Math.round(maxHP()*0.45);
+        S.stats.health=Math.max(0, S.stats.health-big); f.flashPet=16; f.fx={ type:'nova', t:1000, dur:1000 };
+        combatLog('\u2737 '+e.name+' OVERLOADS \u2014 a MASSIVE blast \u2192 '+big+'!'); blip(110,0.3,'sawtooth',0.09);
+        if(S.stats.health<=0){ if(!tryDeathSave(f)){ loseBattle(false); return; } }
+        e.hp=0; winBattle(); return;
+      }
+    } else if(e.caster){
+      f.castTick=(f.castTick||0)+dt;
+      if(f.castTick>=(e.castInt||4000)){ f.castTick=0; enemyCast(f); if(f.state!=='fight') return; }
     }
     // our attack. items can combo (chain extra strikes), sunder (+50% dmg), execute (vs weak foes), bleed, lifesteal.
     f.petTick+=dt;
