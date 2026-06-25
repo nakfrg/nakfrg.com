@@ -1142,6 +1142,9 @@
   var qteRow=$('#qteRow'), qteMsg=$('#qteMsg'), qteBtns=$('#qteBtns'), qteTime=$('#qteTime');
   var alertWrap=$('#alertWrap'), alertBtn=$('#alertBtn'), alertMsg=$('#alertMsg'), alertTime=$('#alertTime');
   var logEl=$('#eventLog');
+  // the log height animates when switching between home/battle; once that settles, re-pin to the
+  // newest line (the mid-transition scrollHeight is stale, which otherwise leaves it scrolled up)
+  if(logEl) logEl.addEventListener('transitionend', function(e){ if(e && e.propertyName==='height' && logPinned) logEl.scrollTop=logEl.scrollHeight; });
   function species(){ return DECAY_BY_SPECIES[S.eggStyle] ? S.eggStyle : 'dewy'; }
 
   // ── state ──
@@ -1335,7 +1338,7 @@
   function doAction(){ }
 
   // ── STAGE COMBAT (tick-based; plays out on screen; cycle is paused while fighting) ──
-  function combatLog(line){ var f=S.fight; if(!f) return; f.log.push(line); if(f.log.length>40) f.log.shift(); }
+  function combatLog(line){ var f=S.fight; if(!f) return; f.logN=(f.logN||0)+1; f.log.push(line); if(f.log.length>40) f.log.shift(); }
 
   var APPROACH_MS = 1400;   // travel-in / enemy-walk-on time before a battle starts
   function startStage(biome, stage){
@@ -1381,8 +1384,26 @@
       setupEvent(e.t);
     }
   }
+  // ── rare secret: a sweetheart in the late biomes (Abyss / Citadel) ──
+  var FROG_GIRL = {
+    title:'A Pretty Frog',
+    text:"A dainty frog in a daisy crown hops onto the path, batting four big eyes. \"My, my\u2026 a brave little hero. All this monster-slaying looks just EXHAUSTING, sugarlily. Why not hang up that sword and make a cosy home with me instead?\" She nods at a snug pond-cottage by the reeds. {n}'s heart goes ba-DUMP.",
+    choices:[
+      { label:'Kiss her cheek & hop on', sub:'full heal, then onward', run:function(f){
+          healPet(1.0);
+          logEvent('\u2661 '+niceName()+' plants a bashful kiss on her cheek, blurts \u201cgotta-save-the-world-byeee!\u201d and bounds off \u2014 cheeks glowing, every wound mended by one heroic smooch.');
+        } },
+      { label:'\u2661 Abandon the quest', sub:'no turning back\u2026', run:function(f){ startFamilyEnding(); } }
+    ]
+  };
   function setupEvent(kind){
-    var f=S.fight, ev=pickEvent(eventPool(kind, f?f.biome:0));
+    var f=S.fight;
+    // a sweetheart appears \u2014 rarely \u2014 deep in the Abyss or Citadel
+    if(kind==='pos' && f && (f.biome===5||f.biome===6) && S.stage==='adult' && Math.random()<0.08){
+      f.event={ kind:'pos', title:FROG_GIRL.title, text:fillName(FROG_GIRL.text), choices:FROG_GIRL.choices, result:null, chosenLabel:null, noBoonNote:true };
+      f.state='event'; openEventChoice(); blip(700,0.09,'sine'); return;
+    }
+    var ev=pickEvent(eventPool(kind, f?f.biome:0));
     f.event={ kind:kind, title:ev.title, text:ev.text, choices:ev.choices||null, result:null, chosenLabel:null };
     if(ev.choices){ f.state='event'; openEventChoice(); blip(640,0.08,'sine'); }
     else {
@@ -1400,6 +1421,7 @@
     var ch=f.event.choices[i]; if(!ch) return;
     var bHP=S.stats.health, bBuffs=Object.assign({},f.buffs);
     ch.run(f);
+    if(S.dead){ closeOverlay(); updateControls(); render(); return; }   // a choice ended the run (secret ending)
     var rep=describeEffect(bHP,bBuffs);
     f.event.result=rep; f.event.chosenLabel=ch.label;
     combatLog('\u2726 '+f.event.title+' \u2014 '+ch.label+(rep.length?'  ('+rep.join(', ')+')':''));
@@ -1911,34 +1933,61 @@
   function escHtml(s){ return String(s).replace(/[&<>]/g,function(c){ return c==='&'?'&amp;':c==='<'?'&lt;':'&gt;'; }); }
   function logEvent(msg){
     if(!S.log) S.log=[];
-    S.log.unshift({ t:clockNow(), m:msg });
+    S.logN=(S.logN||0)+1;
+    S.log.unshift({ t:clockNow(), m:msg, seq:S.logN });
     if(S.log.length>LOG_MAX) S.log.length=LOG_MAX;
     renderLog();
   }
+  // log scrolling: only stick to the newest line if the reader is already at the bottom
+  // (so scrolling up to re-read mid-fight isn't yanked back), but always snap to newest when the
+  // feed switches between the battle log and the home log.
+  var logPinned=true;
+  function logAtBottom(){ return (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) <= 10; }
+  function pinLogBottom(){ logEl.scrollTop = logEl.scrollHeight; }
   function renderLog(){
     if(!logEl) return;
     var title=document.querySelector('.logTitle');
+    var fightMode = !!(S.fight && S.fight.log);
+    var modeChanged = (logEl.classList.contains('fight') !== fightMode);
+    var stick = modeChanged || logAtBottom();   // decide BEFORE we replace the contents
+    var prevTop = logEl.scrollTop;
+    // when preserving the reader's spot, anchor to the entry they're looking at (by seq id) so that
+    // pruning old lines off the top doesn't make the text creep underneath them
+    var anchor=null;
+    if(!stick && !modeChanged){
+      var kids=logEl.children;
+      for(var a=0;a<kids.length;a++){
+        if(kids[a].offsetTop+kids[a].offsetHeight > prevTop){ anchor={ seq:kids[a].getAttribute('data-seq'), gap:kids[a].offsetTop-prevTop }; break; }
+      }
+    }
     // during a battle, the log section becomes the combat feed (keeps art clear)
-    if(S.fight && S.fight.log){
+    if(fightMode){
       if(title) title.textContent='BATTLE';
       logEl.classList.add('fight');
       var f=S.fight, lines=f.log;
       if(!lines.length){ logEl.innerHTML='<div class="logRow logEmpty">\u2694 engaging\u2026</div>'; }
       else {
-        var hb='';
-        for(var j=0;j<lines.length;j++) hb+='<div class="logRow">'+escHtml(lines[j])+'</div>';
+        var base=(f.logN||lines.length)-lines.length, hb='';
+        for(var j=0;j<lines.length;j++) hb+='<div class="logRow" data-seq="'+(base+j)+'">'+escHtml(lines[j])+'</div>';
         logEl.innerHTML=hb;
       }
-      logEl.scrollTop=logEl.scrollHeight;   // keep the newest line in view
-      return;
+    } else {
+      if(title) title.textContent='LOG';
+      logEl.classList.remove('fight');
+      if(!S.log||!S.log.length){ logEl.innerHTML='<div class="logRow logEmpty">...all quiet for now...</div>'; }
+      else {
+        var h='';
+        for(var i=S.log.length-1;i>=0;i--){ var sq=S.log[i].seq;
+          h+='<div class="logRow"'+(sq!=null?' data-seq="'+sq+'"':'')+'><span class="logT">'+S.log[i].t+'</span>'+escHtml(S.log[i].m)+'</div>'; }
+        logEl.innerHTML=h;
+      }
     }
-    if(title) title.textContent='LOG';
-    logEl.classList.remove('fight');
-    if(!S.log||!S.log.length){ logEl.innerHTML='<div class="logRow logEmpty">...all quiet for now...</div>'; return; }
-    var h='';
-    for(var i=S.log.length-1;i>=0;i--) h+='<div class="logRow"><span class="logT">'+S.log[i].t+'</span>'+escHtml(S.log[i].m)+'</div>';
-    logEl.innerHTML=h;
-    logEl.scrollTop=logEl.scrollHeight;   // newest at the bottom, same as the battle feed
+    if(stick){ logPinned=true; pinLogBottom(); }   // newest stays in view
+    else {
+      logPinned=false;
+      var aEl = (anchor && anchor.seq!=null) ? logEl.querySelector('[data-seq="'+anchor.seq+'"]') : null;
+      logEl.scrollTop = aEl ? (aEl.offsetTop - anchor.gap) : prevTop;   // hold the same entry steady
+    }
   }
 
   // ── alert / critical UI ──
@@ -2189,9 +2238,9 @@
     var intro=document.createElement('div'); intro.className='ovhint'; intro.style.marginTop='0'; intro.style.marginBottom='6px';
     intro.textContent=f.event.text; ovBody.appendChild(intro);
     f.event.choices.forEach(function(ch, i){
-      ovBody.appendChild(ovActionRow(ch.label, 'this stage only', function(){ chooseEvent(i); }));
+      ovBody.appendChild(ovActionRow(ch.label, ch.sub||'this stage only', function(){ chooseEvent(i); }));
     });
-    var note=document.createElement('div'); note.className='ovhint'; note.textContent='boons last only for this stage run'; ovBody.appendChild(note);
+    if(!f.event.noBoonNote){ var note=document.createElement('div'); note.className='ovhint'; note.textContent='boons last only for this stage run'; ovBody.appendChild(note); }
     autoNoteEl=null;
     if(autoMode){ autoEventT=0; var ac=document.createElement('div'); ac.className='ovhint'; ac.style.color='#fff';
       ac.textContent='auto-picking first option\u2026'; ovBody.appendChild(ac); autoNoteEl=ac; }
@@ -2408,11 +2457,13 @@
   }
   function renderEnd(){
     if(!endTitle) return;
-    var win = S.ended==='win';
-    endTitle.textContent = win ? '\u2605 VICTORY \u2605' : 'GAME OVER';
+    var win = S.ended==='win', family = S.ended==='family';
+    endTitle.textContent = win ? '\u2605 VICTORY \u2605' : family ? '\u2665 THE END \u2665' : 'GAME OVER';
     var r=S.rpg;
     var lines = [];
-    lines.push(win ? niceName()+' conquered all seven biomes and felled the VOID SOVEREIGN!' : niceName()+' '+(S.ended==='age'?'lived a full life.':'fell: '+S.deadCause));
+    lines.push(win ? niceName()+' conquered all seven biomes and felled the VOID SOVEREIGN!'
+             : family ? niceName()+' abandoned the quest, found love, and started a frog family \u2014 happily ever after.'
+             : niceName()+' '+(S.ended==='age'?'lived a full life.':'fell: '+S.deadCause));
     lines.push('reached age '+(S.age||0)+' / '+MAX_AGE);
     lines.push('cleared '+Math.min(N_TOTAL,S.stageProg||0)+' / '+N_TOTAL+' stages \u00b7 reached '+BIOMES[frontierBiome()]);
     lines.push('form: '+(FORM_NAMES[S.form]||S.form));
@@ -2612,6 +2663,74 @@
     var tw=W*unit, th=H*unit;
     var ox=(cw-tw)/2, oy=ch*0.80-th;
     blitMap(rows, ox, oy, unit, 0);
+  }
+
+  // ── secret "frog family" ending scene ──────────────────────────────────────
+  var HOUSE_SPR = [
+    "      ##      ",
+    "     ####     ",
+    "    ######    ",
+    "   ########   ",
+    "  ##########  ",
+    " ############ ",
+    " #          # ",
+    " #  #    #  # ",
+    " #  #    #  # ",
+    " #   ####   # ",
+    " #   #  #   # ",
+    " #####  ##### "];
+  var HEART_PX = ["011011","111111","111111","011110","001100"];
+  function pxHeart(x,y,s){ for(var r=0;r<HEART_PX.length;r++)for(var c=0;c<6;c++)
+    if(HEART_PX[r].charAt(c)==='1') pctx.fillRect(Math.round(x+c*s),Math.round(y+r*s),Math.ceil(s),Math.ceil(s)); }
+  var familyT=0;
+  function drawFamilyEnding(dt){
+    familyT+=dt;
+    var t=familyT;
+    pctx.fillStyle='#000'; pctx.fillRect(0,0,cw,ch);   // the window fades to black
+    if(t<700) return;                                  // hold on black for a beat
+    var sceneT=t-700, fade=Math.min(1, sceneT/650);
+    pctx.globalAlpha=fade;
+    // ground
+    pctx.strokeStyle='rgba(255,255,255,0.5)'; pctx.lineWidth=1;
+    var fy=Math.round(ch*0.82)+0.5; pctx.beginPath(); pctx.moveTo(cw*0.06,fy); pctx.lineTo(cw*0.94,fy); pctx.stroke();
+    // the cosy little pond-cottage, left of centre
+    pctx.fillStyle='#fff';
+    var hUnit=Math.max(3, Math.floor((ch*0.34)/HOUSE_SPR.length));
+    var hW=HOUSE_SPR[0].length*hUnit, hH=HOUSE_SPR.length*hUnit;
+    blitMap(HOUSE_SPR, cw*0.30-hW/2, ch*0.82-hH, hUnit, 0);
+    // the two sweethearts, side by side
+    var bob=Math.sin(sceneT/300)*2;
+    var girl=(S.form==='lotus')?'canopy':'lotus';
+    drawCreature(SPR[S.form]||SPR.springer, cw*0.575, -2+bob, 0.5, false);
+    drawCreature(SPR[girl], cw*0.70, -2-bob, 0.5, true);
+    // love hearts rising between them
+    var hs=Math.max(2, hUnit*0.5);
+    for(var i=0;i<5;i++){
+      var hp=((sceneT/1500)+i/5)%1;
+      pctx.globalAlpha=fade*(1-hp)*0.9; pctx.fillStyle='#fff';
+      pxHeart(cw*0.635+Math.sin(sceneT/420+i*1.7)*9, ch*0.62-hp*ch*0.30, hs);
+    }
+    pctx.globalAlpha=fade; pctx.fillStyle='#fff';
+    // a little baby frog hops in from off-screen
+    if(sceneT>1500){
+      var bt=sceneT-1500, prog=Math.min(1, bt/1700);
+      var bx=cw*1.06 + (cw*0.84-cw*1.06)*prog;
+      var hop=(prog<1)?-Math.abs(Math.sin(bt/170))*ch*0.11 : -Math.abs(Math.sin(bt/300))*ch*0.04;
+      drawCreature(SPR.padpole, bx, -2+hop, 0.32, true);
+      if(prog>=1){ for(var j=0;j<3;j++){ var jp=((bt-1700)/1100+j/3)%1;
+        pctx.globalAlpha=fade*(1-jp)*0.8; pxHeart(cw*0.78+Math.sin(jp*6+j)*7, ch*0.60-jp*ch*0.22, hs); } }
+    }
+    pctx.globalAlpha=1;
+  }
+  function startFamilyEnding(){
+    if(S.dead) return;
+    S.ended='family'; S.dead=true; S.mode='idle'; S.modeAct=null; S.fight=null; S.critical=null;
+    S.deadCause='abandoned the quest to start a frog family';
+    familyT=0; closeSub();
+    logEvent('\u2665 '+niceName()+' hung up the blade for love \u2014 a cottage, a sweetheart, and soon a little tadpole of their own. THE END \u2665');
+    blip(660,0.12,'triangle',0.06); setTimeout(function(){blip(880,0.12,'triangle',0.06);},150);
+    setTimeout(function(){blip(990,0.14,'triangle',0.06);},300); setTimeout(function(){blip(1320,0.22,'triangle',0.06);},460);
+    updateAlert(); render(); save();
   }
 
   // draw an arbitrary sprite grid centered at xc (used for battle scenes)
@@ -3107,7 +3226,7 @@
     pctx.beginPath(); pctx.moveTo(cw*0.06,fy); pctx.lineTo(cw*0.94,fy); pctx.stroke();
 
     // dead: show a grave and stop the pet animation
-    if(S.dead){ drawGrave(); setBars(); requestAnimationFrame(frame); return; }
+    if(S.dead){ if(S.ended==='family') drawFamilyEnding(dtMs); else drawGrave(); setBars(); requestAnimationFrame(frame); return; }
 
     // egg: rock gently; tapping speeds the hatch, mashing cracks it
     if(S.stage==='egg'){
