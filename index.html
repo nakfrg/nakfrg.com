@@ -1041,7 +1041,11 @@
     { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:60,int:60},  cost:40,  cd:4600, pow:function(r){return Math.round(r.int*2.6);}, self:function(r){return Math.round(r.int*0.32);}, desc:'devastation \u2014 long cooldown, self-cost' },
     { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:80},         cost:24,  cd:4000, pow:function(r){return Math.round(r.int*3.0);}, self:function(r){return Math.round(r.int*0.5);}, desc:'huge hit \u2014 wounds you too' },
     { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:80},         cost:24,  cd:4200, pow:function(r){return Math.round(r.spi*0.9);}, rounds:4, desc:'heal-over-time \u2014 scales with SPIRIT' },
-    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:90,spi:90},  cost:52,  cd:5600, pow:function(r){return Math.round(r.int*3.0+r.spi*0.7);}, vfx:'nuke', desc:'the ultimate nuke \u2014 longest cooldown, INT & SPI mastery' }
+    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:90,spi:90},  cost:52,  cd:5600, pow:function(r){return Math.round(r.int*3.0+r.spi*0.7);}, vfx:'nuke', desc:'the ultimate nuke \u2014 longest cooldown, INT & SPI mastery' },
+    // ── passive defensive auras: no cooldown, no cast \u2014 they simply work while equipped in a slot ──
+    // (cd is a never-used sentinel; passives are skipped by the cast loop and shown as "always on")
+    { id:'evasion',  name:'Phantom Veil', type:'evade',    passive:true, req:{dex:35}, cost:0, cd:1, pow:function(r){return 0;}, desc:'DEX aura \u2014 each hit you take builds +5% dodge; resets the moment you dodge, then builds again' },
+    { id:'luckystar',name:'Lucky Star',   type:'lifeline', passive:true, req:{lck:40}, cost:0, cd:1, pow:function(r){return 0;}, desc:'LCK aura \u2014 once per fight, cheat death: survive a fatal blow and recover 30% HP' }
   ];
   function spellById(id){ for(var i=0;i<SPELLS.length;i++) if(SPELLS[i].id===id) return SPELLS[i]; return null; }
   function spellReady(sp){ var r=S.rpg; for(var k in sp.req) if((r[k]||0)<sp.req[k]) return false; return true; }
@@ -1100,6 +1104,14 @@
   function equipBonus(stat){ var t=0, eq=S.equipped||[]; for(var i=0;i<eq.length;i++){ var it=itemById(eq[i]); if(it&&it.stats&&it.stats[stat]) t+=it.stats[stat]; } return t; }
   function equipEffect(key){ var t=0, eq=S.equipped||[]; for(var i=0;i<eq.length;i++){ var it=itemById(eq[i]); if(it&&it[key]) t+=it[key]; } return t; }
   function hasReviveItem(){ var eq=S.equipped||[]; for(var i=0;i<eq.length;i++){ var it=itemById(eq[i]); if(it&&it.revive) return it.revive; } return 0; }
+  function spellEquipped(id){ var ld=S.loadout||[]; return ld.indexOf(id)>=0; }
+  // a fatal blow: try a Phoenix item revive, then the Lucky Star aura (each once per wave); returns true if death was averted
+  function tryDeathSave(f){
+    var rev=hasReviveItem();
+    if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12; combatLog('\u2605 PHOENIX! revived at '+Math.round(rev*100)+'%'); blip(1100,0.18,'sine'); return true; }
+    if(spellEquipped('luckystar') && !f.lifelineUsed){ f.lifelineUsed=true; S.stats.health=Math.round(maxHP()*0.30); f.flashPet=14; combatLog('\u2726 LUCKY STAR! a fatal blow \u2014 but luck pulls you through (+30% HP)!'); blip(1080,0.16,'sine'); return true; }
+    return false;
+  }
   // a roll of stat with equipped bonuses (used by derived combat stats + spells)
   function ST(k){ return Math.max(0,(S.rpg[k]||0) + equipBonus(k)); }
   function effRpg(){ var o={}; for(var i=0;i<RPG_KEYS.length;i++){ var k=RPG_KEYS[i]; o[k]=ST(k); } return o; }
@@ -1377,7 +1389,7 @@
     var e=f.enc[f.encIdx];
     if(e.t==='combat'){
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n,e.boss);
-      f.petTick=0; f.eneTick=500; f.cdT=[0,0,0]; f.burnTick=0; f.regenTick=0; f.manaTick=0; f.shield=0; f.revived=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0;
+      f.petTick=0; f.eneTick=500; f.cdT=[0,0,0]; f.burnTick=0; f.regenTick=0; f.manaTick=0; f.shield=0; f.revived=false; f.evadeStacks=0; f.lifelineUsed=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0; f.castFx=null;
       f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0; f.sparkN=0;
       f.venom=null; f.venomTick=0; f.silence=false; f.curseAtk=1;   // elite-mechanic pet-side state
@@ -1467,7 +1479,7 @@
   function spellCdr(){ return Math.min(0.55, (ST('int')+ST('spi'))/900); }
   // equipping more spells lengthens every cooldown (trade cast speed for utility): 1 spell \u00d71.0, 2 \u00d71.2, 3 \u00d71.4.
   // the Triumvirate relic removes this penalty \u2014 sling all three at full speed.
-  function spellLoadCount(){ var n=0, ld=S.loadout||[]; for(var i=0;i<ld.length;i++) if(ld[i]) n++; return n; }
+  function spellLoadCount(){ var n=0, ld=S.loadout||[]; for(var i=0;i<ld.length;i++){ var s=ld[i]&&spellById(ld[i]); if(s && !s.passive) n++; } return n; }
   function spellLoadFactor(){ if(equipEffect('triumvirate')>0) return 1; var n=spellLoadCount(); return n>=3?1.4 : (n===2?1.2 : 1.0); }
   function spellCd(sp){ var red=Math.min(0.80, spellCdr()+equipEffect('spellHaste')); return Math.max(420, Math.round((sp.cd||2200)*spellLoadFactor()*(1-red))); }
   // ── verbose, lighthearted combat narration ───────────────────────────────────
@@ -1612,7 +1624,14 @@
     var f=S.fight, e=f.enemy; f.eneLunge=1;
     // Warden / submerged foe: no attack while its guard is up or it's beneath the surface (it's winding up)
     if(!special && (e.shieldUp || e.submerged)) return;
-    if(!special && Math.random()<petDodge()){ f.flashPet=4; combatLog('~ '+niceName()+' dodged!'); blip(700,0.04,'sine'); return; }
+    // Phantom Veil aura: each hit you take builds +5% dodge; landing a dodge resets the momentum
+    var evOn=spellEquipped('evasion');
+    var ddg=petDodge() + (evOn?Math.min(0.85,(f.evadeStacks||0)*0.05):0);
+    if(!special && Math.random()<Math.min(0.92,ddg)){
+      if(evOn){ var hadMomo=(f.evadeStacks||0)>0; f.evadeStacks=0; combatLog('~ '+niceName()+(hadMomo?' SLIPS the blow \u2014 momentum spent!':' dodged!')); }
+      else combatLog('~ '+niceName()+' dodged!');
+      f.flashPet=4; blip(700,0.04,'sine'); return;
+    }
     if(!special && f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); return; }
     // Frenzied: damage ramps with time alive
     if(e.mech==='berserk') mult*=(1+Math.min(1.6,(e.rage||0)/11000));
@@ -1628,6 +1647,7 @@
     if((f.absorb||0)>0){ var soak=Math.min(edmg, f.absorb); edmg-=soak; f.absorb-=soak;   // Divine Thunder ward
       if(soak>0){ f.shieldFlash=8; if(edmg<=0){ combatLog(niceName()+'\u2019s ward absorbs it!'); blip(560,0.05,'sine'); return; } } }
     S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=special?14:9;
+    if(evOn && edmg>0) f.evadeStacks=(f.evadeStacks||0)+1;   // got hit -> dodge chance climbs for next time
     combatLog(foeAtkLine(f, niceName(), e.name, edmg, ecrit, special));
     blip(ecrit?170:240,0.05,'sawtooth');
     // ── elite/boss offensive mechanics (on a landed hit) ──
@@ -1641,9 +1661,7 @@
     var cs=equipEffect('counterSpear');                // Thorn Seles Suffering
     if(cs>0 && edmg>0 && Math.random()<cs){ var sd=Math.max(1,Math.round(ST('end')*1.5)); e.hp-=sd; f.flashEne=8; setProc(f,'spear'); combatLog('\u2191 light spear \u2192 '+sd); blip(880,0.06,'square'); if(e.hp<=0){ winBattle(); return; } }
     if(S.stats.health<=0){
-      var rev=hasReviveItem();
-      if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12;
-        combatLog('\u2605 PHOENIX! revived at '+Math.round(rev*100)+'%'); blip(1100,0.18,'sine'); return; }
+      if(tryDeathSave(f)) return;
       loseBattle(false); return;   // defeat is no longer fatal \u2014 limp home at 1 HP
     }
   }
@@ -1727,7 +1745,7 @@
     if(e.mech==='mirror' && dmg>0){
       var md=Math.max(1, Math.round(dmg*0.35)); S.stats.health=Math.max(0,S.stats.health-md); f.flashPet=7; setProc(f,'spear');
       combatLog('\u21BA '+e.name+' mirrors \u2192 '+md); blip(240,0.05,'sawtooth');
-      if(S.stats.health<=0){ var rv=hasReviveItem(); if(rv&&!f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rv); combatLog('\u2605 PHOENIX! revived'); } else { loseBattle(false); return true; } }
+      if(S.stats.health<=0){ if(!tryDeathSave(f)){ loseBattle(false); return true; } }
     }
     if(++f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); return true; }
     return false;
@@ -1767,7 +1785,7 @@
       f.venomTick=(f.venomTick||0)+dt;
       if(f.venomTick>=DOT_TICK_MS){ f.venomTick-=DOT_TICK_MS; S.stats.health=Math.max(0,S.stats.health-f.venom.dmg); f.flashPet=5; f.venom.rounds--; combatLog('\u2620 venom \u2192 '+f.venom.dmg);
         if(f.venom.rounds<=0) f.venom=null;
-        if(S.stats.health<=0){ var rvv=hasReviveItem(); if(rvv&&!f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rvv); combatLog('\u2605 PHOENIX! revived'); } else { loseBattle(false); return; } } }
+        if(S.stats.health<=0){ if(!tryDeathSave(f)){ loseBattle(false); return; } } }
     }
     // our attack. items can combo (chain extra strikes), sunder (+50% dmg), execute (vs weak foes), bleed, lifesteal.
     f.petTick+=dt;
@@ -1798,9 +1816,9 @@
       if(f.regenTick>=SPELL_DOT_MS){ f.regenTick-=SPELL_DOT_MS; var rgb=S.stats.health; S.stats.health=Math.min(maxHP(),S.stats.health+f.regen.amt); f.regen.rounds--; if(S.stats.health-rgb>0) combatLog('\u2235 regen +'+(S.stats.health-rgb)); if(f.regen.rounds<=0) f.regen=null; } }
     // ── per-spell cooldowns: every equipped slot charges on its OWN timer, casts the moment it fills ──
     var ld=S.loadout||[]; if(!f.cdT) f.cdT=[0,0,0];
-    for(var ci=0; ci<3; ci++){ var cid=ld[ci], csp=cid&&spellById(cid); if(!csp){ f.cdT[ci]=0; continue; } var ecd=spellCd(csp); f.cdT[ci]=Math.min(ecd, (f.cdT[ci]||0)+dt); }
+    for(var ci=0; ci<3; ci++){ var cid=ld[ci], csp=cid&&spellById(cid); if(!csp || csp.passive){ f.cdT[ci]=0; continue; } var ecd=spellCd(csp); f.cdT[ci]=Math.min(ecd, (f.cdT[ci]||0)+dt); }
     for(var sj=0; sj<3; sj++){                                    // cast the lowest ready slot (one per tick)
-      var sid=ld[sj]; if(!sid) continue; var sp=spellById(sid); if(!sp) continue;
+      var sid=ld[sj]; if(!sid) continue; var sp=spellById(sid); if(!sp || sp.passive) continue;
       if((f.cdT[sj]||0) < spellCd(sp)) continue;                  // still charging
       if(f.silence){ f.silence=false; f.cdT[sj]=0; combatLog('\u2014 silenced! '+sp.name+' fizzles'); blip(220,0.06,'sawtooth'); break; }
       // no mana cost any more \u2014 a ready spell always fires, so cooldowns cycle (heals top you off, shields refresh)
@@ -2301,10 +2319,10 @@
     S.spells.forEach(function(id){
       var sp=spellById(id); if(!sp) return;
       var slot=S.loadout.indexOf(id), active=slot>=0;
-      var cd=(spellCd(sp)/1000).toFixed(1)+'s';
+      var cd=sp.passive ? 'PASSIVE \u00b7 always on while equipped' : ('\u23f1 '+(spellCd(sp)/1000).toFixed(1)+'s');
       var row=document.createElement('div'); row.className='ovrow'+(active?' on':'');
       row.innerHTML='<div class="ovdot">'+(active?(slot+1):'')+'</div><div class="ovtext"><div class="ovname">'+sp.name+(active?'  \u00b7 slot '+(slot+1):'')+
-        '</div><div class="ovsub">'+(sp.desc||spellTypeName(sp.type))+'  \u00b7  \u23f1 '+cd+'</div></div>';
+        '</div><div class="ovsub">'+(sp.desc||spellTypeName(sp.type))+'  \u00b7  '+cd+'</div></div>';
       row.addEventListener('click', function(){ toggleSpell(id); openSpells(); });
       ovBody.appendChild(row);
     });
