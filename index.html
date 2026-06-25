@@ -1022,9 +1022,9 @@
     // tier 1 — SIGNATURE spells: each stat mastery still unlocks one (req), but power is INT/SPI
     { id:'ember',    name:'Ember',      type:'dmg',    req:{int:20},         cost:12,  cd:1400, pow:function(r){return Math.round(8+r.int*1.4);},   desc:'a quick fire bolt' },
     { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:20},         cost:9,   cd:1050, pow:function(r){return Math.round(5+r.int*1.0);},   desc:'cheap, fast wind cut \u2014 shortest cooldown' },
-    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:20},         cost:15,  cd:2000, pow:function(r){return Math.round(16+r.spi*1.5);},  desc:'restore HP \u2014 scales with SPIRIT' },
+    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:20},         cost:15,  cd:2000, pow:function(r){return Math.round(10+r.spi);},  desc:'restore HP \u2014 10 + 1 per SPIRIT' },
     { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:22},         cost:12,  cd:2400, pow:function(r){return 1;},                          desc:'absorb the next hit' },
-    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:25},         cost:15,  cd:2200, pow:function(r){return Math.round(6+r.int*0.7);}, weaken:0.25, desc:'damage + saps the foe\u2019s attack 25%' },
+    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:25},         cost:15,  cd:2200, pow:function(r){return Math.round(6+r.int*0.7);}, desc:'damage + saps the foe\u2019s attack 5% per cast (up to \u221230%)' },
     { id:'reaper',   name:'Reaper',     type:'execute',req:{str:30},         cost:24,  cd:2800, pow:function(r){return Math.round(12+r.int*1.5);}, exec:0.30, desc:'2\u00d7 to foes below 30% HP \u2014 a finisher' },
     // tier 2 — mid-game: deeper INT / SPI, stronger but slower
     { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:40},         cost:20,  cd:3000, pow:function(r){return Math.round(r.int*0.85);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 ticks' },
@@ -1083,12 +1083,13 @@
     { id:'helos',    name:'Helos Warblade',        rarity:'legendary', combo:0.10, supercrit:0.10, desc:'+10% combo \u00b7 your crits have a 10% chance to SUPERCRIT for 300% damage' },
     { id:'elres',    name:'Gale Elres Whisperer',  rarity:'legendary', daggerProc:0.50,            desc:'50% on hit to fan daggers (30% atk each), re-rolling at 50/40/30\u2026%' },
     { id:'stmung',   name:'St Mung Elven Bow',     rarity:'legendary', angelProc:0.10,             desc:'10% on hit: an Ilar angel descends and smites your foe for 500% damage' },
-    { id:'seles',    name:'Thorn Seles Suffering', rarity:'legendary', counterSpear:0.50,          desc:'50% when struck: a light spear drops on the foe for 150% of endurance' }
+    { id:'seles',    name:'Thorn Seles Suffering', rarity:'legendary', counterSpear:0.50,          desc:'50% when struck: a light spear drops on the foe for 150% of endurance' },
+    { id:'triumvirate',name:'Triumvirate',         rarity:'legendary', triumvirate:1,              desc:'master of the three \u2014 no cooldown penalty for equipping multiple spells; sling all 3 at full speed' }
   ];
   var RARITY_POOL = {
     rare:['combo_claw','serrated','sunder_maul','vamp_fang','thorn_hide','swift_glass','mana_focus','mana_sigil','spirit_spark'],
     epic:['storm_talon','hemorrhage','executioner','bloodgorge','phoenix','mana_core','mana_wellspring'],
-    legendary:['dragon_fang','ailoren','nashir','helos','elres','stmung','seles'] };
+    legendary:['dragon_fang','ailoren','nashir','helos','elres','stmung','seles','triumvirate'] };
   var RARITY_COL = { rare:'#8fd0ff', epic:'#d79bff', legendary:'#ffd166' };
   function itemById(id){ for(var i=0;i<ITEMS.length;i++) if(ITEMS[i].id===id) return ITEMS[i]; return null; }
   function equipBonus(stat){ var t=0, eq=S.equipped||[]; for(var i=0;i<eq.length;i++){ var it=itemById(eq[i]); if(it&&it.stats&&it.stats[stat]) t+=it.stats[stat]; } return t; }
@@ -1437,7 +1438,11 @@
   var CAST_MS=620;
   // per-spell cooldowns: INT+SPIRIT mastery + item haste shorten cooldowns (combined cap 80%)
   function spellCdr(){ return Math.min(0.55, (ST('int')+ST('spi'))/900); }
-  function spellCd(sp){ var red=Math.min(0.80, spellCdr()+equipEffect('spellHaste')); return Math.max(420, Math.round((sp.cd||2200)*(1-red))); }
+  // equipping more spells lengthens every cooldown (trade cast speed for utility): 1 spell \u00d71.0, 2 \u00d71.2, 3 \u00d71.4.
+  // the Triumvirate relic removes this penalty \u2014 sling all three at full speed.
+  function spellLoadCount(){ var n=0, ld=S.loadout||[]; for(var i=0;i<ld.length;i++) if(ld[i]) n++; return n; }
+  function spellLoadFactor(){ if(equipEffect('triumvirate')>0) return 1; var n=spellLoadCount(); return n>=3?1.4 : (n===2?1.2 : 1.0); }
+  function spellCd(sp){ var red=Math.min(0.80, spellCdr()+equipEffect('spellHaste')); return Math.max(420, Math.round((sp.cd||2200)*spellLoadFactor()*(1-red))); }
   // ── verbose, lighthearted combat narration ───────────────────────────────────
   function pickN(a){ return a[(Math.random()*a.length)|0]; }
   function narr(t,p,e,d){ return t.replace(/\{p\}/g,p).replace(/\{e\}/g,e).replace(/\{d\}/g,d); }
@@ -1530,7 +1535,10 @@
     else if(sp.type==='execute'){ var ed=sp.pow(r), low=(e.hp/e.maxHp)<(sp.exec||0.30); if(low) ed*=2; ed=Math.round(ed); e.hp-=ed; f.flashEne=12; leech(ed); combatLog(spellHitLine(pn,e.name,sp,ed)+(low?' \u2620 EXECUTE!':'')); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
     else if(sp.type==='drain'){ var dr=sp.pow(r); e.hp-=dr; var got=healSelf(dr*(sp.leech||0.5)); f.flashEne=10; f.flashPet=6; combatLog(spellHitLine(pn,e.name,sp,dr)+' (+'+got+' HP back)'); blip(700,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
     else if(sp.type==='burn'){ f.burn={ dmg:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' sets '+e.name+' ablaze with '+sp.name+' \u2014 it\u2019s burning! ('+f.burn.dmg+'/tick)'); blip(780,0.07,'sawtooth'); }
-    else if(sp.type==='weaken'){ var wd=sp.pow(r); e.hp-=wd; if(!e._weak){ e._weak=1; e.atk=Math.max(1,Math.round(e.atk*(1-(sp.weaken||0.25)))); } f.flashEne=8; combatLog(spellHitLine(pn,e.name,sp,wd)); blip(520,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
+    else if(sp.type==='weaken'){ var wd=sp.pow(r); e.hp-=wd;
+      if(e.hexAtk0==null) e.hexAtk0=e.atk;                                   // remember the foe's original attack
+      if((e.hexN||0)<6){ e.hexN=(e.hexN||0)+1; e.atk=Math.max(1,Math.round(e.hexAtk0*(1-0.05*e.hexN))); }   // \u22125%/cast, caps at \u221230% after 6
+      f.flashEne=8; combatLog(spellHitLine(pn,e.name,sp,wd)); blip(520,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
     else if(sp.type==='risky'){ var d2=sp.pow(r), s2=sp.self?sp.self(r):0; e.hp-=d2; S.stats.health=Math.max(1,S.stats.health-s2); f.flashEne=10; f.flashPet=6; combatLog(spellHitLine(pn,e.name,sp,d2)+' (\u2212'+s2+' self)'); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
     else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; combatLog(got2>0 ? ('\u2728 '+pn+' casts '+sp.name+', knitting its wounds shut (+'+got2+' HP)!') : ('\u2728 '+pn+' casts '+sp.name+' \u2014 already in fine fettle!')); blip(560,0.08,'sine'); }
     else if(sp.type==='regen'){ f.regen={ amt:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' weaves '+sp.name+' \u2014 a soft healing glow settles in (+'+f.regen.amt+'/tick).'); blip(600,0.08,'sine'); }
@@ -2215,6 +2223,12 @@
     var scale=document.createElement('div'); scale.className='ovhint'; scale.style.marginTop='4px';
     scale.textContent='INT powers damage \u00b7 SPIRIT powers healing \u00b7 INT+SPI shortens cooldowns (\u2212'+Math.round(spellCdr()*100)+'% now)';
     ovBody.appendChild(scale);
+    var lf=spellLoadFactor();
+    var load=document.createElement('div'); load.className='ovhint'; load.style.marginTop='4px';
+    load.textContent = equipEffect('triumvirate')>0
+      ? '\u25C9 TRIUMVIRATE equipped \u2014 no multi-spell penalty; all cooldowns at full speed'
+      : 'equipping more spells slows them: 2 spells +20% cooldown, 3 spells +40% (now \u00d7'+lf.toFixed(1)+')';
+    ovBody.appendChild(load);
   }
   function toggleSpell(id){
     if(!Array.isArray(S.loadout)) S.loadout=[];
