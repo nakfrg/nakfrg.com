@@ -207,7 +207,7 @@
       <canvas id="pet"></canvas>
       <span id="nameTag" class="pix">DEWY EGG</span>
       <div id="combatBar">
-        <button class="cbtn" id="spd2x" type="button">2&times;</button>
+        <button class="cbtn" id="spd2x" type="button">1&times;</button>
         <button class="cbtn" id="autoBtn" type="button">Auto</button>
       </div>
       <div id="overlay">
@@ -602,7 +602,7 @@
   var PET_ATK_BASE = 1100;       // ms between our attacks at 0 DEX (faster as DEX grows)
   var PET_ATK_MIN  = 420;        // fastest our attack cadence can get
   var ENE_ATK_BASE = 1150;       // ms between enemy attacks
-  var SPELL_TICK_MS = 1600;      // a spell may be cast each "round"
+  var SPELL_DOT_MS = 1300;       // cadence for spell burn/regen DoTs + mana regen (cooldowns are per-spell)
   var MAX_COMBAT_ACTIONS = 100;  // safety cap: a single fight can't run forever (stalemate -> retreat)
   var INTER_BATTLE_MS = 1100;    // pause between battles in a multi-battle stage
   var CRIT_MULT = 1.5;
@@ -1023,24 +1023,27 @@
   // types: dmg | multi | execute | drain | burn | weaken | risky | heal | regen | shield
   // cost = mana. pow(r) = magnitude given rpg stats r. Stronger spells cost more (need magic spec + mana regen to sustain).
   var SPELLS = [
-    // tier 1 — SIGNATURE spells: every stat mastery has one of its own (solo-gated, early-game)
-    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:20},         cost:13,  pow:function(r){return Math.round(8+r.int*1.5);},  desc:'a quick fire bolt' },
-    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:20},         cost:11,  pow:function(r){return Math.round(6+r.dex*1.2);},  desc:'cheap, fast wind cut' },
-    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:20},         cost:16,  pow:function(r){return Math.round(18+r.spi*1.2);}, desc:'restore a burst of HP' },
-    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:22},         cost:13,  pow:function(r){return 1;},                          desc:'absorb the next hit' },
-    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:25},         cost:16,  pow:function(r){return Math.round(r.lck*0.8);}, weaken:0.25, desc:'damage + saps the foe\u2019s attack 25%' },
-    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:30},         cost:32, pow:function(r){return Math.round((r.str+r.spi)*1.3);}, exec:0.30, desc:'2\u00d7 damage to foes below 30% HP \u2014 a STR finisher' },
-    // tier 2 — mid-game: deeper investment, the second rung of INT / SPI
-    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:40},         cost:21,  pow:function(r){return Math.round(r.int*0.7);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 rounds' },
-    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:40},         cost:18,  pow:function(r){return Math.round(10+r.spi*1.7);}, vfx:'holy', desc:'heavy holy strike' },
-    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:50,spi:40},  cost:24,  pow:function(r){return Math.round(r.int*1.6);}, leech:0.55, desc:'damage, heal for 55% of it' },
-    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:45,spi:40},  cost:30, pow:function(r){return 2;}, desc:'absorb the next 2 hits' },
-    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:50,int:45},  cost:34, pow:function(r){return Math.round((r.dex+r.int)*0.6);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
-    // tier 3 — late-game heavy hitters: deep INT / SPI mastery, unlocked well into a run
-    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:60,int:60},  cost:44, pow:function(r){return Math.round((r.str+r.int)*2.1);}, self:function(r){return Math.round((r.str+r.int)*0.30);}, desc:'devastation \u2014 heavy self-cost' },
-    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:80},         cost:25,  pow:function(r){return Math.round(r.int*2.8);}, self:function(r){return Math.round(r.int*0.45);}, desc:'huge hit \u2014 wounds you too' },
-    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:80},         cost:26, pow:function(r){return Math.round(r.spi*0.8);}, rounds:4, desc:'heal-over-time for 4 rounds' },
-    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:90,spi:90},  cost:56, pow:function(r){return Math.round((r.int+r.spi)*2.4);}, vfx:'nuke', desc:'the ultimate nuke \u2014 mastery of INT & SPI' }
+    // ── magic is an INT / SPIRIT discipline now ──
+    // damage scales with INT, healing with SPIRIT; INT+SPI shortens every cooldown (see spellCd).
+    // each spell has its own base cooldown (cd, ms): weak/cheap = fast, heavy hitters = slow.
+    // tier 1 — SIGNATURE spells: each stat mastery still unlocks one (req), but power is INT/SPI
+    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:20},         cost:12,  cd:1400, pow:function(r){return Math.round(8+r.int*1.4);},   desc:'a quick fire bolt' },
+    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:20},         cost:9,   cd:1050, pow:function(r){return Math.round(5+r.int*1.0);},   desc:'cheap, fast wind cut \u2014 shortest cooldown' },
+    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:20},         cost:15,  cd:2000, pow:function(r){return Math.round(16+r.spi*1.5);},  desc:'restore HP \u2014 scales with SPIRIT' },
+    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:22},         cost:12,  cd:2400, pow:function(r){return 1;},                          desc:'absorb the next hit' },
+    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:25},         cost:15,  cd:2200, pow:function(r){return Math.round(6+r.int*0.7);}, weaken:0.25, desc:'damage + saps the foe\u2019s attack 25%' },
+    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:30},         cost:24,  cd:2800, pow:function(r){return Math.round(12+r.int*1.5);}, exec:0.30, desc:'2\u00d7 to foes below 30% HP \u2014 a finisher' },
+    // tier 2 — mid-game: deeper INT / SPI, stronger but slower
+    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:40},         cost:20,  cd:3000, pow:function(r){return Math.round(r.int*0.85);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 ticks' },
+    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:40},         cost:18,  cd:2300, pow:function(r){return Math.round(10+r.int*1.9);}, vfx:'holy', desc:'heavy holy strike' },
+    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:50,spi:40},  cost:22,  cd:2800, pow:function(r){return Math.round(r.int*1.7);}, leech:0.55, desc:'damage, heal for 55% of it' },
+    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:45,spi:40},  cost:26,  cd:3600, pow:function(r){return 2;}, desc:'absorb the next 2 hits' },
+    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:50,int:45},  cost:30,  cd:3200, pow:function(r){return Math.round(r.int*0.75);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
+    // tier 3 — late-game heavy hitters: long cooldowns, huge INT/SPI payoff
+    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:60,int:60},  cost:40,  cd:4600, pow:function(r){return Math.round(r.int*2.6);}, self:function(r){return Math.round(r.int*0.32);}, desc:'devastation \u2014 long cooldown, self-cost' },
+    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:80},         cost:24,  cd:4000, pow:function(r){return Math.round(r.int*3.0);}, self:function(r){return Math.round(r.int*0.5);}, desc:'huge hit \u2014 wounds you too' },
+    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:80},         cost:24,  cd:4200, pow:function(r){return Math.round(r.spi*0.9);}, rounds:4, desc:'heal-over-time \u2014 scales with SPIRIT' },
+    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:90,spi:90},  cost:52,  cd:5600, pow:function(r){return Math.round(r.int*3.0+r.spi*0.7);}, vfx:'nuke', desc:'the ultimate nuke \u2014 longest cooldown, INT & SPI mastery' }
   ];
   function spellById(id){ for(var i=0;i<SPELLS.length;i++) if(SPELLS[i].id===id) return SPELLS[i]; return null; }
   function spellReady(sp){ var r=S.rpg; for(var k in sp.req) if((r[k]||0)<sp.req[k]) return false; return true; }
@@ -1128,10 +1131,14 @@
   var nameTag=$('#nameTag');
   // ── combat speed / auto toggles (session-only, combat HUD) ──
   var combatBar=$('#combatBar'), spd2xBtn=$('#spd2x'), autoBtn=$('#autoBtn');
-  var fastMode=false, autoMode=false, autoEventT=0, autoNoteEl=null;
-  function refreshCombatToggles(){ if(spd2xBtn) spd2xBtn.className='cbtn'+(fastMode?' on':''); if(autoBtn) autoBtn.className='cbtn'+(autoMode?' on':''); }
-  if(spd2xBtn) spd2xBtn.addEventListener('click', function(){ fastMode=!fastMode; refreshCombatToggles(); blip(fastMode?760:420,0.05,'square'); });
+  // combat runs at a readable HALF-speed by default; the speed button cycles 1\u00d7 \u2192 2\u00d7 \u2192 3\u00d7 (of that readable pace)
+  var SPEED_MULTS=[0.5,1.0,1.5], SPEED_LABELS=['1\u00d7','2\u00d7','3\u00d7'];
+  var combatSpeed=0, autoMode=false, autoEventT=0, autoNoteEl=null;
+  function combatMult(){ return SPEED_MULTS[combatSpeed]||0.5; }
+  function refreshCombatToggles(){ if(spd2xBtn){ spd2xBtn.className='cbtn'+(combatSpeed>0?' on':''); spd2xBtn.innerHTML=SPEED_LABELS[combatSpeed]; } if(autoBtn) autoBtn.className='cbtn'+(autoMode?' on':''); }
+  if(spd2xBtn) spd2xBtn.addEventListener('click', function(){ combatSpeed=(combatSpeed+1)%3; refreshCombatToggles(); blip(combatSpeed>0?640+combatSpeed*120:420,0.05,'square'); });
   if(autoBtn)  autoBtn.addEventListener('click', function(){ autoMode=!autoMode; autoEventT=0; refreshCombatToggles(); blip(autoMode?760:420,0.05,'square'); });
+  refreshCombatToggles();
   var msgEl=$('#msg'), hintEl=$('#hint');
   var questRow=$('#questRow'), questBiome=$('#questBiome'), questProg=$('#questProg'), questAge=$('#questAge');
   var actionsEl=$('#actions'), subPicker=$('#subPicker'), rpgRow=$('#rpgRow');
@@ -1223,7 +1230,7 @@
     if(S.dead) return;
     if(S.stage==='egg'){ S.age += dt; checkEvolve(); return; } // egg incubates in real time
     var st=S.stats;
-    if(st.health<=0){ die('its wounds'); return; }
+    if(!S.fight && st.health<=0){ die('its wounds'); return; }   // combat owns HP; defeat there is non-fatal (endFight restores 1 HP)
     checkCritical();
     if(S.dead) return;
     checkEvolve();
@@ -1354,7 +1361,7 @@
     for(var ei=0; ei<enc.length; ei++) if(enc[ei].t==='combat') numCombats++;
     S.fight={ biome:biome, stage:stage, enc:enc, encIdx:-1, combatNo:0, combatsTotal:numCombats, wavesTotal:waves,
       enemy:null, buffs:freshBuffs(), event:null,
-      petTick:0, eneTick:600, spellTick:850, spellIdx:0, specialTick:0, fx:null,
+      petTick:0, eneTick:600, cdT:[0,0,0], burnTick:0, regenTick:0, manaTick:0, specialTick:0, fx:null,
       shield:0, log:[], flashPet:0, flashEne:0, lunge:0, eneLunge:0, revived:false,
       state:'approach', approachT:APPROACH_MS, eneEnter:0, scroll:0, travelX:0, stateT:0, died:false };
     S.mode='idle'; S.modeAct=null;
@@ -1370,7 +1377,7 @@
     var e=f.enc[f.encIdx];
     if(e.t==='combat'){
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n,e.boss);
-      f.petTick=0; f.eneTick=500; f.spellTick=700; f.shield=0; f.revived=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0; f.spellIdx=0;
+      f.petTick=0; f.eneTick=500; f.cdT=[0,0,0]; f.burnTick=0; f.regenTick=0; f.manaTick=0; f.shield=0; f.revived=false; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0; f.castFx=null;
       f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0; f.sparkN=0;
       f.venom=null; f.venomTick=0; f.silence=false; f.curseAtk=1;   // elite-mechanic pet-side state
@@ -1439,6 +1446,86 @@
   var CAST_MS=620;
   // effective mana cost after item reductions (Mana Focus/Sigil/Core)
   function spellCost(sp){ var r=Math.min(0.75, equipEffect('manaCost')); return Math.max(1, Math.round(sp.cost*(1-r))); }
+  // per-spell cooldowns: INT+SPIRIT mastery shortens every cooldown, up to 55% (caps near int+spi\u2248495)
+  function spellCdr(){ return Math.min(0.55, (ST('int')+ST('spi'))/900); }
+  function spellCd(sp){ return Math.max(480, Math.round((sp.cd||2200)*(1-spellCdr()))); }
+  // ── verbose, lighthearted combat narration ───────────────────────────────────
+  function pickN(a){ return a[(Math.random()*a.length)|0]; }
+  function narr(t,p,e,d){ return t.replace(/\{p\}/g,p).replace(/\{e\}/g,e).replace(/\{d\}/g,d); }
+  var PET_HITS=[
+    '{p} rears up and slams the ground, clobbering {e} for {d}!',
+    '{p} bonks {e} right on the noggin \u2014 {d} damage.',
+    '{p} cannonballs into {e} with a mighty *ribbit* ({d}).',
+    '{p} unloads a flurry of tiny furious paws on {e} \u2014 {d}!',
+    '{p} delivers a heroic headbutt to {e} for {d}.',
+    '{p} chomps down on {e} with surprising gusto ({d}).',
+    '{p} spin-kicks {e} like a pint-sized martial artist \u2014 {d}!',
+    '{p} belly-flops onto {e} from a great height for {d}.',
+    '{p} whacks {e} with the confidence of a creature thrice its size ({d}).',
+    '{p} hops up and drop-kicks {e} square in the face \u2014 {d}!',
+    '{p} lashes out with a sticky tongue, smacking {e} for {d}.'
+  ];
+  var PET_COMBO=[
+    '\u21BB and AGAIN! {p} keeps wailing on {e} \u2014 {d}!',
+    '\u21BB {p} isn\u2019t finished \u2014 another smack lands on {e} for {d}!',
+    '\u21BB COMBO! {p} chains straight into {e} ({d})!'
+  ];
+  var PET_CRIT=[
+    '\u2726 CRITICAL! {p} finds the soft spot and wallops {e} for {d}!',
+    '\u2726 KAPOW! {p} hits {e} so hard its ancestors felt it \u2014 {d}!',
+    '\u2726 CRIT! {p} channels pure frog fury into {e} ({d})!'
+  ];
+  var PET_SUPER=[
+    '\u2742 SUPERCRIT!! {p} unleashes a legendary blow on {e} \u2014 {d}!!',
+    '\u2742 the heavens part \u2014 {p} utterly demolishes {e} for {d}!!'
+  ];
+  // enemy attacks get biome-themed flavour: "{e} <phrase> {p} \u2014 {d}!"
+  var FOE_FLAVOR={
+    0:['kicks up a dust cloud and charges at','stampedes headlong into','snorts and barrels into','headbutts'],
+    1:['lashes out with a thorny vine at','snarls and pounces on','flings a spray of bark at','tangles up'],
+    2:['surges with a cold wave at','spits a jet of water at','crackles with eel-light and zaps','splashes hard into'],
+    3:['hurls a jagged rock at','looms from the dark and swipes at','grinds its stony fists into','drops a boulder on'],
+    4:['crackles with lightning and strikes','dives screaming out of the sky at','buffets a howling gust at','tail-whips'],
+    5:['oozes shadow and lunges at','whispers something awful and claws at','drains the warmth right out of','engulfs'],
+    6:['blazes with eldritch power at','unleashes a ribbon of pure force at','warps space to strike','smites']
+  };
+  var FOE_CRIT=[
+    '\u2726 OUCH! {e} lands a critical hit on {p} \u2014 {d}!',
+    '\u2726 {e} catches {p} napping for a nasty {d}!',
+    '\u2726 CRIT! {e} clobbers {p} for {d} and looks far too smug about it.'
+  ];
+  var FOE_SPECIAL_HIT=[
+    'the blast catches {p} square \u2014 {d}!',
+    '{p} is hurled back by the impact for {d}!',
+    '{p} eats the full force of it \u2014 {d}!'
+  ];
+  function petAtkLine(p,e,d,isCombo,crit,supr){
+    if(supr) return narr(pickN(PET_SUPER),p,e,d);
+    if(crit) return narr(pickN(PET_CRIT),p,e,d);
+    if(isCombo) return narr(pickN(PET_COMBO),p,e,d);
+    return narr(pickN(PET_HITS),p,e,d);
+  }
+  function foeAtkLine(f,p,e,d,crit,special){
+    if(special) return narr('\u2737 '+pickN(FOE_SPECIAL_HIT),p,e,d);
+    if(crit) return narr(pickN(FOE_CRIT),p,e,d);
+    var fl=FOE_FLAVOR[f.biome]||FOE_FLAVOR[0];
+    return e+' '+pickN(fl)+' '+p+' \u2014 '+d+'!';
+  }
+  // spell flavour, weaving the spell's name + caster + foe
+  function spellHitLine(p,e,sp,d){
+    var n=sp.name;
+    switch(sp.type){
+      case 'multi':   return '\u2728 {p} calls down {n} \u2014 {e} is battered for {d}!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+      case 'execute': return '\u2728 {p} swings {n} in a wide arc \u2014 {e} reels for {d}!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+      case 'weaken':  return '\u2728 {p} hexes {e} with {n} \u2014 {d}, and its strength wilts!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+      case 'drain':   return '\u2728 {p} siphons life from {e} with {n} \u2014 {d}!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+      case 'risky':   return '\u2728 {p} channels {n} \u2014 {e} is blasted for {d}, but the backlash bites!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+      default:
+        if(sp.vfx==='holy') return '\u2728 {p} brings down {n} \u2014 holy light smites {e} for {d}!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+        if(sp.vfx==='nuke') return '\u2728 {p} unleashes {n} \u2014 a cataclysm engulfs {e} for {d}!!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+        return '\u2728 {p} hurls {n} at {e} \u2014 {d} damage!'.replace('{p}',p).replace('{n}',n).replace('{e}',e).replace('{d}',d);
+    }
+  }
   function doCast(sp, f){
     var cost=spellCost(sp);
     if((S.mana||0) < cost) return false;
@@ -1450,52 +1537,19 @@
     var r=effRpg(), e=f.enemy, ls=equipEffect('lifesteal');
     function healSelf(h){ var b=S.stats.health; S.stats.health=Math.min(maxHP(),S.stats.health+Math.round(h)); return S.stats.health-b; }
     function leech(d){ if(ls>0) healSelf(d*ls); }
-    if(sp.type==='dmg'){ var d=sp.pow(r); e.hp-=d; f.flashEne=10; leech(d); combatLog('\u2728 '+sp.name+' \u2192 '+d); blip(840,0.06,'triangle'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='multi'){ var hits=sp.hits||3, tot=0; for(var hh=0;hh<hits;hh++){ var dd=sp.pow(r); if(Math.random()<petCritChance()) dd=Math.round(dd*petCritMult()); e.hp-=dd; tot+=dd; } f.flashEne=11; leech(tot); combatLog('\u2728 '+sp.name+' \u00d7'+hits+' \u2192 '+tot); blip(900,0.06,'triangle'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='execute'){ var ed=sp.pow(r), low=(e.hp/e.maxHp)<(sp.exec||0.30); if(low) ed*=2; ed=Math.round(ed); e.hp-=ed; f.flashEne=12; leech(ed); combatLog('\u2728 '+sp.name+' \u2192 '+ed+(low?' \u2620EXECUTE':'')); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='drain'){ var dr=sp.pow(r); e.hp-=dr; var got=healSelf(dr*(sp.leech||0.5)); f.flashEne=10; f.flashPet=6; combatLog('\u2728 '+sp.name+' \u2192 '+dr+' (+'+got+' HP)'); blip(700,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='burn'){ f.burn={ dmg:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+sp.name+' \u2014 foe ignites ('+f.burn.dmg+'/rnd \u00d7'+f.burn.rounds+')'); blip(780,0.07,'sawtooth'); }
-    else if(sp.type==='weaken'){ var wd=sp.pow(r); e.hp-=wd; if(!e._weak){ e._weak=1; e.atk=Math.max(1,Math.round(e.atk*(1-(sp.weaken||0.25)))); } f.flashEne=8; combatLog('\u2728 '+sp.name+' \u2192 '+wd+' (foe weakened)'); blip(520,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='risky'){ var d2=sp.pow(r), s2=sp.self?sp.self(r):0; e.hp-=d2; S.stats.health=Math.max(1,S.stats.health-s2); f.flashEne=10; f.flashPet=6; combatLog('\u2728 '+sp.name+' \u2192 '+d2+' (-'+s2+' self)'); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; combatLog('\u2728 '+sp.name+' +'+got2+' HP'); blip(560,0.08,'sine'); }
-    else if(sp.type==='regen'){ f.regen={ amt:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+sp.name+' \u2014 regen '+f.regen.amt+'/rnd \u00d7'+f.regen.rounds); blip(600,0.08,'sine'); }
-    else if(sp.type==='shield'){ f.shield=(f.shield||0)+(sp.pow(r)||1); combatLog('\u2728 '+sp.name+' \u2014 shield \u00d7'+f.shield); blip(620,0.07,'sine'); }
+    var pn=niceName();
+    if(sp.type==='dmg'){ var d=sp.pow(r); e.hp-=d; f.flashEne=10; leech(d); combatLog(spellHitLine(pn,e.name,sp,d)); blip(840,0.06,'triangle'); if(e.hp<=0){ winBattle(); } }
+    else if(sp.type==='multi'){ var hits=sp.hits||3, tot=0; for(var hh=0;hh<hits;hh++){ var dd=sp.pow(r); if(Math.random()<petCritChance()) dd=Math.round(dd*petCritMult()); e.hp-=dd; tot+=dd; } f.flashEne=11; leech(tot); combatLog(spellHitLine(pn,e.name,sp,tot)+' (\u00d7'+hits+')'); blip(900,0.06,'triangle'); if(e.hp<=0){ winBattle(); } }
+    else if(sp.type==='execute'){ var ed=sp.pow(r), low=(e.hp/e.maxHp)<(sp.exec||0.30); if(low) ed*=2; ed=Math.round(ed); e.hp-=ed; f.flashEne=12; leech(ed); combatLog(spellHitLine(pn,e.name,sp,ed)+(low?' \u2620 EXECUTE!':'')); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
+    else if(sp.type==='drain'){ var dr=sp.pow(r); e.hp-=dr; var got=healSelf(dr*(sp.leech||0.5)); f.flashEne=10; f.flashPet=6; combatLog(spellHitLine(pn,e.name,sp,dr)+' (+'+got+' HP back)'); blip(700,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
+    else if(sp.type==='burn'){ f.burn={ dmg:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' sets '+e.name+' ablaze with '+sp.name+' \u2014 it\u2019s burning! ('+f.burn.dmg+'/tick)'); blip(780,0.07,'sawtooth'); }
+    else if(sp.type==='weaken'){ var wd=sp.pow(r); e.hp-=wd; if(!e._weak){ e._weak=1; e.atk=Math.max(1,Math.round(e.atk*(1-(sp.weaken||0.25)))); } f.flashEne=8; combatLog(spellHitLine(pn,e.name,sp,wd)); blip(520,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
+    else if(sp.type==='risky'){ var d2=sp.pow(r), s2=sp.self?sp.self(r):0; e.hp-=d2; S.stats.health=Math.max(1,S.stats.health-s2); f.flashEne=10; f.flashPet=6; combatLog(spellHitLine(pn,e.name,sp,d2)+' (\u2212'+s2+' self)'); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
+    else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; combatLog('\u2728 '+pn+' casts '+sp.name+', knitting its wounds shut (+'+got2+' HP)!'); blip(560,0.08,'sine'); }
+    else if(sp.type==='regen'){ f.regen={ amt:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' weaves '+sp.name+' \u2014 a soft healing glow settles in (+'+f.regen.amt+'/tick).'); blip(600,0.08,'sine'); }
+    else if(sp.type==='shield'){ f.shield=(f.shield||0)+(sp.pow(r)||1); combatLog('\u2728 '+pn+' raises '+sp.name+' \u2014 a shimmering ward springs up (\u00d7'+f.shield+')!'); blip(620,0.07,'sine'); }
     if(f.state==='fight' && f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); }
     return true;
-  }
-  // cast in the player's chosen slot order (1->2->3), skipping unaffordable spells and clearly-wasted
-  // utility (a heal at near-full HP, a regen already ticking, a shield already up) so the order keeps flowing.
-  function castNextSpell(){
-    var f=S.fight, ld=S.loadout||[];
-    if(f.silence){ f.silence=false; combatLog('\u2014 silenced! your spell fizzles'); blip(220,0.06,'sawtooth'); return; }
-    var any=false; for(var z=0;z<ld.length;z++) if(ld[z]) any=true; if(!any) return;
-    if(tryCast(f, ld)) return;
-    // Mana Wellspring: a relic may surge mana back the moment you run dry
-    var mr=equipEffect('manaRecover');
-    if(mr>0 && (S.mana||0) < cheapestCost(ld) && Math.random()<mr){
-      S.mana=Math.min(maxMana(), (S.mana||0)+Math.round(maxMana()*0.5));
-      setProc(f,'mana'); f.flashPet=Math.max(f.flashPet||0,6);
-      combatLog('\u25C9 second wind \u2014 mana surges back!'); blip(680,0.08,'sine');
-      tryCast(f, ld);
-    }
-  }
-  function cheapestCost(ld){ var m=1e9; for(var i=0;i<ld.length;i++){ var sp=ld[i]&&spellById(ld[i]); if(sp){ var c=spellCost(sp); if(c<m) m=c; } } return m; }
-  function tryCast(f, ld){
-    var hpFrac=S.stats.health/maxHP();
-    for(var n=0;n<ld.length;n++){
-      var idx=((f.spellIdx||0)+n)%ld.length, id=ld[idx];
-      if(!id) continue;
-      var sp=spellById(id); if(!sp) continue;
-      if((S.mana||0) < spellCost(sp)) continue;
-      if(sp.type==='heal'  && hpFrac>=0.92) continue;             // don't waste a heal at full HP
-      if(sp.type==='regen' && (f.regen || hpFrac>=0.92)) continue; // regen already rolling / not needed
-      if(sp.type==='shield'&& (f.shield||0)>0) continue;          // shield already up
-      f.spellIdx=(idx+1)%ld.length;
-      doCast(sp, f);
-      return true;
-    }
-    f.spellIdx=((f.spellIdx||0)+1)%ld.length;   // nothing castable this round
-    return false;
   }
 
   function interludeRegen(){
@@ -1548,7 +1602,7 @@
     if((f.absorb||0)>0){ var soak=Math.min(edmg, f.absorb); edmg-=soak; f.absorb-=soak;   // Divine Thunder ward
       if(soak>0){ f.shieldFlash=8; if(edmg<=0){ combatLog(niceName()+'\u2019s ward absorbs it!'); blip(560,0.05,'sine'); return; } } }
     S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=special?14:9;
-    combatLog((special?'\u2737 ':(ecrit?'\u2726':'\u00b7'))+' '+e.name+' \u2192 '+edmg+(ecrit?' CRIT':''));
+    combatLog(foeAtkLine(f, niceName(), e.name, edmg, ecrit, special));
     blip(ecrit?170:240,0.05,'sawtooth');
     // ── elite/boss offensive mechanics (on a landed hit) ──
     if(edmg>0){
@@ -1635,7 +1689,7 @@
     }
     e.hp-=dmg; f.flashEne=9; f.lunge=1;
     var ls=equipEffect('lifesteal')+bfAdd('lifesteal'); if(ls>0){ S.stats.health=Math.min(maxHP(),S.stats.health+Math.round(dmg*ls)); }
-    combatLog((isCombo?'\u21BB':(supr?'\u2742':(crit?'\u2726':'\u00b7')))+' '+niceName()+' \u2192 '+dmg+(supr?' SUPERCRIT':(crit?' CRIT':''))+(vuln?' \u25C8':''));
+    combatLog(petAtkLine(niceName(), e.name, dmg, isCombo, crit, supr)+(vuln?' \u25C8':''));
     blip(supr?1180:(crit?900:680),0.04,'square');
     var bl=equipEffect('bleed')+bfAdd('bleed');
     if(bl>0){ var bd=Math.max(1, Math.round(petATK()*bl*((crit&&hasBleedCrit())?2:1))); f.bleed={ dmg:bd, rounds:5 }; }
@@ -1712,18 +1766,30 @@
         if(e.hp<=0){ winBattle(); return; }
       }
     }
-    // spell (one per round; cycles the loadout; costs mana; small in-combat regen)
-    if(S.loadout && S.loadout.length){
-      f.spellTick+=dt;
-      if(f.spellTick>=SPELL_TICK_MS){
-        f.spellTick-=SPELL_TICK_MS;
-        S.mana=Math.min(maxMana(), (S.mana||0)+manaRegenRound());
-        // damage/heal over time from spells
-        if(f.burn && f.burn.rounds>0){ e.hp-=f.burn.dmg; f.flashEne=6; f.burn.rounds--; combatLog('\u2235 burn \u2192 '+f.burn.dmg); if(f.burn.rounds<=0) f.burn=null; if(e.hp<=0){ winBattle(); return; } }
-        if(f.regen && f.regen.rounds>0){ var rb=S.stats.health; S.stats.health=Math.min(maxHP(),S.stats.health+f.regen.amt); f.regen.rounds--; if(S.stats.health-rb>0) combatLog('\u2235 regen +'+(S.stats.health-rb)); if(f.regen.rounds<=0) f.regen=null; }
-        castNextSpell();
-        if(f.state!=='fight') return;
-      }
+    // ── spell burn / regen DoTs + mana regen, each on its own steady cadence ──
+    if(f.burn && f.burn.rounds>0){ f.burnTick=(f.burnTick||0)+dt;
+      if(f.burnTick>=SPELL_DOT_MS){ f.burnTick-=SPELL_DOT_MS; e.hp-=f.burn.dmg; f.flashEne=6; f.burn.rounds--; combatLog('\u2235 burn \u2192 '+f.burn.dmg); if(f.burn.rounds<=0) f.burn=null; if(e.hp<=0){ winBattle(); return; } } }
+    if(f.regen && f.regen.rounds>0){ f.regenTick=(f.regenTick||0)+dt;
+      if(f.regenTick>=SPELL_DOT_MS){ f.regenTick-=SPELL_DOT_MS; var rgb=S.stats.health; S.stats.health=Math.min(maxHP(),S.stats.health+f.regen.amt); f.regen.rounds--; if(S.stats.health-rgb>0) combatLog('\u2235 regen +'+(S.stats.health-rgb)); if(f.regen.rounds<=0) f.regen=null; } }
+    f.manaTick=(f.manaTick||0)+dt;
+    if(f.manaTick>=SPELL_DOT_MS){ f.manaTick-=SPELL_DOT_MS; S.mana=Math.min(maxMana(), (S.mana||0)+manaRegenRound());
+      if((S.mana||0) < 20){ var mwr=equipEffect('manaRecover'); if(mwr>0 && Math.random()<mwr){ S.mana=Math.min(maxMana(), (S.mana||0)+Math.round(maxMana()*0.5)); setProc(f,'mana'); f.flashPet=Math.max(f.flashPet||0,6); combatLog('\u25C9 second wind \u2014 mana surges back!'); blip(680,0.08,'sine'); } }
+    }
+    // ── per-spell cooldowns: every equipped slot charges on its OWN timer, casts the moment it fills ──
+    var ld=S.loadout||[]; if(!f.cdT) f.cdT=[0,0,0];
+    for(var ci=0; ci<3; ci++){ var cid=ld[ci], csp=cid&&spellById(cid); if(!csp){ f.cdT[ci]=0; continue; } var ecd=spellCd(csp); f.cdT[ci]=Math.min(ecd, (f.cdT[ci]||0)+dt); }
+    for(var sj=0; sj<3; sj++){                                    // cast the lowest ready+castable slot (one per tick)
+      var sid=ld[sj]; if(!sid) continue; var sp=spellById(sid); if(!sp) continue;
+      if((f.cdT[sj]||0) < spellCd(sp)) continue;                  // still charging
+      if(f.silence){ f.silence=false; f.cdT[sj]=0; combatLog('\u2014 silenced! '+sp.name+' fizzles'); blip(220,0.06,'sawtooth'); break; }
+      var hpFrac=S.stats.health/maxHP();
+      if(sp.type==='heal'  && hpFrac>=0.92) continue;             // hold the charge until actually hurt
+      if(sp.type==='regen' && (f.regen || hpFrac>=0.92)) continue;
+      if(sp.type==='shield'&& (f.shield||0)>0) continue;          // shield already up \u2014 wait
+      if((S.mana||0) < spellCost(sp)) continue;                   // ready, but hold until mana allows
+      doCast(sp, f); f.cdT[sj]=0;
+      if(f.state!=='fight') return;
+      break;
     }
     // boss special attack (dramatic; every ~3.6s — the ascended Sovereign hammers faster)
     if(e.biomeBoss){
@@ -2154,24 +2220,28 @@
     openOverlay('SPELLS \u2014 EQUIP UP TO 3','spells');
     if(!S.spells.length){ var e=document.createElement('div'); e.className='ovhint';
       e.textContent='no spells learned yet \u2014 raise INT, SPI, DEX, END or LCK by training to unlock spells.'; ovBody.appendChild(e); }
-    // cast-order strip: shows the 3 ordered slots (tap a spell below to fill the next empty slot)
+    // cast-order strip: 3 slots, each casts on its own cooldown
     var order=document.createElement('div'); order.className='ovhint'; order.style.margin='0 0 6px';
     var parts=[]; for(var s=0;s<3;s++){ var id=S.loadout[s]; var sp=id?spellById(id):null; parts.push((s+1)+'. '+(sp?sp.name:'\u2014')); }
-    order.textContent='cast order \u2192  '+parts.join('   ');
+    order.textContent='slots \u2192  '+parts.join('   ');
     ovBody.appendChild(order);
     S.spells.forEach(function(id){
       var sp=spellById(id); if(!sp) return;
       var slot=S.loadout.indexOf(id), active=slot>=0;
+      var cd=(spellCd(sp)/1000).toFixed(1)+'s';
       var row=document.createElement('div'); row.className='ovrow'+(active?' on':'');
-      row.innerHTML='<div class="ovdot">'+(active?(slot+1):'')+'</div><div class="ovtext"><div class="ovname">'+sp.name+(active?'  \u00b7 cast '+(slot+1):'')+
-        '</div><div class="ovsub">'+(sp.desc||spellTypeName(sp.type))+'  \u00b7  '+spellCost(sp)+' mana</div></div>';
+      row.innerHTML='<div class="ovdot">'+(active?(slot+1):'')+'</div><div class="ovtext"><div class="ovname">'+sp.name+(active?'  \u00b7 slot '+(slot+1):'')+
+        '</div><div class="ovsub">'+(sp.desc||spellTypeName(sp.type))+'  \u00b7  '+spellCost(sp)+' mana  \u00b7  \u23f1 '+cd+'</div></div>';
       row.addEventListener('click', function(){ toggleSpell(id); openSpells(); });
       ovBody.appendChild(row);
     });
     var filled=S.loadout.filter(function(x){return !!x;}).length;
     var hint=document.createElement('div'); hint.className='ovhint';
-    hint.textContent='active '+filled+'/3 \u00b7 cast in order 1\u21922\u21923 each round \u00b7 tap to add (fills the lowest free slot) or remove';
+    hint.textContent='active '+filled+'/3 \u00b7 each slot casts on its own cooldown \u00b7 tap to add (fills lowest free slot) or remove';
     ovBody.appendChild(hint);
+    var scale=document.createElement('div'); scale.className='ovhint'; scale.style.marginTop='4px';
+    scale.textContent='INT powers damage \u00b7 SPIRIT powers healing \u00b7 INT+SPI shortens cooldowns (\u2212'+Math.round(spellCdr()*100)+'% now)';
+    ovBody.appendChild(scale);
   }
   function toggleSpell(id){
     if(!Array.isArray(S.loadout)) S.loadout=[];
@@ -2780,6 +2850,14 @@
       pctx.fillStyle=(frac>=0.92)?'#fff':'rgba(255,255,255,0.7)'; pctx.fillRect(x,y,Math.round(w*frac),h);  // fill (flashes full)
       pctx.strokeStyle='rgba(255,255,255,0.45)'; pctx.lineWidth=1; pctx.strokeRect(x+0.5,y+0.5,w-1,h-1);     // outline
     }
+    // one cooldown ring per equipped spell slot: empty outline -> pie sweep -> solid (ready/flash)
+    function drawCdRing(cx, cy, frac, has){
+      var r=4; pctx.lineWidth=1;
+      pctx.strokeStyle='rgba(255,255,255,'+(has?0.5:0.22)+')'; pctx.beginPath(); pctx.arc(cx,cy,r,0,6.2832); pctx.stroke();
+      if(!has) return;
+      if(frac>=1){ pctx.fillStyle=(Math.floor(animT/120)%2===0)?'#fff':'rgba(255,255,255,0.8)'; pctx.beginPath(); pctx.arc(cx,cy,r-1,0,6.2832); pctx.fill(); }
+      else if(frac>0){ pctx.fillStyle='rgba(255,255,255,0.78)'; pctx.beginPath(); pctx.moveTo(cx,cy); pctx.arc(cx,cy,r-1,-1.5708,-1.5708+frac*6.2832); pctx.closePath(); pctx.fill(); }
+    }
     var bob=Math.sin(animT*0.02)*2;
     var petRows=SPR[S.form]||SPR.springer;
     var petFlash=f.flashPet>0, blinkP=petFlash && (Math.floor(animT/55)%2===0);
@@ -2834,6 +2912,13 @@
       var eInt2=ENE_ATK_BASE; if(e.mech==='berserk') eInt2=Math.max(620, Math.round(ENE_ATK_BASE*(1-Math.min(0.45,(e.rage||0)/16000))));
       drawActBar(pX, (f.petTick||0)/petInt);
       if(enter>0.98 && !e.submerged) drawActBar(eneX, (f.eneTick||0)/eInt2);
+      // 3 spell-cooldown rings under the pet's bar (shown once any slot is equipped)
+      var ld2=S.loadout||[], anyLd=false; for(var li=0;li<3;li++) if(ld2[li]) anyLd=true;
+      if(anyLd){ var cy=gy+17, gap=11, x0=Math.round(pX)-gap;
+        for(var k=0;k<3;k++){ var sid2=ld2[k], spc2=sid2&&spellById(sid2);
+          var fr = spc2 ? Math.min(1,(f.cdT&&f.cdT[k]||0)/spellCd(spc2)) : 0;
+          drawCdRing(x0+k*gap, cy, fr, !!spc2); }
+      }
     }
     // header
     pctx.fillStyle='#fff'; pctx.textAlign='center'; pctx.font='8px "Pixel",monospace';
@@ -3000,11 +3085,11 @@
 
     // COMBAT: pauses the cycle clock; plays out in real time tick-by-tick
     if(!S.dead && S.fight){
-      fightTick(dtMs*(fastMode?2:1));
+      fightTick(dtMs*combatMult());
       // AUTO: after a delay, pick the first option of a combat choice event (QTEs are NOT handled \u2014 they still fail)
       if(autoMode && S.fight && S.fight.state==='event'){
         autoEventT+=dtMs;
-        var autoLim=fastMode?5000:10000, rem=Math.max(0,Math.ceil((autoLim-autoEventT)/1000));
+        var autoLim=(combatSpeed===0?10000:combatSpeed===1?6000:4000), rem=Math.max(0,Math.ceil((autoLim-autoEventT)/1000));
         if(autoNoteEl) autoNoteEl.textContent='auto-picking first option in '+rem+'s\u2026';
         if(autoEventT>=autoLim){ autoEventT=0; autoNoteEl=null; chooseEvent(0); }
       } else { autoEventT=0; }
