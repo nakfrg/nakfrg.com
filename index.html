@@ -1565,9 +1565,8 @@
       var rev=hasReviveItem();
       if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12;
         combatLog('\u2605 PHOENIX! revived at '+Math.round(rev*100)+'%'); blip(1100,0.18,'sine'); return; }
-      loseBattle(true); return;
+      loseBattle(false); return;   // defeat is no longer fatal \u2014 limp home at 1 HP
     }
-    if(S.stats.health<=Math.max(1,Math.round(maxHP()*0.12))){ loseBattle(false); return; }
   }
   // pick a boss special by biome for flavour
   function bossSpecial(f){
@@ -1649,7 +1648,7 @@
     if(e.mech==='mirror' && dmg>0){
       var md=Math.max(1, Math.round(dmg*0.35)); S.stats.health=Math.max(0,S.stats.health-md); f.flashPet=7; setProc(f,'spear');
       combatLog('\u21BA '+e.name+' mirrors \u2192 '+md); blip(240,0.05,'sawtooth');
-      if(S.stats.health<=0){ var rv=hasReviveItem(); if(rv&&!f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rv); combatLog('\u2605 PHOENIX! revived'); } else { loseBattle(true); return true; } }
+      if(S.stats.health<=0){ var rv=hasReviveItem(); if(rv&&!f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rv); combatLog('\u2605 PHOENIX! revived'); } else { loseBattle(false); return true; } }
     }
     if(++f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); return true; }
     return false;
@@ -1689,7 +1688,7 @@
       f.venomTick=(f.venomTick||0)+dt;
       if(f.venomTick>=DOT_TICK_MS){ f.venomTick-=DOT_TICK_MS; S.stats.health=Math.max(0,S.stats.health-f.venom.dmg); f.flashPet=5; f.venom.rounds--; combatLog('\u2620 venom \u2192 '+f.venom.dmg);
         if(f.venom.rounds<=0) f.venom=null;
-        if(S.stats.health<=0){ var rvv=hasReviveItem(); if(rvv&&!f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rvv); combatLog('\u2605 PHOENIX! revived'); } else { loseBattle(true); return; } } }
+        if(S.stats.health<=0){ var rvv=hasReviveItem(); if(rvv&&!f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rvv); combatLog('\u2605 PHOENIX! revived'); } else { loseBattle(false); return; } } }
     }
     // our attack. items can combo (chain extra strikes), sunder (+50% dmg), execute (vs weak foes), bleed, lifesteal.
     f.petTick+=dt;
@@ -1775,14 +1774,14 @@
       if(isFinal){ endGame('win'); return; }
       blip(820,0.1,'sine'); save(); updateControls(); render();
     } else {
-      var died=f.died;
-      // capture exactly where & to what the run ended, before the fight state is cleared
+      // a defeat is never fatal now — note where & to what you fell, then limp home at 1 HP
       var foe=(f.enemy&&f.enemy.name) ? f.enemy.name : 'an unseen foe';
       var wv=(f.encIdx||0)+1, wt=f.wavesTotal||f.enc.length;
       var where=BIOMES[f.biome]+' Stage '+(f.stage+1)+', Wave '+wv+'/'+wt;
       S.fight=null; S.mode='idle';
-      if(died){ die(where+' \u2014 slain by '+foe); }
-      else { logEvent('\u2620 '+niceName()+' retreated from '+where+'. heal up and return.'); blip(200,0.16,'sawtooth'); save(); updateControls(); render(); }
+      S.stats.health=1;   // limp home with 1 HP
+      logEvent('\u2620 '+niceName()+' was defeated at '+where+' by '+foe+' \u2014 limped home at 1 HP.');
+      setMessage('defeated \u2014 limped home at 1 HP'); blip(200,0.16,'sawtooth'); save(); updateControls(); render();
     }
   }
 
@@ -2775,6 +2774,12 @@
     var scroll = (f.travelX||0)*0.5 + (f.scroll||0)*0.015;
     drawBackdrop(f.biome, scroll);
     var gy=Math.round(ch*0.82);
+    function drawActBar(cx, frac){
+      frac=Math.max(0,Math.min(1,frac)); var w=30, h=4, x=Math.round(cx-w/2), y=gy+6;
+      pctx.fillStyle='rgba(255,255,255,0.16)'; pctx.fillRect(x,y,w,h);                 // track
+      pctx.fillStyle=(frac>=0.92)?'#fff':'rgba(255,255,255,0.7)'; pctx.fillRect(x,y,Math.round(w*frac),h);  // fill (flashes full)
+      pctx.strokeStyle='rgba(255,255,255,0.45)'; pctx.lineWidth=1; pctx.strokeRect(x+0.5,y+0.5,w-1,h-1);     // outline
+    }
     var bob=Math.sin(animT*0.02)*2;
     var petRows=SPR[S.form]||SPR.springer;
     var petFlash=f.flashPet>0, blinkP=petFlash && (Math.floor(animT/55)%2===0);
@@ -2823,6 +2828,13 @@
     if(f.shieldFlash>0){ pctx.save(); pctx.strokeStyle='#fff'; pctx.globalAlpha=Math.min(1,f.shieldFlash/8)*0.8; pctx.lineWidth=2;
       pctx.beginPath(); pctx.arc(pX, gy-20, 22, 0, 6.28); pctx.stroke(); pctx.globalAlpha=1; pctx.lineWidth=1; pctx.restore(); }
     pctx.restore();
+    // ── action-timing bars: each fills toward that combatant's next attack, then empties ──
+    if(f.state==='fight'){
+      var petInt=petAtkInterval();
+      var eInt2=ENE_ATK_BASE; if(e.mech==='berserk') eInt2=Math.max(620, Math.round(ENE_ATK_BASE*(1-Math.min(0.45,(e.rage||0)/16000))));
+      drawActBar(pX, (f.petTick||0)/petInt);
+      if(enter>0.98 && !e.submerged) drawActBar(eneX, (f.eneTick||0)/eInt2);
+    }
     // header
     pctx.fillStyle='#fff'; pctx.textAlign='center'; pctx.font='8px "Pixel",monospace';
     pctx.fillText('STAGE '+(f.stage+1)+'  \u00b7  WAVE '+(f.encIdx+1)+'/'+f.wavesTotal, cw*0.5, 11);
@@ -2843,7 +2855,7 @@
     } else if(f.state==='won'||f.state==='lost'||f.state==='interlude'){
       pctx.fillStyle='rgba(0,0,0,0.55)'; pctx.fillRect(0, ch*0.44, cw, 24);
       pctx.fillStyle='#fff'; pctx.font='11px "Pixel",monospace'; pctx.textAlign='center';
-      var txt = f.state==='won'?'STAGE CLEAR!' : f.state==='lost'?(f.died?'DEFEATED':'RETREAT!') : 'ONWARD\u2026';
+      var txt = f.state==='won'?'STAGE CLEAR!' : f.state==='lost'?'DEFEATED' : 'ONWARD\u2026';
       pctx.fillText(txt, cw*0.5, ch*0.44+17);
     }
     pctx.textAlign='left';
