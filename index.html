@@ -695,6 +695,11 @@
   // enemy stats scale with difficulty tier (biome*6 + stage) plus a small within-stage ramp.
   // tuned so early biomes still take several hits and an under-levelled pet walls (must train more).
   var ENEMY_HP0=184, ENEMY_HP_GROW=1.091, ENEMY_ATK0=14, ENEMY_ATK_GROW=1.103, ENEMY_DEF0=6, ENEMY_DEF_GROW=1.055;
+  // minimum enemy hit as a fraction of the pet's max HP, by biome (regular tier). This stops HP-stacking
+  // from trivialising the EARLY biomes (where raw atk is tiny); it fades to ~0 by the Cavern, since from
+  // there on raw atk-DEF already scales the damage on its own. Capped to a multiple of the foe's atk so
+  // low-biome / replayed enemies stay weak.
+  var HP_FLOOR_PCT = [0.055, 0.052, 0.048, 0.012, 0, 0, 0];   // Plains, Forest, Lake, Cavern, Peaks, Abyss, Citadel
   var BOSS_SPR = {
     boss_plains:["                      ", "   ###    ###         ", "    #      #          ", "     #    #           ", "      #  #            ", "      #######         ", "      # #####         ", "   ###############    ", "    ###############   ", "   ############### #  ", "        ##########  # ", "        ##########   #", "        ## #######   #", "        ## ## ####    ", "        ## ## ####    ", "        ## ## ####    ", "                      "],
     boss_forest:["    #  ###   #        ", "     ## #  ##         ", "   #   ## #   #       ", "        ##            ", "        #             ", "     ########         ", "     ########         ", "     ## ## ##         ", "     ########         ", "    ##########        ", "   ############       ", "  # ## #### ## #      ", " #  ## #### ##  #     ", "#   ##########   #    ", "    ##########        ", "     ## ## ##         ", "     ## ## ##         "],
@@ -1611,7 +1616,12 @@
     if(!special && f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); return; }
     // Frenzied: damage ramps with time alive
     if(e.mech==='berserk') mult*=(1+Math.min(1.6,(e.rage||0)/11000));
-    var edmg=Math.max(Math.round(e.atk*0.38*mult), Math.round((e.atk-petDEF())*mult), 1);
+    // damage floor proportional to the pet's max HP, so stacking HP can't trivialise fights;
+    // capped to a multiple of the foe's own attack so weak / low-biome enemies stay weak (the
+    // floor scales with the biome's threat, and naturally fades once raw atk-DEF dominates late).
+    var fbi=(f.biome||0), fpct=(HP_FLOOR_PCT[fbi]||0)*(e.biomeBoss?2.4:e.elite?1.6:1.0);
+    var hpFloor=Math.min(maxHP()*fpct, (e.atk||1)*3.5);
+    var edmg=Math.max(Math.round(e.atk*0.38*mult), Math.round((e.atk-petDEF())*mult), Math.round(hpFloor*mult), 1);
     edmg=Math.max(1, Math.round(edmg*bfMul('foeAtk')));
     var ecrit=Math.random()<e.crit;
     if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
@@ -1821,12 +1831,43 @@
     if(f.eneTick>=eInt){ f.eneTick-=eInt; enemyStrike(1, false); if(f.state!=='fight') return; }
   }
 
+  // ── verbose stage-clear flavour ──────────────────────────────────────────
+  var WIN_LINES = [
+    '{n} stands triumphant amid the fallen \u2014 {biome} Stage {s} cleared!',
+    'the dust settles and nothing stirs; {n} cleared {biome} Stage {s}!',
+    'wave after wave beaten back \u2014 {biome} Stage {s} cleared by {n}!',
+    '{n} catches its breath, victorious \u2014 {biome} Stage {s} cleared!',
+    'the path ahead lies open; {n} cleared {biome} Stage {s} at last!',
+    'every last foe routed \u2014 {n} cleared {biome} Stage {s}!',
+    '{n} hops over the last of them; {biome} Stage {s} cleared!',
+    'silence falls over the battlefield \u2014 {biome} Stage {s} cleared!'
+  ];
+  var BOSS_WIN_FLAVOR = [
+    'the fields fall silent; the great herd-beast moves no more.',
+    'the ancient bramble withers away; the canopy breathes free again.',
+    'the waters go still; the leviathan sinks into the lightless deep.',
+    'the caverns stop their trembling; the colossus is so much rubble.',
+    'the storm tears itself apart; the great roc plummets from the sky.',
+    'the dark recoils and scatters; the tyrant of the abyss is undone.',
+    'reality steadies and holds; the sovereign of the void is no more.'
+  ];
+  function logVictory(f){
+    var biome=BIOMES[f.biome], s=f.stage+1, boss=(f.enemy&&f.enemy.name)||'the boss';
+    if(f.stage===N_STAGES-1){   // the biome boss
+      logEvent('\u2605\u2605 the '+boss+' CRASHES DOWN \u2014 SLAIN by '+niceName()+'! \u2605\u2605');
+      logEvent('the '+biome+' is CONQUERED \u2014 '+(BOSS_WIN_FLAVOR[f.biome]||'its champion will trouble these lands no longer.'));
+    } else {
+      var t=WIN_LINES[(Math.random()*WIN_LINES.length)|0];
+      logEvent('\u2605 '+t.replace(/\{n\}/g,niceName()).replace(/\{biome\}/g,biome).replace(/\{s\}/g,s));
+    }
+  }
   function endFight(){
     var f=S.fight; if(!f) return;
     if(f.state==='won'){
       var isFinal=(f.biome===N_BIOMES-1 && f.stage===N_STAGES-1);
       var frontier=(stageIndex(f.biome,f.stage)===(S.stageProg||0));
-      logEvent('\u2605 cleared '+BIOMES[f.biome]+' Stage '+(f.stage+1));
+      logVictory(f);
+      if(f.stage===N_STAGES-1 && !isFinal) setMessage(BIOMES[f.biome]+' BOSS DEFEATED!');
       if(frontier){
         S.stageProg=Math.min(N_TOTAL, (S.stageProg||0)+1);
         // first-clear reward: rotate str\u2192dex\u2192end\u2192int\u2192spi\u2192lck per stage, points scale with biome (Plains 1 ... Citadel 7)
@@ -1845,7 +1886,9 @@
       checkSpells();
       S.fight=null; S.mode='idle';
       if(isFinal){ endGame('win'); return; }
-      blip(820,0.1,'sine'); save(); updateControls(); render();
+      if(f.stage===N_STAGES-1){ blip(700,0.12,'triangle'); setTimeout(function(){blip(950,0.12,'triangle');},140); setTimeout(function(){blip(1180,0.2,'triangle');},300); }
+      else blip(820,0.1,'sine');
+      save(); updateControls(); render();
     } else {
       // a defeat is never fatal now — note where & to what you fell, then limp home at 1 HP
       var foe=(f.enemy&&f.enemy.name) ? f.enemy.name : 'an unseen foe';
