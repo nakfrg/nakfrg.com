@@ -1074,23 +1074,23 @@
     // damage scales with INT, healing with SPIRIT; INT+SPI shortens every cooldown (see spellCd).
     // each spell has its own base cooldown (cd, ms): weak/cheap = fast, heavy hitters = slow.
     // tier 1 — SIGNATURE spells: each stat mastery still unlocks one (req), but power is INT/SPI
-    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:20},         cost:12,  cd:1400, pow:function(r){return Math.round(8+r.int*1.4);},   desc:'a quick fire bolt' },
-    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:20},         cost:9,   cd:1050, pow:function(r){return Math.round(5+r.int*1.0);},   desc:'cheap, fast wind cut \u2014 shortest cooldown' },
-    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:20},         cost:15,  cd:2000, pow:function(r){return Math.round(10+r.spi);},  desc:'restore HP \u2014 10 + 1 per SPIRIT' },
-    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:22},         cost:12,  cd:2400, pow:function(r){return 1;},                          desc:'absorb the next hit' },
-    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:25},         cost:15,  cd:2200, pow:function(r){return Math.round(6+r.int*0.7);}, desc:'damage + saps the foe\u2019s attack 5% per cast (up to \u221230%)' },
-    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:30},         cost:24,  cd:2800, pow:function(r){return Math.round(12+r.int*1.5);}, exec:0.30, desc:'2\u00d7 to foes below 30% HP \u2014 a finisher' },
+    { id:'ember',    name:'Ember',      type:'dmg',    req:{int:20},         cost:12,  cd:2800, pow:function(r){return Math.round(16+r.int*2.8);},   desc:'a quick fire bolt' },
+    { id:'gust',     name:'Gust',       type:'dmg',    req:{dex:20},         cost:9,   cd:2100, pow:function(r){return Math.round(10+r.int*2.0);},   desc:'cheap, fast wind cut \u2014 shortest cooldown' },
+    { id:'mend',     name:'Mend',       type:'heal',   req:{spi:20},         cost:15,  cd:4000, pow:function(r){return Math.round(20+r.spi*2);},  desc:'restore HP \u2014 20 + 2 per SPIRIT' },
+    { id:'barkskin', name:'Barkskin',   type:'shield', req:{end:22},         cost:12,  cd:4800, pow:function(r){return 2;},                          desc:'absorb the next 2 hits' },
+    { id:'hex',      name:'Hex',        type:'weaken', req:{lck:25},         cost:15,  cd:4400, pow:function(r){return Math.round(12+r.int*1.4);}, desc:'damage + saps the foe\u2019s attack 10% per cast (up to \u221230%)' },
+    { id:'reaper',   name:'Reaper',     type:'execute',req:{str:30},         cost:24,  cd:5600, pow:function(r){return Math.round(24+r.int*3.0);}, exec:0.30, desc:'2\u00d7 to foes below 30% HP \u2014 a finisher' },
     // tier 2 — mid-game: deeper INT / SPI, stronger but slower
-    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:40},         cost:20,  cd:3000, pow:function(r){return Math.round(r.int*0.85);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 ticks' },
-    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:40},         cost:18,  cd:2300, pow:function(r){return Math.round(10+r.int*1.9);}, vfx:'holy', desc:'heavy holy strike' },
-    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:50,spi:40},  cost:22,  cd:2800, pow:function(r){return Math.round(r.int*1.7);}, leech:0.55, desc:'damage, heal for 55% of it' },
-    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:45,spi:40},  cost:26,  cd:3600, pow:function(r){return 2;}, desc:'absorb the next 2 hits' },
-    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:50,int:45},  cost:30,  cd:3200, pow:function(r){return Math.round(r.int*0.75);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
+    { id:'cinder',   name:'Cinderburn', type:'burn',   req:{int:40},         cost:20,  cd:6000, pow:function(r){return Math.round(r.int*1.7);}, rounds:4, desc:'ignites the foe \u2014 damage over 4 ticks' },
+    { id:'smite',    name:'Smite',      type:'dmg',    req:{spi:40},         cost:18,  cd:4600, pow:function(r){return Math.round(20+r.int*3.8);}, vfx:'holy', desc:'heavy holy strike' },
+    { id:'drain',    name:'Lifedrain',  type:'drain',  req:{int:50,spi:40},  cost:22,  cd:5600, pow:function(r){return Math.round(r.int*3.4);}, leech:0.55, desc:'damage, heal for 55% of it' },
+    { id:'aegis',    name:'Aegis',      type:'shield', req:{end:45,spi:40},  cost:26,  cd:7200, pow:function(r){return 4;}, desc:'absorb the next 4 hits' },
+    { id:'tempest',  name:'Tempest',    type:'multi',  req:{dex:50,int:45},  cost:30,  cd:6400, pow:function(r){return Math.round(r.int*1.5);}, hits:3, vfx:'storm', desc:'3 strikes, each can crit' },
     // tier 3 — late-game heavy hitters: long cooldowns, huge INT/SPI payoff
-    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:60,int:60},  cost:40,  cd:4600, pow:function(r){return Math.round(r.int*2.6);}, self:function(r){return Math.round(r.int*0.32);}, desc:'devastation \u2014 long cooldown, self-cost' },
-    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:80},         cost:24,  cd:4000, pow:function(r){return Math.round(r.int*3.0);}, self:function(r){return Math.round(r.int*0.5);}, desc:'huge hit \u2014 wounds you too' },
-    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:80},         cost:24,  cd:4200, pow:function(r){return Math.round(r.spi*0.9);}, rounds:4, desc:'heal-over-time \u2014 scales with SPIRIT' },
-    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:90,spi:90},  cost:52,  cd:5600, pow:function(r){return Math.round(r.int*3.0+r.spi*0.7);}, vfx:'nuke', desc:'the ultimate nuke \u2014 longest cooldown, INT & SPI mastery' },
+    { id:'cataclysm',name:'Cataclysm',  type:'risky',  req:{str:60,int:60},  cost:40,  cd:9200, pow:function(r){return Math.round(r.int*5.2);}, self:function(r){return Math.round(r.int*0.64);}, desc:'devastation \u2014 long cooldown, self-cost' },
+    { id:'bloodbolt',name:'Bloodbolt',  type:'risky',  req:{int:80},         cost:24,  cd:8000, pow:function(r){return Math.round(r.int*6.0);}, self:function(r){return Math.round(r.int*1.0);}, desc:'huge hit \u2014 wounds you too' },
+    { id:'regrow',   name:'Regrowth',   type:'regen',  req:{spi:80},         cost:24,  cd:8400, pow:function(r){return Math.round(r.spi*1.8);}, rounds:4, desc:'heal-over-time \u2014 scales with SPIRIT' },
+    { id:'ascend',   name:'Ascendance', type:'dmg',    req:{int:90,spi:90},  cost:52,  cd:11200, pow:function(r){return Math.round(r.int*6.0+r.spi*1.4);}, vfx:'nuke', desc:'the ultimate nuke \u2014 longest cooldown, INT & SPI mastery' },
     // ── passive defensive auras: no cooldown, no cast \u2014 they simply work while equipped in a slot ──
     // (cd is a never-used sentinel; passives are skipped by the cast loop and shown as "always on")
     { id:'evasion',  name:'Phantom Veil', type:'evade',    passive:true, req:{dex:35}, cost:0, cd:1, pow:function(r){return 0;}, desc:'DEX aura \u2014 each hit you take builds +5% dodge; resets the moment you dodge, then builds again' },
@@ -1157,8 +1157,8 @@
   // a fatal blow: try a Phoenix item revive, then the Lucky Star aura (each once per wave); returns true if death was averted
   function tryDeathSave(f){
     var rev=hasReviveItem();
-    if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12; combatLog('\u2605 PHOENIX! revived at '+Math.round(rev*100)+'%'); blip(1100,0.18,'sine'); return true; }
-    if(spellEquipped('luckystar') && !f.lifelineUsed){ f.lifelineUsed=true; S.stats.health=Math.round(maxHP()*0.30); f.flashPet=14; combatLog('\u2726 LUCKY STAR! a fatal blow \u2014 but luck pulls you through (+30% HP)!'); blip(1080,0.16,'sine'); return true; }
+    if(rev && !f.revived){ f.revived=true; S.stats.health=Math.round(maxHP()*rev); f.flashPet=12; playAnim(f,'revive','pet'); combatLog('\u2605 PHOENIX! revived at '+Math.round(rev*100)+'%'); blip(1100,0.18,'sine'); return true; }
+    if(spellEquipped('luckystar') && !f.lifelineUsed){ f.lifelineUsed=true; S.stats.health=Math.round(maxHP()*0.30); f.flashPet=14; playAnim(f,'revive','pet'); combatLog('\u2726 LUCKY STAR! a fatal blow \u2014 but luck pulls you through (+30% HP)!'); blip(1080,0.16,'sine'); return true; }
     return false;
   }
   // a roll of stat with equipped bonuses (used by derived combat stats + spells)
@@ -1440,7 +1440,7 @@
       f.combatNo=e.n; f.enemy=enemyAt(f.biome,f.stage,e.n,e.boss);
       f.petTick=0; f.eneTick=500; f.cdT=[0,0,0]; f.burnTick=0; f.regenTick=0; f.manaTick=0; f.shield=0; f.revived=false; f.evadeStacks=0; f.lifelineUsed=false; f.castTick=0; f.fuseT=0; f.edot=null; f.edotTick=0; f.specialTick=((f.enemy&&f.enemy.biomeBoss)?2300:0); f.fx=null; f.burn=null; f.regen=null; f.actions=0;
       f.bleed=null; f.bleedTick=0; f.vuln=0; f.comboFlash=0; f.sunderFlash=0; f.castFx=null;
-      f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0; f.sparkN=0;
+      f.proc=null; f.absorb=0; f.thunderTick=0; f.shieldFlash=0; f.sparkN=0; f.anim=null;
       f.venom=null; f.venomTick=0; f.silence=false; f.curseAtk=1;   // elite-mechanic pet-side state
       f.shield=Math.round(bfAdd('shieldPer'))||0;   // a stage boon can grant shields each fight
       f.state='approach'; f.approachT=APPROACH_MS; f.eneEnter=0;
@@ -1626,10 +1626,10 @@
     else if(sp.type==='burn'){ f.burn={ dmg:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' sets '+e.name+' ablaze with '+sp.name+' \u2014 it\u2019s burning! ('+f.burn.dmg+'/tick)'); blip(780,0.07,'sawtooth'); }
     else if(sp.type==='weaken'){ var wd=sp.pow(r); e.hp-=wd;
       if(e.hexAtk0==null) e.hexAtk0=e.atk;                                   // remember the foe's original attack
-      if((e.hexN||0)<6){ e.hexN=(e.hexN||0)+1; e.atk=Math.max(1,Math.round(e.hexAtk0*(1-0.05*e.hexN))); }   // \u22125%/cast, caps at \u221230% after 6
+      if((e.hexN||0)<3){ e.hexN=(e.hexN||0)+1; e.atk=Math.max(1,Math.round(e.hexAtk0*(1-0.10*e.hexN))); }   // \u221210%/cast, caps at \u221230% after 3
       f.flashEne=8; combatLog(spellHitLine(pn,e.name,sp,wd)); blip(520,0.07,'sine'); if(e.hp<=0){ winBattle(); } }
     else if(sp.type==='risky'){ var d2=sp.pow(r), s2=sp.self?sp.self(r):0; e.hp-=d2; S.stats.health=Math.max(1,S.stats.health-s2); f.flashEne=10; f.flashPet=6; combatLog(spellHitLine(pn,e.name,sp,d2)+' (\u2212'+s2+' self)'); blip(760,0.07,'sawtooth'); if(e.hp<=0){ winBattle(); } }
-    else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; combatLog(got2>0 ? ('\u2728 '+pn+' casts '+sp.name+', knitting its wounds shut (+'+got2+' HP)!') : ('\u2728 '+pn+' casts '+sp.name+' \u2014 already in fine fettle!')); blip(560,0.08,'sine'); }
+    else if(sp.type==='heal'){ var got2=healSelf(sp.pow(r)); f.flashPet=8; if(got2>0) playAnim(f,'heal','pet'); combatLog(got2>0 ? ('\u2728 '+pn+' casts '+sp.name+', knitting its wounds shut (+'+got2+' HP)!') : ('\u2728 '+pn+' casts '+sp.name+' \u2014 already in fine fettle!')); blip(560,0.08,'sine'); }
     else if(sp.type==='regen'){ f.regen={ amt:sp.pow(r), rounds:sp.rounds||4 }; combatLog('\u2728 '+pn+' weaves '+sp.name+' \u2014 a soft healing glow settles in (+'+f.regen.amt+'/tick).'); blip(600,0.08,'sine'); }
     else if(sp.type==='shield'){ var sv=(sp.pow(r)||1); f.shield=Math.max(f.shield||0, sv); combatLog('\u2728 '+pn+' raises '+sp.name+' \u2014 a shimmering ward holds (\u00d7'+f.shield+')!'); blip(620,0.07,'sine'); }   // top-up, never stacks past its value
     if(f.state==='fight' && f.actions>=MAX_COMBAT_ACTIONS){ combatLog('\u231b '+MAX_COMBAT_ACTIONS+' actions \u2014 the fight drags on, you lose the battle!'); loseBattle(false); }
@@ -1646,7 +1646,7 @@
     // Undying: the first time it would die, it rises again, enraged
     if(e.mech==='revenant' && !e.eRevived){
       e.eRevived=true; e.hp=Math.round(e.maxHp*0.45); e.atk=Math.round(e.atk*1.25); e.crit=Math.min(0.5,e.crit+0.06);
-      f.flashEne=14; setProc(f,'angel'); f.fx={ type:'nova', t:850, dur:850 };
+      f.flashEne=14; playAnim(f,'rise','ene'); f.fx={ type:'nova', t:850, dur:850 };
       combatLog('\u2620 '+e.name+' RISES AGAIN \u2014 enraged!'); blip(150,0.2,'sawtooth',0.07); return;
     }
     // Sovereign (final boss) ascends once at the kill, instead of dying, into a faster, shielded form
@@ -1686,9 +1686,10 @@
     if(!special && Math.random()<Math.min(0.92,ddg)){
       if(evOn){ var hadMomo=(f.evadeStacks||0)>0; f.evadeStacks=0; combatLog('~ '+niceName()+(hadMomo?' SLIPS the blow \u2014 momentum spent!':' dodged!')); }
       else combatLog('~ '+niceName()+' dodged!');
+      playAnim(f,'dodge','pet');
       f.flashPet=4; blip(700,0.04,'sine'); return;
     }
-    if(!special && f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); return; }
+    if(!special && f.shield>0){ f.shield--; combatLog(niceName()+' shields it!'); blip(520,0.05,'sine'); playAnim(f,'block','pet'); return; }
     // Frenzied: damage ramps with time alive
     if(e.mech==='berserk') mult*=(1+Math.min(e.bossEarly?0.55:1.6,(e.rage||0)/(e.bossEarly?16000:11000)));
     // damage floor proportional to the pet's max HP, so stacking HP can't trivialise fights;
@@ -1702,15 +1703,16 @@
     var ecrit=Math.random()<e.crit;
     if(ecrit) edmg=Math.round(edmg*ENE_CRIT_MULT);
     if((f.absorb||0)>0){ var soak=Math.min(edmg, f.absorb); edmg-=soak; f.absorb-=soak;   // Divine Thunder ward
-      if(soak>0){ f.shieldFlash=8; if(edmg<=0){ combatLog(niceName()+'\u2019s ward absorbs it!'); blip(560,0.05,'sine'); return; } } }
+      if(soak>0){ f.shieldFlash=8; playAnim(f,'block','pet'); if(edmg<=0){ combatLog(niceName()+'\u2019s ward absorbs it!'); blip(560,0.05,'sine'); return; } } }
     S.stats.health=Math.max(0, S.stats.health-edmg); f.flashPet=special?14:9;
+    if(ecrit && edmg>0) playAnim(f,'crit','pet');
     if(evOn && edmg>0) f.evadeStacks=(f.evadeStacks||0)+1;   // got hit -> dodge chance climbs for next time
     combatLog(foeAtkLine(f, niceName(), e.name, edmg, ecrit, special));
     blip(ecrit?170:240,0.05,'sawtooth');
     // ── elite/boss offensive mechanics (on a landed hit) ──
     if(edmg>0){
-      if(e.mech==='vampire'){ var heal=Math.round(edmg*0.6); e.hp=Math.min(e.maxHp, e.hp+heal); f.flashEne=4; combatLog('\u2748 '+e.name+' drains '+heal); }
-      if(e.mech==='curse'){ var vd=Math.max(1,Math.round(e.atk*0.18)); f.venom={ dmg:vd, rounds:4 }; f.curseAtk=Math.max(0.55,(f.curseAtk||1)*0.92); combatLog('\u2620 cursed \u2014 venom & weakness'); }
+      if(e.mech==='vampire'){ var heal=Math.round(edmg*0.6); e.hp=Math.min(e.maxHp, e.hp+heal); f.flashEne=4; combatLog('\u2748 '+e.name+' drains '+heal); playAnim(f,'drain','ene'); }
+      if(e.mech==='curse'){ var vd=Math.max(1,Math.round(e.atk*0.18)); f.venom={ dmg:vd, rounds:4 }; f.curseAtk=Math.max(0.55,(f.curseAtk||1)*0.92); combatLog('\u2620 cursed \u2014 venom & weakness'); playAnim(f,'poison','pet'); }
       if(e.mech==='siphon' && Math.random()<0.5){ f.silence=true; combatLog('\u2014 your spellcasting is SCRAMBLED \u2014 a cast fizzles'); }
     }
     var refl=equipEffect('reflect')+bfAdd('reflect');
@@ -1732,12 +1734,12 @@
     }
     if(e.caster==='selfheal'){
       if(e.hp>0 && e.hp<e.maxHp){ var h=Math.max(1,Math.round(e.maxHp*0.07)); e.hp=Math.min(e.maxHp, e.hp+h); f.flashEne=6;
-        combatLog('\u2728 '+e.name+' mends itself (+'+h+')'); blip(560,0.07,'sine'); }
+        combatLog('\u2728 '+e.name+' mends itself (+'+h+')'); blip(560,0.07,'sine'); playAnim(f,'heal','ene'); }
       return;
     }
     if(e.caster==='dot'){
       var dd=Math.max(1, Math.round(e.atk*0.20)); f.edot={ dmg:dd, rounds:4 };
-      combatLog('\u2620 '+e.name+' spreads a CREEPING PLAGUE \u2014 '+dd+'/tick'); blip(300,0.1,'sawtooth'); return;
+      combatLog('\u2620 '+e.name+' spreads a CREEPING PLAGUE \u2014 '+dd+'/tick'); blip(300,0.1,'sawtooth'); playAnim(f,'poison','pet'); return;
     }
   }
   function bossSpecial(f){
@@ -1755,6 +1757,9 @@
   // one player strike. returns true if the fight ended. applies vuln(+50%), execute, lifesteal, then refreshes bleed and rolls sunder.
   var PROC_MS = 540;
   function setProc(f, kind, n){ f.proc={ kind:kind, t:PROC_MS, dur:PROC_MS, n:n||1 }; }
+  // event-animation channel: short positioned flourishes for notable combat moments (heal, crit, dodge, poison, revive)
+  var ANIM_MS = 760;
+  function playAnim(f, kind, side){ if(!f) return; f.anim={ kind:kind, side:(side||'pet'), t:ANIM_MS, dur:ANIM_MS }; }
   // legendary item procs that fire after a landed hit (Sword Qi, dagger fan, Ilar angel). mutates e.hp.
   function applyHitProcs(f, e){
     var base=Math.max(1, petATK()-e.def), atk=petATK(), sup=false;
@@ -1802,9 +1807,10 @@
     if(e.mech==='bulwark' && !crit && !e.cracked){
       dmg=Math.min(dmg, Math.max(2, Math.round(petATK()*0.12)));
       e.armorHits=(e.armorHits||0)+1;
-      if(e.armorHits>=(e.biomeBoss?16:12)){ e.cracked=true; f.vuln=Math.max(f.vuln||0,3); f.sunderFlash=12; combatLog('\u25C8 '+e.name+'\u2019s armour SHATTERS! +50% dmg'); blip(420,0.1,'sawtooth'); }
+      if(e.armorHits>=(e.biomeBoss?16:12)){ e.cracked=true; f.vuln=Math.max(f.vuln||0,3); f.sunderFlash=12; combatLog('\u25C8 '+e.name+'\u2019s armour SHATTERS! +50% dmg'); blip(420,0.1,'sawtooth'); playAnim(f,'shatter','ene'); }
     }
     e.hp-=dmg; f.flashEne=9; f.lunge=1;
+    if(crit||supr) playAnim(f,'crit','ene');
     var ls=equipEffect('lifesteal')+bfAdd('lifesteal'); if(ls>0){ S.stats.health=Math.min(maxHP(),S.stats.health+Math.round(dmg*ls)); }
     combatLog(petAtkLine(niceName(), e.name, dmg, isCombo, crit, supr)+(vuln?' \u25C8':''));
     blip(supr?1180:(crit?900:680),0.04,'square');
@@ -1832,6 +1838,7 @@
     if(f.fx){ f.fx.t-=dt; if(f.fx.t<=0) f.fx=null; }
     if(f.castFx){ f.castFx.t-=dt; if(f.castFx.t<=0) f.castFx=null; }
     if(f.proc){ f.proc.t-=dt; if(f.proc.t<=0) f.proc=null; }
+    if(f.anim){ f.anim.t-=dt; if(f.anim.t<=0) f.anim=null; }
     f.scroll=(f.scroll||0)+dt;   // backdrop clock
     // approach: pet hops in, backdrop scrolls, enemy walks on from the right
     if(f.state==='approach'){
@@ -3104,6 +3111,90 @@
     pctx.restore();
   }
 
+  // ── notable combat-event animations (heal / crit / dodge / poison / revive) ──
+  function drawAnim(f, petX, eneX, gy){
+    var a=f.anim; if(!a) return;
+    var p=1-Math.max(0,a.t)/a.dur, cx=(a.side==='ene'?eneX:petX), cy=gy-20, TAU=6.2832;
+    pctx.save(); pctx.fillStyle='#fff'; pctx.strokeStyle='#fff';
+    if(a.kind==='heal'){
+      // soft expanding ring + rising medic crosses
+      pctx.globalAlpha=(1-p)*0.7; pctx.lineWidth=2;
+      pctx.beginPath(); pctx.arc(cx, cy, 6+p*16, 0, TAU); pctx.stroke();
+      for(var i=0;i<4;i++){ var ph=(p+i*0.22)%1, py=cy+10-ph*30, px=cx+(i-1.5)*7, al=Math.sin(ph*3.14159);
+        if(al<=0) continue; pctx.globalAlpha=al;
+        pctx.fillRect(Math.round(px-2),Math.round(py-1),5,2); pctx.fillRect(Math.round(px-1),Math.round(py-2),2,5); }
+    } else if(a.kind==='crit'){
+      // sharp radiating impact spikes + a quick flash ring
+      pctx.globalAlpha=1-p; pctx.lineWidth=2;
+      for(var k=0;k<8;k++){ var ang=k/8*TAU + 0.2, r1=4+p*8, r2=12+p*30;
+        pctx.beginPath(); pctx.moveTo(cx+Math.cos(ang)*r1, cy+Math.sin(ang)*r1); pctx.lineTo(cx+Math.cos(ang)*r2, cy+Math.sin(ang)*r2); pctx.stroke(); }
+      if(p<0.4){ pctx.globalAlpha=1-p/0.4; pctx.beginPath(); pctx.arc(cx,cy,5+p*10,0,TAU); pctx.stroke();
+        for(var s=0;s<4;s++){ var sa=s/4*TAU+0.6; pctx.fillRect(Math.round(cx+Math.cos(sa)*7),Math.round(cy+Math.sin(sa)*7),3,3); } }
+      pctx.lineWidth=1;
+    } else if(a.kind==='dodge'){
+      // a swoosh arc + trailing speed lines as the pet slips aside
+      pctx.globalAlpha=(1-p)*0.85; pctx.lineWidth=2;
+      pctx.beginPath(); pctx.arc(cx-3, cy, 14, -1.1+p*0.6, 1.1+p*0.6); pctx.stroke();
+      for(var l=0;l<4;l++){ var lx=cx-8-l*6-p*14, ly=cy-7+l*4; pctx.globalAlpha=(1-p)*(0.8-l*0.15);
+        pctx.fillRect(Math.round(lx),Math.round(ly),Math.max(2,8-l),1); }
+      pctx.lineWidth=1;
+    } else if(a.kind==='poison'){
+      // bubbles drifting up + a little skull
+      for(var b=0;b<5;b++){ var bp=(p+b*0.2)%1, by=cy+12-bp*30, bx=cx+Math.sin(b*2+p*6)*8, br=1+(b%2);
+        pctx.globalAlpha=(1-bp)*0.9; pctx.lineWidth=1; pctx.beginPath(); pctx.arc(bx,by,br+0.5,0,TAU); pctx.stroke(); }
+      var sa2=Math.sin(p*3.14159), sk=cy-24;
+      if(sa2>0){ pctx.globalAlpha=sa2;
+        pctx.beginPath(); pctx.arc(cx,sk,5,0,TAU); pctx.fill();                       // skull dome
+        pctx.fillStyle='#000'; pctx.fillRect(cx-3,sk-1,2,2); pctx.fillRect(cx+1,sk-1,2,2);  // eye sockets
+        pctx.fillStyle='#fff'; pctx.fillRect(cx-3,sk+4,6,2);                          // jaw
+        pctx.fillStyle='#000'; pctx.fillRect(cx-2,sk+4,1,2); pctx.fillRect(cx,sk+4,1,2); pctx.fillStyle='#fff'; }
+    } else if(a.kind==='revive'){
+      // a rising halo, a column of light, and a starburst
+      pctx.globalAlpha=(1-p); pctx.lineWidth=3;
+      pctx.beginPath(); pctx.arc(cx, cy-p*8, 6+p*28, 0, TAU); pctx.stroke();
+      pctx.globalAlpha=(1-p)*0.8; pctx.lineWidth=1;
+      pctx.fillRect(Math.round(cx-2), Math.round(cy-40*p), 4, Math.round(40*p));
+      for(var r=0;r<12;r++){ var ra=r/12*TAU, rd=p*36; pctx.globalAlpha=1-p;
+        pctx.fillRect(Math.round(cx+Math.cos(ra)*rd), Math.round(cy+Math.sin(ra)*rd*0.8), 3, 3); }
+      if(p>0.5){ var tp=(p-0.5)/0.5, ty=cy-34; pctx.globalAlpha=1-tp;     // a star crowns the top
+        pctx.fillRect(cx-1,ty-5,2,10); pctx.fillRect(cx-5,ty-1,10,2);
+        pctx.fillRect(cx-3,ty-3,2,2); pctx.fillRect(cx+1,ty-3,2,2); pctx.fillRect(cx-3,ty+1,2,2); pctx.fillRect(cx+1,ty+1,2,2); }
+    } else if(a.kind==='block'){
+      // a hex barrier flares where the blow lands, with deflected sparks
+      var bx=cx+8;                                   // sits just in front of the pet, toward the foe
+      pctx.globalAlpha=(1-p); pctx.lineWidth=2; pctx.beginPath();
+      for(var h=0;h<6;h++){ var ha=h/6*TAU - 1.5708, hx=bx+Math.cos(ha)*13, hy=cy+Math.sin(ha)*15; if(h===0) pctx.moveTo(hx,hy); else pctx.lineTo(hx,hy); }
+      pctx.closePath(); pctx.stroke();
+      if(p<0.35){ pctx.globalAlpha=1-p/0.35; pctx.beginPath(); pctx.arc(bx, cy, 4+p*14, 0, TAU); pctx.stroke(); }   // impact ripple
+      for(var d=0;d<5;d++){ var da=-1.0+d*0.5, dd=6+p*22; pctx.globalAlpha=(1-p)*0.9;   // sparks bounce off, back toward the foe
+        pctx.fillRect(Math.round(bx+Math.cos(da)*dd), Math.round(cy+Math.sin(da)*dd-4), 2, 2); }
+      pctx.lineWidth=1;
+    } else if(a.kind==='drain'){
+      // motes of life torn from the pet and pulled into the foe
+      for(var m=0;m<6;m++){ var lp=(p-m*0.09)/0.72; if(lp<0||lp>1) continue;
+        var dx=petX+8+(eneX-petX-8)*lp, dy=cy-Math.sin(lp*3.14159)*12-2;
+        pctx.globalAlpha=(1-lp)*0.5+0.4;
+        pctx.fillRect(Math.round(dx-1),Math.round(dy),3,1); pctx.fillRect(Math.round(dx),Math.round(dy-1),1,3); }   // little crosses streaming over
+      if(p>0.55){ var ap=(p-0.55)/0.45; pctx.globalAlpha=1-ap; pctx.lineWidth=2;     // foe pulses as it feeds
+        pctx.beginPath(); pctx.arc(eneX, cy, 6+ap*12, 0, TAU); pctx.stroke(); pctx.lineWidth=1; }
+    } else if(a.kind==='shatter'){
+      // armour cracks and shards spit outward
+      if(p<0.3){ pctx.globalAlpha=1-p/0.3; pctx.lineWidth=2; pctx.beginPath(); pctx.arc(cx, cy, 4+p*16, 0, TAU); pctx.stroke(); pctx.lineWidth=1; }
+      for(var sh=0;sh<9;sh++){ var sa=sh/9*TAU+0.3, sd=6+p*30, sx=cx+Math.cos(sa)*sd, sy=cy+Math.sin(sa)*sd, sz=3-Math.round(p*2);
+        pctx.globalAlpha=1-p; pctx.fillRect(Math.round(sx-sz/2), Math.round(sy-sz/2), Math.max(1,sz), Math.max(1,sz)); }
+    } else if(a.kind==='rise'){
+      // the undying re-forms: a ring contracts inward as jagged energy claws upward
+      pctx.globalAlpha=(1-p)*0.9; pctx.lineWidth=2;
+      pctx.beginPath(); pctx.arc(cx, cy, 6+(1-p)*24, 0, TAU); pctx.stroke();           // ring pulls in
+      for(var w=0;w<4;w++){ var wx=cx+(w-1.5)*8, top=cy+8-p*30; pctx.globalAlpha=(1-p)*0.85;   // jagged wisps clawing up
+        pctx.beginPath(); pctx.moveTo(wx, cy+8); pctx.lineTo(wx+3, (cy+8+top)/2); pctx.lineTo(wx-2, top); pctx.stroke(); }
+      for(var e2=0;e2<5;e2++){ var ep=(p+e2*0.2)%1, ey=cy+6-ep*26, ex=cx+Math.sin(e2*3+p*5)*9;   // embers
+        pctx.globalAlpha=(1-ep)*0.8; pctx.fillRect(Math.round(ex),Math.round(ey),2,2); }
+      pctx.lineWidth=1;
+    }
+    pctx.globalAlpha=1; pctx.lineWidth=1; pctx.restore();
+  }
+
   function drawFight(){
     var f=S.fight; if(!f) return;
     var scroll = (f.travelX||0)*0.5 + (f.scroll||0)*0.015;
@@ -3167,6 +3258,7 @@
     drawFx(f, pX, eneX, gy);
     drawCastFx(f, pX, eneX, gy);
     drawProcFx(f, pX, eneX, gy);
+    drawAnim(f, pX, eneX, gy);
     if(f.shieldFlash>0){ pctx.save(); pctx.strokeStyle='#fff'; pctx.globalAlpha=Math.min(1,f.shieldFlash/8)*0.8; pctx.lineWidth=2;
       pctx.beginPath(); pctx.arc(pX, gy-20, 22, 0, 6.28); pctx.stroke(); pctx.globalAlpha=1; pctx.lineWidth=1; pctx.restore(); }
     pctx.restore();
