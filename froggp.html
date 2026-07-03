@@ -391,17 +391,35 @@ var KART=[
 "## ##### ##",
 "  #######  ",
 "  #     #  "];
-function drawCar(x,y,ang,outline){
+function drawCar(x,y,ang,p2){
   var q=Math.round(ang/(Math.PI/8))*(Math.PI/8);
   ctx.save(); ctx.translate(x,y); ctx.rotate(q+Math.PI/2);
   ctx.fillStyle='#fff';
   for(var r=0;r<KART.length;r++) for(var c=0;c<KART[r].length;c++){
     if(KART[r][c]!=='#') continue;
-    if(outline && r>0 && r<KART.length-1 && c>0 && c<KART[r].length-1 &&
+    /* P2 livery: checker-dithered body, solid wheels + outline */
+    if(p2 && (r+c)%2===1 && r>0 && r<KART.length-1 && c>0 && c<KART[r].length-1 &&
        KART[r-1][c]==='#' && KART[r+1][c]==='#' && KART[r][c-1]==='#' && KART[r][c+1]==='#') continue;
     ctx.fillRect(c-5.5, r-7.5, 1, 1);
   }
   ctx.restore();
+}
+/* floating name tag that follows a car (2P only) */
+function drawTag(x,y,label){
+  ctx.font='7px Pixel, monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var tx=clamp(x, 12, W-12), ty=clamp(y-14, 8, H-8);
+  ctx.fillStyle='#000'; ctx.fillRect(tx-8, ty-5, 16, 10);
+  ctx.fillStyle='#fff'; ctx.fillText(label, tx, ty);
+}
+/* short motion trail so each kart is easy to follow */
+function drawTrail(ev, idx, dashed){
+  var from=Math.max(0, idx-26);
+  if(idx-from<2) return;
+  ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1;
+  if(dashed) ctx.setLineDash([2,3]);
+  ctx.beginPath(); ctx.moveTo(ev[from].x, ev[from].y);
+  for(var i=from+1;i<=idx;i++) ctx.lineTo(ev[i].x, ev[i].y);
+  ctx.stroke(); ctx.setLineDash([]);
 }
 function drawStartDot(pulse){
   var p=startPt();
@@ -575,7 +593,11 @@ function precountFrame(){
   /* cars on the grid */
   for(var pI=0;pI<R.races.length;pI++){
     var ev=R.races[pI].ev;
-    if(ev.length) drawCar(ev[0].x, ev[0].y, ev[0].ang, pI===1);
+    if(!ev.length) continue;
+    /* stagger the grid slot slightly so both karts are visible */
+    var gx=ev[0].x + (ST.twoP ? (pI===0?-6:6) : 0);
+    drawCar(gx, ev[0].y, ev[0].ang, pI===1);
+    if(ST.twoP) drawTag(gx, ev[0].y, 'P'+(pI+1));
   }
   var left=R.goAt-NOW();
   if(left<=0){
@@ -600,10 +622,13 @@ function replayFrame(){
       R.idx[pI]++;
       if(ev[R.idx[pI]].hit){ sHit(); shake=reduced?0:5; flash=reduced?0:2; }
     }
-    var e2=ev[Math.min(R.idx[pI],ev.length-1)];
+    var ci=Math.min(R.idx[pI],ev.length-1);
+    var e2=ev[ci];
     var finished = t>=rc.time;
     if(!finished) allDone=false;
+    drawTrail(ev, ci, pI===1);
     drawCar(e2.x, e2.y, e2.ang, pI===1);
+    if(ST.twoP) drawTag(e2.x, e2.y, 'P'+(pI+1));
     var lbl=ST.twoP?('P'+(pI+1)+' '):'';
     huds.push(lbl+(finished?(rc.dnf?'DNF':fmt(rc.time)):fmt(Math.min(t,rc.time))));
   }
