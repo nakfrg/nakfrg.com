@@ -37,12 +37,25 @@
   .subtitle { text-align:center; font-size:8px; letter-spacing:2px; color:var(--dim); margin:6px 0 10px; text-transform:uppercase; }
 
   #screen { position:relative; width:100%; background:#000; overflow:hidden;
-    box-shadow: 0 0 0 3px #fff; margin:2px 0 12px; }
+    box-shadow: 0 0 0 3px #fff; margin:2px 0 12px; display:none; }
   #scene { display:block; width:100%; image-rendering:pixelated; image-rendering:crisp-edges;
     touch-action:none; }
-  #hud { position:absolute; top:6px; left:8px; right:8px; display:flex; justify-content:space-between;
-    font-family:'Pixel',monospace; font-size:9px; letter-spacing:1px; color:#fff; pointer-events:none; }
-  #screenCaption { position:absolute; bottom:5px; left:50%; transform:translateX(-50%);
+  /* race mode: the track owns the whole phone */
+  body.race #app { max-width:none; padding:0; }
+  body.race .title, body.race .subtitle, body.race #footer, body.race .secret { display:none; }
+  body.race #screen { display:block; position:fixed; inset:0; margin:0; box-shadow:none; z-index:10; }
+  body.race #scene { width:100vw; height:100vh; height:100dvh; }
+  #quitX { position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:15;
+    background:#000; color:var(--dim); border:0; cursor:pointer;
+    font-family:'Pixel',monospace; font-size:10px; padding:6px 8px; }
+  #quitX:hover { color:#fff; }
+  body.race .panel.overlay { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:min(320px, 86vw); background:#000; box-shadow:0 0 0 3px #fff, 0 0 0 7px #000;
+    padding:16px 14px 10px; z-index:20; margin:0; }
+  #logo { display:block; margin:4px auto 12px; image-rendering:pixelated; image-rendering:crisp-edges; }
+  #hud { position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between;
+    font-family:'Pixel',monospace; font-size:10px; letter-spacing:1px; color:#fff; pointer-events:none; }
+  #screenCaption { position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
     max-width:94%; text-align:center; white-space:nowrap;
     font-family:'Pixel',monospace; font-size:8px; letter-spacing:1px; color:var(--dim);
     background:#000; padding:2px 6px; pointer-events:none; }
@@ -98,12 +111,14 @@
   <div id="app">
     <div class="title pix">FROG GP</div>
     <div class="subtitle pix" id="subtitle">DRAW FAST. DRIVE FASTER.</div>
+    <canvas id="logo" width="150" height="34" style="width:225px;height:51px"></canvas>
 
     <div id="screen">
-      <canvas id="scene" width="240" height="240"></canvas>
+      <canvas id="scene" width="240" height="360"></canvas>
       <div id="hud"><span id="hudL"></span><span id="hudR"></span></div>
       <div id="bigMsg" class="pix"></div>
       <div id="screenCaption"></div>
+      <button id="quitX">&#10005; QUIT</button>
     </div>
 
     <!-- menu -->
@@ -145,21 +160,15 @@
       <div class="choices"><div class="choiceRow"><button class="pixbtn" id="btnRecBack">BACK</button></div></div>
     </div>
 
-    <!-- trace -->
-    <div id="tracePanel" class="panel hidden">
-      <div class="panelText" id="traceHint" style="text-align:center"></div>
-      <div class="choices"><div class="choiceRow"><button class="pixbtn" id="btnAbort">ABANDON RACE</button></div></div>
-    </div>
-
     <!-- handoff -->
-    <div id="handPanel" class="panel hidden">
+    <div id="handPanel" class="panel overlay hidden">
       <div class="panelTitle">PASS THE PHONE</div>
       <div class="panelText" style="text-align:center">Player 1&#8217;s line is locked in.<br><br><span class="dim">No peeking at the replay yet. Hand it over.</span></div>
       <div class="choices"><div class="choiceRow"><button class="pixbtn" id="btnP2go">PLAYER 2 READY</button></div></div>
     </div>
 
     <!-- results -->
-    <div id="resPanel" class="panel hidden">
+    <div id="resPanel" class="panel overlay hidden">
       <div id="resBig" class="pix"></div>
       <div id="resNew" class="pix"></div>
       <div id="resSub" class="pix"></div>
@@ -216,7 +225,7 @@ refreshMute();
 var cv=$('scene'), ctx=cv.getContext('2d');
 var W=cv.width, H=cv.height;
 
-/* ── tracks ── */
+/* ── tracks: rebuilt to fit whatever shape the screen is ── */
 function buildTrack(id,name,halfW,gen,n){
   var pts=[], i;
   for(i=0;i<n;i++) pts.push(gen(i/n));
@@ -228,23 +237,42 @@ function buildTrack(id,name,halfW,gen,n){
   }
   return {id:id, name:name, halfW:halfW, pts:pts, cum:cum, len:len, n:n};
 }
+var TRACKS=[];
 /* clockwise on screen: angle t -> (cos, sin) with canvas y-down */
-var TRACKS=[
-  buildTrack('oval','THE OVAL',21,function(t){
+function rebuildTracks(){
+  var cx=W/2, cy=H/2, m;
+  TRACKS.length=0;
+  m=21+11;
+  var orx=cx-m, ory=cy-m;
+  TRACKS.push(buildTrack('oval','THE OVAL',21,function(t){
     var a=t*Math.PI*2;
-    return {x:120+82*Math.cos(a), y:120+58*Math.sin(a)};
-  },72),
-  buildTrack('bean','HAIRPIN BEND',16,function(t){
+    return {x:cx+orx*Math.cos(a), y:cy+ory*Math.sin(a)};
+  },72));
+  m=16+11;
+  var brx=cx-m, bry=cy-m;
+  TRACKS.push(buildTrack('bean','HAIRPIN BEND',16,function(t){
     var a=t*Math.PI*2;
     var dent = 1 - 0.42*Math.exp(-Math.pow(((a+Math.PI)%(Math.PI*2))-Math.PI,2)/0.35);
-    return {x:120+86*Math.cos(a)*dent, y:120+62*Math.sin(a)*(0.8+0.2*Math.cos(a))};
-  },96),
-  buildTrack('gp','GRAND CIRCUIT',13,function(t){
+    return {x:cx+brx*Math.cos(a)*dent, y:cy+bry*Math.sin(a)*(0.8+0.2*Math.cos(a))};
+  },96));
+  m=13+11;
+  var grx=(cx-m)/1.26, gry=(cy-m)/1.26;
+  TRACKS.push(buildTrack('gp','GRAND CIRCUIT',13,function(t){
     var a=t*Math.PI*2;
     var r = 1 + 0.16*Math.sin(3*a) - 0.10*Math.cos(2*a);
-    return {x:120+72*Math.cos(a)*r, y:120+58*Math.sin(a)*r};
-  },120)
-];
+    return {x:cx+grx*Math.cos(a)*r, y:cy+gry*Math.sin(a)*r};
+  },120));
+}
+rebuildTracks();
+/* size the race surface to the actual phone: same aspect as the viewport */
+function fitCanvas(){
+  var vw=window.innerWidth||380, vh=window.innerHeight||640;
+  var h=clamp(Math.round(240*vh/Math.max(vw,1)), 280, 560);
+  if(h!==cv.height){ cv.height=h; H=h; rebuildTracks(); }
+}
+window.addEventListener('resize', function(){
+  if(document.body.classList.contains('race') && (ST.mode==='wait')) { fitCanvas(); }
+});
 
 /* nearest point on centerline: returns {s: 0..1 progress, d: distance, x,y, ang} */
 function project(tr, px, py){
@@ -282,8 +310,22 @@ function saveBest(o){ try{ localStorage.setItem('froggp_best', JSON.stringify(o)
 function fmt(ms){ return (ms/1000).toFixed(2)+'s'; }
 
 /* ── panels ── */
-var PANELS=['menuPanel','howPanel','recPanel','tracePanel','handPanel','resPanel'];
+var PANELS=['menuPanel','howPanel','recPanel','handPanel','resPanel'];
+function setRace(on){ document.body.classList.toggle('race', on); }
 function show(p){ PANELS.forEach(function(x){ $(x).classList.toggle('hidden', x!==p); }); }
+/* splash logo: two karts on a checkered straight */
+(function(){
+  var lc=$('logo'), lctx=lc.getContext('2d');
+  lctx.fillStyle='#fff';
+  for(var x=0;x<150;x+=4) for(var y=0;y<8;y+=4)
+    if(((x/4)+(y/4))%2<1){ lctx.fillRect(x,24+y,4,4); }
+  function mini(map,ox,oy){
+    for(var r=0;r<map.length;r++) for(var c=0;c<map[r].length;c++)
+      if(map[r][c]==='#') lctx.fillRect(ox+c*2, oy+r*2, 2, 2);
+  }
+  var K=["  # # #  "," ####### ","## ### ##"," ####### ","## ### ##"," ####### ","  ## ##  "];
+  mini(K, 30, 4); mini(K, 96, 8);
+})();
 function caption(t){ $('screenCaption').textContent=t||''; }
 function bigMsg(t,blink){ var b=$('bigMsg'); b.textContent=t||''; b.classList.toggle('blinkfast',!!blink); }
 function hud(l,r){ $('hudL').textContent=l||''; $('hudR').textContent=r||''; }
@@ -372,12 +414,11 @@ function evPos(e){
 var NOW = function(){ return performance.now(); };
 function beginWait(){
   ST.mode='wait'; ST.rec=null;
-  show('tracePanel');
-  var who = ST.twoP ? ('PLAYER '+(ST.player+1)) : 'DRIVER';
-  $('traceHint').innerHTML = '<span class="dim">'+TRACKS[ST.trackIdx].name+' &#183; '+ST.laps+' LAPS</span><br><br>'+who+': hold the dot on the start line.<br>On GO &#8212; trace every lap. Fast.';
-  hud(ST.twoP?('P'+(ST.player+1)):'', TRACKS[ST.trackIdx].name);
-  caption('HOLD THE DOT TO ARM THE LIGHTS');
-  bigMsg('');
+  show(null);
+  hud(ST.twoP?('P'+(ST.player+1)):'', TRACKS[ST.trackIdx].name+' \u00B7 '+ST.laps+' LAPS');
+  caption('HOLD THE DOT \u00B7 GO ON GREEN \u00B7 TRACE EVERY LAP');
+  if(ST.twoP){ bigMsg('PLAYER '+(ST.player+1)); setTimeout(function(){ if(ST.mode==='wait') bigMsg(''); }, 1100); }
+  else bigMsg('');
 }
 function armCountdown(){
   ST.mode='count';
@@ -505,8 +546,8 @@ function computeRace(trace, tr, laps){
 /* ── replay ── */
 var shake=0, flash=0;
 function startReplay(){
-  ST.mode='replay'; show('tracePanel');
-  $('traceHint').innerHTML='<span class="dim">RACE IN PROGRESS. THE FROGS ARE DRIVING YOUR LINES.</span>';
+  ST.mode='replay'; show(null);
+  caption('THE FROGS ARE DRIVING YOUR LINES');
   var tr=TRACKS[ST.trackIdx];
   var races=[computeRace(ST.traces[0],tr,ST.laps)];
   if(ST.twoP) races.push(computeRace(ST.traces[1],tr,ST.laps));
@@ -585,8 +626,7 @@ function showResults(){
 function frame(){
   var tr=TRACKS[ST.trackIdx];
   if(ST.mode==='menu'||ST.mode==='how'||ST.mode==='rec'){
-    drawTrack(tr); drawStartDot(false);
-    caption(tr.name+' \u00B7 '+ST.laps+' LAPS');
+    /* splash: canvas hidden, nothing to draw */
   }
   else if(ST.mode==='wait'){
     drawTrack(tr); drawStartDot(true);
@@ -600,8 +640,8 @@ function frame(){
       var lit = 3-Math.ceil(left/300);
       for(var i=0;i<3;i++){
         ctx.strokeStyle='#fff'; ctx.lineWidth=2;
-        ctx.strokeRect(102+i*14, 106, 10, 10);
-        if(i<=lit){ ctx.fillStyle='#fff'; ctx.fillRect(104+i*14, 108, 6, 6); }
+        ctx.strokeRect(W/2-18+i*14, H/2-14, 10, 10);
+        if(i<=lit){ ctx.fillStyle='#fff'; ctx.fillRect(W/2-16+i*14, H/2-12, 6, 6); }
       }
     }
   }
@@ -651,9 +691,11 @@ function renderMenuBtns(){
 }
 renderMenuBtns();
 
-function toMenu(){ ST.mode='menu'; ST.traces=[null,null]; ST.player=0; ST.race=null; show('menuPanel'); hud('',''); bigMsg(''); }
+function toMenu(){ ST.mode='menu'; ST.traces=[null,null]; ST.player=0; ST.race=null;
+  setRace(false); show('menuPanel'); hud('',''); bigMsg(''); caption(''); }
 function startRace(twoP){
   ST.twoP=twoP; ST.player=0; ST.traces=[null,null];
+  setRace(true); fitCanvas();
   beginWait();
 }
 $('btn1p').onclick=function(){ sTick(); startRace(false); };
@@ -662,7 +704,7 @@ $('btnHow').onclick=function(){ sTick(); ST.mode='how'; show('howPanel'); };
 $('btnHowBack').onclick=function(){ sTick(); toMenu(); };
 $('btnRec').onclick=function(){ sTick(); renderRecords(); ST.mode='rec'; show('recPanel'); };
 $('btnRecBack').onclick=function(){ sTick(); toMenu(); };
-$('btnAbort').onclick=function(){ sTick(); toMenu(); };
+$('quitX').onclick=function(){ sTick(); toMenu(); };
 $('btnP2go').onclick=function(){ sTick(); beginWait(); };
 $('btnAgain').onclick=function(){ sTick(); startRace(ST.twoP); };
 $('btnMenu').onclick=function(){ sTick(); toMenu(); };
@@ -683,7 +725,8 @@ toMenu();
 /* test hooks */
 window.FGP_TEST={ TRACKS:TRACKS, project:project, computeRace:computeRace, ST:ST,
   recordPoint:recordPoint, armCountdown:armCountdown, goGo:goGo, beginWait:beginWait,
-  startRace:startRace, showResults:showResults, startReplay:startReplay, setNow:function(f){ NOW=f; } };
+  startRace:startRace, showResults:showResults, startReplay:startReplay, setNow:function(f){ NOW=f; },
+  rebuildTracks:rebuildTracks, fitCanvas:fitCanvas, dims:function(){ return {W:W,H:H}; } };
 })();
 </script>
 </body>
