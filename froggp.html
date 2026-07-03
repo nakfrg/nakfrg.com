@@ -238,36 +238,50 @@ function buildTrack(id,name,halfW,gen,n){
   return {id:id, name:name, halfW:halfW, pts:pts, cum:cum, len:len, n:n};
 }
 var TRACKS=[];
-/* clockwise on screen: angle t -> (cos, sin) with canvas y-down */
+/* real-circuit centerlines: hand-laid control points, Chaikin-smoothed.
+   normalized 0..1 coords, clockwise, index 0 = start/finish on a straight */
+var COURSES=[
+ {id:'spd', name:'THE SPEEDWAY', halfW:20, ctrl:[
+   [0.96,0.50],[0.88,0.80],[0.72,0.93],[0.30,0.93],[0.12,0.82],[0.07,0.62],
+   [0.07,0.38],[0.12,0.18],[0.30,0.07],[0.72,0.07],[0.88,0.20]]},
+ {id:'gpx', name:'GRAND PRIX', halfW:14, ctrl:[
+   [0.92,0.18],[0.92,0.58],[0.84,0.78],[0.66,0.90],[0.50,0.82],[0.48,0.66],
+   [0.32,0.74],[0.16,0.86],[0.06,0.72],[0.16,0.56],[0.05,0.42],[0.16,0.28],
+   [0.08,0.12],[0.36,0.05],[0.64,0.06],[0.86,0.10]]},
+ {id:'mtf', name:'MONTE FROGGO', halfW:11, ctrl:[
+   [0.90,0.14],[0.90,0.34],[0.78,0.42],[0.90,0.52],[0.88,0.68],[0.76,0.82],
+   [0.62,0.74],[0.60,0.60],[0.44,0.56],[0.36,0.66],[0.38,0.80],[0.24,0.90],
+   [0.10,0.80],[0.08,0.64],[0.20,0.50],[0.08,0.36],[0.10,0.16],[0.30,0.06],
+   [0.56,0.05],[0.72,0.12],[0.80,0.05]]}
+];
+function chaikin(pts, iters){
+  for(var k=0;k<iters;k++){
+    var out=[];
+    for(var i=0;i<pts.length;i++){
+      var a=pts[i], b=pts[(i+1)%pts.length];
+      out.push({x:a.x*0.75+b.x*0.25, y:a.y*0.75+b.y*0.25});
+      out.push({x:a.x*0.25+b.x*0.75, y:a.y*0.25+b.y*0.75});
+    }
+    pts=out;
+  }
+  return pts;
+}
 function rebuildTracks(){
-  var cx=W/2, cy=H/2, m;
   TRACKS.length=0;
-  m=21+11;
-  var orx=cx-m, ory=cy-m;
-  TRACKS.push(buildTrack('oval','THE OVAL',21,function(t){
-    var a=t*Math.PI*2;
-    return {x:cx+orx*Math.cos(a), y:cy+ory*Math.sin(a)};
-  },72));
-  m=16+11;
-  var brx=cx-m, bry=cy-m;
-  TRACKS.push(buildTrack('bean','HAIRPIN BEND',16,function(t){
-    var a=t*Math.PI*2;
-    var dent = 1 - 0.42*Math.exp(-Math.pow(((a+Math.PI)%(Math.PI*2))-Math.PI,2)/0.35);
-    return {x:cx+brx*Math.cos(a)*dent, y:cy+bry*Math.sin(a)*(0.8+0.2*Math.cos(a))};
-  },96));
-  m=13+11;
-  var grx=(cx-m)/1.26, gry=(cy-m)/1.26;
-  TRACKS.push(buildTrack('gp','GRAND CIRCUIT',13,function(t){
-    var a=t*Math.PI*2;
-    var r = 1 + 0.16*Math.sin(3*a) - 0.10*Math.cos(2*a);
-    return {x:cx+grx*Math.cos(a)*r, y:cy+gry*Math.sin(a)*r};
-  },120));
+  COURSES.forEach(function(c){
+    var m=c.halfW+9, sx=W-2*m, sy=H-2*m;
+    var raw=c.ctrl.map(function(p){ return {x:m+p[0]*sx, y:m+p[1]*sy}; });
+    var sm=chaikin(raw,3);
+    TRACKS.push(buildTrack(c.id, c.name, c.halfW, function(t){
+      return sm[Math.floor(t*sm.length)%sm.length];
+    }, sm.length));
+  });
 }
 rebuildTracks();
 /* size the race surface to the actual phone: same aspect as the viewport */
 function fitCanvas(){
   var vw=window.innerWidth||380, vh=window.innerHeight||640;
-  var h=clamp(Math.round(240*vh/Math.max(vw,1)), 280, 560);
+  var h=clamp(Math.round(240*vh/Math.max(vw,1)), 320, 560);
   if(h!==cv.height){ cv.height=h; H=h; rebuildTracks(); }
 }
 window.addEventListener('resize', function(){
