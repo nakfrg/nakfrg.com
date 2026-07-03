@@ -300,7 +300,7 @@ var ST={
   rec:null,               // live recording
   race:null               // replay data
 };
-var CAR_R=4;              // car body radius for wall clamping
+var CAR_R=5;              // car body radius for wall clamping
 var SLOW=2;               // extra time multiplier off-track (total 3x)
 
 /* ── records ── */
@@ -374,24 +374,32 @@ function drawInk(pts, alpha, upto){
   for(var i=1;i<end;i++) ctx.lineTo(pts[i].x, pts[i].y);
   ctx.stroke();
 }
-/* frog kart: pixel map, rotation quantized to 16 dirs to keep it crisp */
+/* frog kart: open-wheeler, nose up. rotation quantized to 16 dirs to keep it crisp */
 var KART=[
-"  # # #  ",
-" ####### ",
-"## ### ##",
-" ####### ",
-"## ### ##",
-" ####### ",
-"  ## ##  "];
+"    ###    ",
+"    # #    ",
+"## ##### ##",
+"## # # # ##",
+"## ##### ##",
+"    ###    ",
+"   ## ##   ",
+"   # # #   ",
+"   ## ##   ",
+"   #####   ",
+"## ##### ##",
+"## # # # ##",
+"## ##### ##",
+"  #######  ",
+"  #     #  "];
 function drawCar(x,y,ang,outline){
   var q=Math.round(ang/(Math.PI/8))*(Math.PI/8);
   ctx.save(); ctx.translate(x,y); ctx.rotate(q+Math.PI/2);
+  ctx.fillStyle='#fff';
   for(var r=0;r<KART.length;r++) for(var c=0;c<KART[r].length;c++){
     if(KART[r][c]!=='#') continue;
     if(outline && r>0 && r<KART.length-1 && c>0 && c<KART[r].length-1 &&
        KART[r-1][c]==='#' && KART[r+1][c]==='#' && KART[r][c-1]==='#' && KART[r][c+1]==='#') continue;
-    ctx.fillStyle='#fff';
-    ctx.fillRect(c-4.5, r-3.5, 1, 1);
+    ctx.fillRect(c-5.5, r-7.5, 1, 1);
   }
   ctx.restore();
 }
@@ -545,21 +553,45 @@ function computeRace(trace, tr, laps){
 
 /* ── replay ── */
 var shake=0, flash=0;
+/* the car drives at watching speed: playback duration scales off how fast you drew */
+function calcSlow(raceMs){
+  var play=clamp(raceMs*2.4, 10000, 26000);
+  return play/Math.max(raceMs,1);
+}
 function startReplay(){
-  ST.mode='replay'; show(null);
-  caption('THE FROGS ARE DRIVING YOUR LINES');
   var tr=TRACKS[ST.trackIdx];
   var races=[computeRace(ST.traces[0],tr,ST.laps)];
   if(ST.twoP) races.push(computeRace(ST.traces[1],tr,ST.laps));
-  ST.race={races:races, t0:NOW(), idx:[0,0], doneAt:null};
-  caption(''); bigMsg('');
+  var maxT=0;
+  races.forEach(function(rc){ maxT=Math.max(maxT, rc.time||1); });
+  var slow=calcSlow(maxT||8000);
+  ST.race={races:races, slow:slow, goAt:NOW()+2900, t0:0, idx:[0,0], doneAt:null, lastN:9};
+  ST.mode='precount'; show(null);
+  hud('',''); caption(''); bigMsg('');
+}
+function precountFrame(){
+  var R=ST.race, tr=TRACKS[ST.trackIdx];
+  drawTrack(tr);
+  /* cars on the grid */
+  for(var pI=0;pI<R.races.length;pI++){
+    var ev=R.races[pI].ev;
+    if(ev.length) drawCar(ev[0].x, ev[0].y, ev[0].ang, pI===1);
+  }
+  var left=R.goAt-NOW();
+  if(left<=0){
+    bigMsg('GO!'); sGo();
+    ST.mode='replay'; R.t0=NOW();
+    setTimeout(function(){ if(ST.mode==='replay') bigMsg(''); }, 420);
+    return;
+  }
+  var n=Math.ceil(left/900);
+  if(n!==R.lastN){ R.lastN=n; sTick(); }
+  bigMsg(''+n);
 }
 function replayFrame(){
   var R=ST.race, tr=TRACKS[ST.trackIdx];
-  var t=NOW()-R.t0;
+  var t=(NOW()-R.t0)/R.slow;       /* race clock runs slower than the wall clock */
   drawTrack(tr);
-  drawInk(ST.traces[0].pts, 0.15);
-  if(ST.twoP) drawInk(ST.traces[1].pts, 0.10);
   var allDone=true, huds=[];
   for(var pI=0;pI<R.races.length;pI++){
     var rc=R.races[pI], ev=rc.ev;
@@ -660,6 +692,9 @@ function frame(){
     drawTrack(tr);
     bigMsg('');
   }
+  else if(ST.mode==='precount'){
+    precountFrame();
+  }
   else if(ST.mode==='replay'){
     replayFrame();
   }
@@ -726,7 +761,7 @@ toMenu();
 window.FGP_TEST={ TRACKS:TRACKS, project:project, computeRace:computeRace, ST:ST,
   recordPoint:recordPoint, armCountdown:armCountdown, goGo:goGo, beginWait:beginWait,
   startRace:startRace, showResults:showResults, startReplay:startReplay, setNow:function(f){ NOW=f; },
-  rebuildTracks:rebuildTracks, fitCanvas:fitCanvas, dims:function(){ return {W:W,H:H}; } };
+  rebuildTracks:rebuildTracks, fitCanvas:fitCanvas, calcSlow:calcSlow, dims:function(){ return {W:W,H:H}; } };
 })();
 </script>
 </body>
