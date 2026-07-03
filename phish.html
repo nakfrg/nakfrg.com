@@ -250,6 +250,7 @@
       <a class="linkbtn" href="index.html">arcade</a>
       <a class="linkbtn" href="tamafroggi.html">tamafroggi</a>
       <a class="linkbtn" href="breaker.html">breaker</a>
+      <a class="linkbtn" href="froggp.html">frog gp</a>
       <a class="linkbtn" href="https://capycalc.nakfrg.com/">capycalc</a>
     </div>
   </div>
@@ -383,7 +384,7 @@ var ROLES=[
   {id:'intern', name:'THE INTERN', desc:'No access, no fear, nothing to lose. Damage reduced. Nobody listens to you.', energy:100,sec:70,rep:40, mod:{dmg:0.75}},
   {id:'manager', name:'MIDDLE MANAGER', desc:'Drowning in email. Balanced stats, maximum meetings.', energy:85,sec:60,rep:60, mod:{}},
   {id:'itadmin', name:'IT ADMIN', desc:'You know things. Threats get hints. But admin access means bigger explosions.', energy:80,sec:75,rep:55, mod:{hints:true,dmg:1.3}},
-  {id:'ceo', name:'THE CEO', desc:'Whale-sized target. Huge reputation, terrible passwords. Hard mode.', energy:75,sec:40,rep:90, mod:{dmg:1.2,whale:true}}
+  {id:'ceo', name:'THE CEO', desc:'Whale-sized target. Everyone is hunting you, personally. Big hits, small wins. Hard mode.', energy:75,sec:40,rep:90, mod:{dmg:1.35,whale:true}}
 ];
 
 function newGame(name, role){
@@ -397,16 +398,17 @@ function applyDelta(d){
   if(!d) return;
   var mod = G.role.mod.dmg || 1;
   if(d.energy) G.energy = clamp(G.energy + d.energy);
-  if(d.sec)    G.sec    = clamp(G.sec + (d.sec<0 ? Math.round(d.sec*mod) : d.sec));
+  if(d.sec)    G.sec    = clamp(G.sec + (d.sec<0 ? Math.round(d.sec*mod) : secGain(d.sec)));
   if(d.rep)    G.rep    = clamp(G.rep + d.rep);
   updateStats();
 }
+function secGain(v){ return G.role.mod.whale ? Math.max(1, Math.round(v*0.6)) : v; }
 function deltaText(d){
   if(!d) return '';
   var out=[];
   var mod = G.role.mod.dmg || 1;
   if(d.energy) out.push('ENERGY '+(d.energy>0?'+':'')+d.energy);
-  if(d.sec){ var s=d.sec<0?Math.round(d.sec*mod):d.sec; out.push('SECURITY '+(s>0?'+':'')+s); }
+  if(d.sec){ var s=d.sec<0?Math.round(d.sec*mod):secGain(d.sec); out.push('SECURITY '+(s>0?'+':'')+s); }
   if(d.rep) out.push('REP '+(d.rep>0?'+':'')+d.rep);
   return out.length ? '<br><span class="dim">['+out.join(' / ')+']</span>' : '';
 }
@@ -484,7 +486,7 @@ var EVENTS=[
     msg:'You leave it in the car park. An intern picks it up an hour later. That is now the intern\u2019s origin story, not yours.',
     tip:'Not your problem is a valid security strategy \u2014 but handing it to IT protects the next person.'};}}]},
 
-{id:'aicall', title:'INCOMING CALL', icon:'phone', text:function(){
+{id:'aicall', title:'INCOMING CALL', icon:'phone', roles:['intern','manager','itadmin'], text:function(){
   return 'Your phone rings. It\u2019s the CEO\u2019s voice \u2014 exactly the CEO\u2019s voice.<br><br>"'+G.name+'! Thank god. I\u2019m at the airport, my card\u2019s blocked, huge client emergency. I need you to buy $800 in gift cards and text me the codes. You\u2019re the only one I trust."'+hint('Voice cloning needs about 3 seconds of audio. Your CEO did a podcast.');},
  choices:[
   {label:'BUY THE GIFT CARDS', go:function(){
@@ -937,7 +939,7 @@ var EVENTS=[
     msg:'The open-source alternative has a weirder interface and a mascot that is somehow a wrench. But it\u2019s legal, clean, and exports the file. The deadline is met with 40 minutes to spare.',
     tip:'Legitimate free software exists for almost everything. Get it from the official site \u2014 crack sites also fake THOSE downloads.'};}}]},
 
-{id:'charity', title:'FROM THE CEO\u2019S HEART', icon:'mail', text:function(){
+{id:'charity', title:'FROM THE CEO\u2019S HEART', icon:'mail', roles:['intern','manager','itadmin'], text:function(){
   return 'Company-wide email, hours after a disaster hits the news: <span class="dim">"I\u2019m personally organizing relief donations. Given banking delays, I\u2019m collecting via crypto for speed. Every coin counts. \u2014 [CEO name], sent from my iPhone"</span>'+hint('The CEO\u2019s actual emails are written by comms and have never contained warmth or cryptocurrency.');},
  choices:[
   {label:'DONATE CRYPTO. FOR THE CAUSE.', go:function(){ return {oops:1, d:{sec:-14, rep:-5},
@@ -951,11 +953,11 @@ var EVENTS=[
     tip:'Right instinct, loud method. Report suspicious mail to IT or comms directly \u2014 they can warn everyone once, without the avalanche.'};}}]},
 
 {id:'sharepw', title:'FAVOR REQUEST', icon:'note', text:function(){
-  return 'Your boss, from a beach, via text: <span class="dim">"Hey! Sandra needs to pull a report from my dashboard but her access is broken. Just give her YOUR password, easiest fix, I\u2019ll authorize it. Don\u2019t make it a whole thing \uD83D\uDE05"</span>'+hint('It is, unfortunately, a whole thing. Passwords are single-occupancy.');},
+  return BOSSC()+', from a beach, via text: <span class="dim">"Hey! Sandra needs to pull a report from my dashboard but her access is broken. Just give her YOUR password, easiest fix, I\u2019ll authorize it. Don\u2019t make it a whole thing \uD83D\uDE05"</span>'+hint('It is, unfortunately, a whole thing. Passwords are single-occupancy.');},
  choices:[
-  {label:'SHARE IT. BOSS AUTHORIZED IT.', go:function(){ return {oops:1, d:{sec:-22},
+  {label:'SHARE IT. IT WAS AUTHORIZED.', go:function(){ return {oops:1, d:{sec:-22},
     msg:'Sandra gets the report. Sandra also \u2014 weeks later, after Sandra leaves \u2014 still technically has your password, written in her notes app under "misc." Everything done with your account, by anyone, forever, has your name on it.',
-    tip:'A boss can authorize access; nobody can authorize sharing YOUR password \u2014 it makes every future action untraceable and yours. "Authorized" sharing is how audits become mysteries.'};}},
+    tip:'Someone senior can authorize access; nobody can authorize sharing YOUR password \u2014 it makes every future action untraceable and yours. "Authorized" sharing is how audits become mysteries.'};}},
   {label:'"NO \u2014 BUT I\u2019LL PULL THE REPORT"', go:function(){ return {smart:1, d:{sec:12, rep:4},
     msg:'You run the report yourself and send it over in six minutes. Sandra\u2019s unblocked, the boss is happy, and your password remains a population of one.',
     tip:'There\u2019s almost always a way to help that isn\u2019t credential-sharing: do the task, request delegate access, or loop in IT. Helpful and secure aren\u2019t opposites.'};}},
@@ -1075,15 +1077,86 @@ var EVENTS=[
     tip:'No security tip \u2014 though anonymous notes escalate exactly like reply-all threads, and end the same way: laminated.'};}},
   {label:'RETIRE THE FISH. EAT SANDWICHES.', go:function(){ return {d:{energy:4, rep:6},
     msg:'You bring sandwiches all week. The notes stop. Peace returns. Months from now, you will microwave one final fish on your last day, as a signature. But for now: statesmanship.',
-    tip:'No security tip. Sometimes de-escalation is just sandwiches.'};}}]}
+    tip:'No security tip. Sometimes de-escalation is just sandwiches.'};}}]},
+
+{id:'ceoclone', title:'YOUR ASSISTANT, PALE', icon:'phone', roles:['ceo'], text:function(){
+  return 'Your EA appears at the door, phone in hand. \u201CThree staff just got calls from\u2026 you. Your voice. Asking them to buy gift cards for a \u2018client emergency.\u2019 Accounts already bought $400 worth.\u201D<br><br>Somewhere out there, an AI is doing your accent.'+hint('You did four podcasts and a keynote this year. That\u2019s a training dataset.');},
+ choices:[
+  {label:'COMPANY-WIDE ALERT + CODE WORD', go:function(){ return {smart:1, d:{sec:14, rep:6},
+    msg:'All-staff email in nine minutes: \u201CI will never ask for gift cards. Voice requests for money get verified by calling my office \u2014 no exceptions, including me.\u201D You set a verification code word with finance. The clone\u2019s next three calls die on arrival.',
+    tip:'Executives are cloned BECAUSE staff obey their voice. The fix is procedural: a standing rule that no voice alone \u2014 even yours \u2014 moves money, plus an out-of-band verification step.'};}},
+  {label:'\u201CSTAFF SHOULD KNOW BETTER\u201D', go:function(){ return {oops:1, d:{sec:-18, rep:-8},
+    msg:'You decide it\u2019s a training issue, not a you issue. The clone keeps calling. By Thursday it has asked payroll for \u201Ca small favor\u201D and reception for the wifi password, and everyone who complies believes they\u2019re helping YOU.',
+    tip:'When an executive is being impersonated, silence transfers the risk to staff. The impersonated person warning everyone loudly is the single strongest defense.'};}},
+  {label:'RECORD A VIDEO REBUTTAL', go:function(){ return {oops:1, d:{rep:4, sec:-8},
+    msg:'You record a three-minute address about the fake calls \u2014 crisp audio, great lighting, published everywhere. The scammers download it immediately. Their clone of you just got a free upgrade, and it thanks you in your own voice.',
+    tip:'Every minute of clean public audio improves the clone. Warn in writing; save the speeches. And yes, this trade-off is real for anyone with a podcast.'};}}]},
+
+{id:'ceowhale', title:'A VERY PERSONAL EMAIL', icon:'mail', roles:['ceo'], text:function(){
+  return 'From \u201Cthe law firm handling the acquisition\u201D:<br><span class="dim">\u201CFollowing your round at Royghton on Saturday (how\u2019s the 14 handicap treating you?), and ahead of the school run \u2014 congrats on Milly\u2019s science prize \u2014 please review the attached BOARD MINUTES before tomorrow. Password-protected for your eyes only.\u201D</span>'+hint('Your golf club posts results. The school posted the prize. The \u201Cminutes\u201D need your login to open. This email cost them a week of research \u2014 you\u2019re worth it.');},
+ choices:[
+  {label:'OPEN THE MINUTES', go:function(){ G.flags.credsLeaked=true; return {oops:1, d:{sec:-30},
+    msg:'The \u201Cprotected document\u201D wants your executive login to decrypt. You enter it. The document is blank. Your credentials \u2014 the ones with access to everything \u2014 are not blank; they\u2019re in someone\u2019s hands, being tried on the board portal right now.',
+    tip:'\u201CWhaling\u201D targets executives with researched, personal detail scraped from public sources. The more an email knows about your weekend, the MORE suspicious it should be, not less.'};}},
+  {label:'FORWARD TO SECURITY, UNTOUCHED', go:function(){ return {smart:1, d:{sec:12},
+    msg:'Security traces it: registered domain, nine days old; the \u201Cpartner\u201D who signed it retired in 2019. They\u2019re impressed by the research and mildly horrified by your golf club\u2019s public results page, which they suggest you leave.',
+    tip:'Executives should assume tailored attacks are constant. Route anything unexpected through security \u2014 that\u2019s not weakness, that\u2019s what the department is for.'};}},
+  {label:'REPLY FROM PERSONAL GMAIL', go:function(){ return {oops:1, d:{sec:-12},
+    msg:'You reply \u201CWho is this?\u201D from your personal account \u2014 gifting them a live, unmonitored channel straight to you, outside every company filter. They will use it. Politely. Patiently. Repeatedly.',
+    tip:'Never move a suspicious conversation to personal channels \u2014 that\u2019s exactly where attackers want you: no security team watching, no logs, just you.'};}}]},
+
+{id:'internlogin', title:'ACCESS DENIED (STILL)', icon:'badge', roles:['intern'], text:function(){
+  return 'Week three of the internship. Your system access request is \u201Cprocessing.\u201D You cannot open the one folder your entire project lives in. A kind senior dev slides over: \u201CUgh, just use my login. Everyone does it. Here \u2014\u201D and puts a sticky note on your desk.'+hint('Everyone does not do it. And the folder logs every action under the account that opened it \u2014 which would be theirs, done by you.');},
+ choices:[
+  {label:'USE IT ALL WEEK. FINALLY, PRODUCTIVITY.', go:function(){ return {oops:1, d:{sec:-20},
+    msg:'You fly through the project as \u201Cdave.chen\u201D. Then something breaks in a folder you visited, the audit points at Dave, Dave points at you, and the phrase \u201Cthe intern had my password\u201D gets said in a meeting with HR present. Nobody involved enjoys the meeting.',
+    tip:'Shared credentials destroy accountability in both directions \u2014 you inherit their access, they inherit your mistakes. Interns are especially exposed: no history, no benefit of the doubt.'};}},
+  {label:'REFUSE + ESCALATE THE TICKET', go:function(){ return {smart:1, d:{sec:10, rep:5},
+    msg:'You decline the sticky note, then email IT with your manager CC\u2019d: \u201Cblocked three weeks, project at risk.\u201D Access appears in four hours. It turns out tickets move when someone senior is watching them.',
+    tip:'The fix for slow access is escalation, not borrowed passwords. CC the person whose project is blocked \u2014 bureaucracy responds to visibility.'};}},
+  {label:'USE IT ONCE. JUST FOR ONE FILE.', go:function(){ return {oops:1, d:{sec:-10},
+    msg:'Just once. Except the session stays logged in, and Tuesday-you uses it \u201Cjust once\u201D again, and by Friday it\u2019s simply how you work. There is no such thing as using someone\u2019s password once. There is only the first time.',
+    tip:'\u201CJust once\u201D is how every credential-sharing habit starts. The one-time exception and the policy violation are the same act.'};}}]},
+
+{id:'adminmfa', title:'THE VP OF SALES HAS OPINIONS', icon:'phone', roles:['itadmin'], text:function(){
+  return 'The VP of Sales calls you directly. \u201CYour MFA thing locked two reps out during a client demo. It\u2019s costing us DEALS. Turn it off for my team \u2014 I\u2019ll take full responsibility. I\u2019m telling you, not asking.\u201D'+hint('He cannot, in fact, take responsibility for a breach. That\u2019s not how breaches, or responsibility, work.');},
+ choices:[
+  {label:'DISABLE IT FOR SALES', go:function(){ return {oops:1, d:{sec:-28},
+    msg:'You carve out the exception. Sales is thrilled for eleven days \u2014 until a rep\u2019s reused password shows up in a breach dump and, with no MFA to stop it, someone walks straight into the CRM and exports the pipeline. The VP\u2019s \u201Cfull responsibility\u201D turns out to be a forwarded email with you on it.',
+    tip:'MFA exceptions are the holes attackers look for first \u2014 and admin-made exceptions carry the admin\u2019s name forever. Loud stakeholders don\u2019t change the threat model.'};}},
+  {label:'SHOW HIM THE NUMBERS', go:function(){ return {smart:1, d:{sec:12, rep:4},
+    msg:'You reply with three lines: blocked sign-in attempts on his own team this month (114), the cost of the last industry CRM breach, and an offer to fix the demo-day problem properly. He reads it, goes quiet, and forwards it to his team titled \u201Cwhy IT says no.\u201D',
+    tip:'\u201CNo\u201D lands better as data. Most MFA resistance is a workflow complaint wearing a policy demand \u2014 answer the workflow, keep the control.'};}},
+  {label:'FIX THE FRICTION INSTEAD', go:function(){ return {smart:1, d:{sec:10, energy:-6},
+    msg:'You set the sales team up with passkeys and remembered devices \u2014 sign-in drops from 40 seconds of fury to one thumbprint. The VP declares victory over IT. You let him. The control stays; only the annoyance died.',
+    tip:'The strongest security is the kind people stop noticing. Passkeys and device trust keep MFA\u2019s protection while deleting the friction that fuels demands to remove it.'};}}]},
+
+{id:'mgrclicker', title:'A QUIET CONFESSION', icon:'mail', roles:['manager'], text:function(){
+  return 'One of your reports appears at your desk, speaking at whisper volume. \u201CSo\u2026 that invoice email from this morning. I clicked it. And typed my password. It looked SO real. Am I fired? Please don\u2019t tell anyone.\u201D'+hint('The clock started when they typed the password. What you do in the next five minutes matters more than what they did.');},
+ choices:[
+  {label:'REPORT IT TOGETHER, RIGHT NOW', go:function(){ return {smart:1, d:{sec:15, rep:6},
+    msg:'You walk to IT together. Password rotated, sessions killed, sender blocked \u2014 total elapsed time: eleven minutes; total damage: zero. Your report tells the whole team how painless it was. Next month, someone else reports their own click within 90 seconds.',
+    tip:'A team\u2019s real security level is how fast people admit mistakes. Managers set that speed: make the first confession painless and you\u2019ve bought every future one.'};}},
+  {label:'ANNOUNCE IT AT STANDUP AS A \u201CLESSON\u201D', go:function(){ return {oops:1, d:{sec:-10, rep:-6},
+    msg:'You handle the technical side, then narrate the whole thing at standup with the clicker\u2019s name attached, \u201Cso we all learn.\u201D Everyone learns. Specifically, everyone learns to never, ever tell you about a click again. The next incident on your team will be reported by the attackers.',
+    tip:'Public shaming converts honest reporters into silent ones \u2014 and silent clicks become breaches. Fix loudly, teach generically, never name the confessor.'};}},
+  {label:'\u201CLET\u2019S KEEP THIS BETWEEN US\u201D', go:function(){ return {oops:1, d:{sec:-22},
+    msg:'You quietly have them change their password and agree it never happened. Except the attacker used the password within minutes \u2014 there\u2019s already a hidden inbox rule and a live session you didn\u2019t kill, working nights inside an account IT doesn\u2019t know to watch.',
+    tip:'A password change alone doesn\u2019t evict an attacker \u2014 active sessions, app tokens, and mail rules survive it. Compromise response needs IT, every time, however kind the cover-up feels.'};}}]}
 ];
 
 function hint(t){
   return (G && G.role.mod.hints) ? '<br><br><span class="dim">[IT INSTINCT] '+t+'</span>' : '';
 }
 
+/* who outranks you depends on who you are */
+function BOSS(){ return G.role.id==='ceo' ? 'the board chair' : 'the CEO'; }
+function BOSSC(){ return G.role.id==='ceo' ? 'The board chair' : 'The CEO'; }
+function BOSSU(){ return G.role.id==='ceo' ? 'BOARD CHAIR' : 'CEO'; }
+
 /* ── scripted events ── */
 var STANDUP={id:'standup', title:'MONDAY STANDUP', icon:'zoom', text:function(){
+  if(G.role.id==='ceo') return '9AM. The all-hands you called. Fourteen faces in a grid, waiting for you to speak. You called this meeting. You no longer remember why.';
   return '9AM. The weekly standup. Fourteen faces in a grid. Someone is eating cereal directly into their mic. It is your turn to give an update on the thing you have not started.';},
  choices:[
   {label:'"MAKING GOOD PROGRESS"', go:function(){ return {d:{rep:5, energy:-5},
@@ -1108,10 +1181,10 @@ var RANSOM={id:'ransom', title:'YOUR SCREEN TURNS RED', icon:'skull', text:funct
 
 var FINALE={id:'finale', title:'FRIDAY, 4:59 PM', icon:'clock', text:function(){
   var extra = G.flags.oooLeak ? ' They even know who covered for you Thursday morning. That detailed out-of-office is paying dividends \u2014 for them.' : '';
-  return 'One minute to freedom. Then, an email from "the CEO":<br><br><span class="dim">"Are you at your desk? I need an urgent wire before EOD. Highly confidential \u2014 tell NO ONE. I\u2019m boarding a flight, can\u2019t talk. I\u2019m counting on you, '+G.name+'."</span>'+extra+hint('Urgency, secrecy, authority, unreachability. That\u2019s the full royal flush of fraud.');},
+  return 'One minute to freedom. Then, an email from "'+BOSS()+'":<br><br><span class="dim">"Are you at your desk? I need an urgent wire before EOD. Highly confidential \u2014 tell NO ONE. I\u2019m boarding a flight, can\u2019t talk. I\u2019m counting on you, '+G.name+'."</span>'+extra+hint('Urgency, secrecy, authority, unreachability. That\u2019s the full royal flush of fraud.');},
  choices:[
   {label:'SEND THE WIRE. GO HOME A HERO.', go:function(){ return {death:{cause:'wired the money at 4:59 PM on a Friday', title:'SO CLOSE.',
-    msg:'You made it to the final minute of the final day, and then wired company money to "CEO_Dave_Real" because an email said hurry. Friday-afternoon fraud exists because tired people click fast. You were the tiredest, fastest person in the building.',
+    msg:'You made it to the final minute of the final day, and then wired company money to "'+BOSSU().replace(' ','_')+'_Dave_Real" because an email said hurry. Friday-afternoon fraud exists because tired people click fast. You were the tiredest, fastest person in the building.',
     tip:'Attackers deliberately strike Friday 4-5pm when guards are down and verification is hard. Urgent + secret + can\u2019t-call-me is ALWAYS fraud. No exceptions, especially at 4:59.'}};}},
   {label:'FORWARD TO IT. LOG OFF.', go:function(){ return {smart:1, d:{sec:10},
     msg:'Forwarded, flagged, done. You shut the laptop at exactly 5:00:00 PM with the serenity of someone who has survived the week.', endgame:true,
@@ -1119,8 +1192,8 @@ var FINALE={id:'finale', title:'FRIDAY, 4:59 PM', icon:'clock', text:function(){
   {label:'REPLY: "NEW PHONE, WHO DIS?"', go:function(){ return {smart:1, d:{rep:4},
     msg:'The "CEO" replies with mounting fury, blowing their cover entirely. You forward the whole thread to IT with the subject line "friday entertainment". IT replies with a trophy emoji.', endgame:true,
     tip:'Fraudsters lose composure when the script breaks. But verify-and-report beats banter \u2014 do the banter after forwarding.'};}},
-  {label:'CALL THE CEO\u2019S REAL NUMBER', go:function(){ return {smart:1, d:{sec:8, rep:4},
-    msg:'"A wire? I\u2019ve been on the golf course since noon," says the CEO, wind whipping the mic. Confirmed scam. Confirmed golf. You log off into the weekend, undefeated.', endgame:true,
+  {label:'CALL THE REAL NUMBER', go:function(){ return {smart:1, d:{sec:8, rep:4},
+    msg:'"A wire? I\u2019ve been on the golf course since noon," says '+BOSS()+', wind whipping the mic. Confirmed scam. Confirmed golf. You log off into the weekend, undefeated.', endgame:true,
     tip:'One thirty-second call on a known number defeats every impersonation ever attempted. The weekend is yours.'};}}]};
 
 var SLEEP_EV={id:'sleepev', title:'SYSTEM SHUTDOWN (YOURS)', icon:'clock', text:function(){
@@ -1179,9 +1252,10 @@ function nextSegment(){
     if(G.sec<20 && !G.flags.ransomDone && Math.random()<0.4){
       G.flags.ransomDone=true; runEvent(RANSOM); return; }
     // random event or peace
-    if(Math.random()<0.78){
+    if(Math.random()<(G.role.mod.whale?0.9:0.78)){
       var pool=EVENTS.filter(function(e){
         if(G.usedEvents[e.id]) return false;
+        if(e.roles && e.roles.indexOf(G.role.id)<0) return false;
         if(e.cond && !e.cond()) return false;
         return true;
       });

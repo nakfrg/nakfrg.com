@@ -167,6 +167,15 @@
             <span class="stat pix" style="display:block" data-stat="phish"></span>
           </span>
         </a>
+        <a class="row" href="froggp.html" data-icon="kart">
+          <span class="cur pix">&#9658;</span>
+          <canvas width="16" height="14"></canvas>
+          <span class="meta">
+            <span class="name pix">FROG GP</span>
+            <span class="tag pix" style="display:block">DRAW FAST. DRIVE FASTER.</span>
+            <span class="stat pix" style="display:block" data-stat="gp"></span>
+          </span>
+        </a>
         <a class="row" href="https://capycalc.nakfrg.com/" data-icon="capy">
           <span class="cur pix">&#9658;</span>
           <canvas width="16" height="14"></canvas>
@@ -253,6 +262,13 @@ var SPR = {
          "#  #  #  #",
          "# #    # #",
          "##########"],
+  kart: [" ##    ## ",
+         " ######## ",
+         "##  ##  ##",
+         "##########",
+         " # #### # ",
+         "##########",
+         "##  ##  ##"],
   capy: ["   ###### ",
          "  ####### ",
          " ######## ",
@@ -302,6 +318,11 @@ try{
   var hi=parseInt(localStorage.getItem('nakfrg_breaker_hi')||'0',10)||0;
   stat('breaker', hi>0 ? ('HI SCORE '+hi) : 'NO HI SCORE YET');
 }catch(e){ stat('breaker','NO HI SCORE YET'); }
+try{
+  var gpb=JSON.parse(localStorage.getItem('froggp_best')||'{}');
+  var nrec=Object.keys(gpb).length;
+  stat('gp', nrec ? ('TRACK RECORDS HELD: '+nrec+'/9') : 'NO LAP TIMES SET');
+}catch(e){ stat('gp','NO LAP TIMES SET'); }
 try{
   var hall=JSON.parse(localStorage.getItem('pt_hall')||'[]');
   stat('phish', hall.length ? ('HALL OF SHAME: '+hall.length+' '+(hall.length===1?'CASUALTY':'CASUALTIES')) : 'NO CASUALTIES YET');
@@ -353,7 +374,7 @@ document.addEventListener('keydown', function(e){
   else if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){ e.preventDefault(); setSel(sel-1); blip(523,0.04); }
   else if(e.key==='Enter'||e.key===' '){ e.preventDefault(); launch(); }
   else if(e.key==='Escape'){ toAttract(); }
-  else if(e.key>='1' && e.key<='4'){ setSel(parseInt(e.key,10)-1); launch(); }
+  else if(e.key>='1' && e.key<='5'){ setSel(parseInt(e.key,10)-1); launch(); }
 });
 
 /* input: menu rows */
