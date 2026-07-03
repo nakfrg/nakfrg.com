@@ -26,12 +26,7 @@
   body { display: flex; flex-direction: column; }
 
   /* Pixel box buttons at the top */
-  #nav {
-    flex: 0 0 auto;
-    display: flex; gap: 14px;
-    align-items: center; justify-content: center;
-    padding: 16px 0 14px;
-  }
+
   .pixbtn {
     font-family:'Pixel', monospace; font-size:10px; line-height:1; letter-spacing:0;
     color:#fff; text-decoration:none; background:#000; cursor:pointer; text-transform:uppercase;
@@ -44,6 +39,16 @@
   .pixbtn:hover, .pixbtn:focus-visible { background:#fff; color:#000; outline:none; }
   .pixbtn:active { transform: translateY(3px);
     box-shadow: 0 -4px 0 0 #fff,0 4px 0 0 #fff,-4px 0 0 0 #fff,4px 0 0 0 #fff,0 0 0 4px #fff; }
+
+  /* House header + footer, matching tamafroggi / phish trail */
+  #hdr { flex: 0 0 auto; text-align: center; padding: 14px 0 4px; }
+  .title { color:#fff; font-size:14px; letter-spacing:1px; }
+  .subtitle { color:rgba(255,255,255,0.4); font-size:8px; letter-spacing:2px; margin-top:6px; text-transform:uppercase; }
+  #footer { flex: 0 0 auto; display:flex; gap:6px; justify-content:center; align-items:center;
+            padding: 8px 0 12px; flex-wrap:wrap; }
+  .linkbtn { background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; padding:5px;
+             font:10px/1 ui-monospace, monospace; letter-spacing:1px; text-transform:uppercase; text-decoration:none; }
+  .linkbtn:hover { color:#fff; }
 
   #wrap {
     flex: 1 1 auto;
@@ -75,13 +80,20 @@
 </style>
 </head>
 <body>
-  <nav id="nav">
-    <a class="pixbtn" href="https://capycalc.nakfrg.com/">capycalc</a>
-    <a class="pixbtn" href="index.html">tamafroggi</a>
-  </nav>
+  <div id="hdr">
+    <div class="title pix">FROG BREAKER</div>
+    <div class="subtitle pix">BRICKS. BALL. VENGEANCE.</div>
+  </div>
 
   <div id="wrap">
     <canvas id="game"></canvas>
+  </div>
+
+  <div id="footer">
+    <a class="linkbtn" href="index.html">arcade</a>
+    <a class="linkbtn" href="tamafroggi.html">tamafroggi</a>
+    <a class="linkbtn" href="phish.html">phish trail</a>
+    <a class="linkbtn" href="https://capycalc.nakfrg.com/">capycalc</a>
   </div>
 
   <!-- Hidden link to CapyCalc -->
