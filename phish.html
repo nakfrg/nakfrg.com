@@ -751,7 +751,326 @@ var EVENTS=[
     tip:'Speed matters after a leak: rotate the password everywhere you reused it (this is why we don\u2019t reuse), and enable MFA.'};}},
   {label:'"$4? THAT\u2019S INSULTING." IGNORE.', go:function(){ return {oops:1, d:{sec:-20},
     msg:'Someone pays the $4. It works. Worst return on investment in company history, and it isn\u2019t the hacker\u2019s.',
-    tip:'Leaked credentials get tested automatically within hours. Ignoring a breach alert is choosing to be breached.'};}}]}
+    tip:'Leaked credentials get tested automatically within hours. Ignoring a breach alert is choosing to be breached.'};}}]},
+
+{id:'smish', title:'TEXT MESSAGE', icon:'phone', text:function(){
+  return 'Your phone: <span class="dim">"AusPost: Your parcel is held at our facility. Pay $1.20 redelivery fee: aus-post-track.delivery-notice.top"</span><br><br>You are, admittedly, expecting a parcel.'+hint('Real carriers don\u2019t charge $1.20 by text link. The fee is bait \u2014 they want the card, not the coin.');},
+ choices:[
+  {label:'PAY THE $1.20. IT\u2019S $1.20.', go:function(){ return {oops:1, d:{sec:-16},
+    msg:'You enter your full card details to save $1.20. The charge that matters arrives three days later, from an electronics store in a country you cannot point to on a map.',
+    tip:'"Smishing" fees are never about the fee \u2014 the form harvests your whole card. Track parcels only in the carrier\u2019s official app.'};}},
+  {label:'CHECK THE CARRIER\u2019S APP', go:function(){ return {smart:1, d:{sec:8},
+    msg:'The official app says your parcel is on the truck, no fee, arriving today. The text was fiction with a payment form attached.',
+    tip:'Golden rule for delivery texts: never the link, always the app. If a parcel is real, it exists there too.'};}},
+  {label:'DELETE + REPORT JUNK', go:function(){ return {smart:1, d:{sec:5},
+    msg:'Reported and deleted. Somewhere, a scam operation\u2019s spreadsheet marks your number "no fun."',
+    tip:'Reporting scam texts trains carrier filters and protects whoever they text next.'};}}]},
+
+{id:'recruiter', title:'DREAM JOB ALERT', icon:'mail', text:function(){
+  return 'A LinkedIn message: <span class="dim">"Hi '+G.name+'! I was BLOWN AWAY by your profile. Senior role, double your salary, fully remote. Just complete the attached skills assessment: SkillsTest_Setup.exe"</span>'+hint('Recruiters send calendar links, not .exe files. Also \u201Cblown away\u201D by a profile you haven\u2019t updated since 2023?');},
+ choices:[
+  {label:'RUN THE SKILLS TEST', go:function(){ G.flags.malware=true; return {oops:1, d:{sec:-28},
+    msg:'The "assessment" is a loading bar that goes to 100% and vanishes. There are no questions. There is no job. There IS now something new running on your laptop, and it passed its skills test with flying colors.',
+    tip:'Fake-recruiter malware targets employees precisely because flattery lowers defenses. No legitimate hiring process starts with running an executable.'};}},
+  {label:'LOOK UP THE RECRUITER FIRST', go:function(){ return {smart:1, d:{sec:10},
+    msg:'The "recruiter" joined LinkedIn nine days ago, has 14 connections, and their profile photo appears on four other profiles with four other names. Blocked.',
+    tip:'Verify recruiters: company domain email, real history, mutual connections. AI-generated faces and week-old profiles are the tell.'};}},
+  {label:'SEND CV TO THEIR GMAIL', go:function(){ return {oops:1, d:{sec:-8},
+    msg:'You email your CV \u2014 full name, phone, address, employment history \u2014 to a stranger\u2019s gmail. It\u2019s not malware, but someone now has a beautifully formatted dossier on you.',
+    tip:'A CV is a social-engineering starter kit: your history, skills, and contacts. Share it with verified companies, not enthusiastic strangers.'};}}]},
+
+{id:'bank', title:'CALL FROM "YOUR BANK"', icon:'phone', text:function(){
+  return '"This is the fraud team. Someone is draining your account RIGHT NOW. We need to move your money to a safe account immediately \u2014 I\u2019ll read you the details. Please stay calm, but hurry."'+hint('Banks never ask you to move money to a \u201Csafe account.\u201D The safe account is the scam.');},
+ choices:[
+  {label:'TRANSFER TO THE SAFE ACCOUNT', go:function(){ return {death:{cause:'moved their savings somewhere \u201Csafe\u201D', title:'SAVINGS: RELOCATED',
+    msg:'You transfer everything to the "safe account." The line goes dead. Your actual bank confirms there was never any fraud \u2014 until thirty seconds ago, when you authorized all of it. The money is gone, the scammer\u2019s account is empty, and the transfer was, legally, made by you.',
+    tip:'The "safe account" scam causes some of the largest individual losses in the world. Banks NEVER ask you to move money. Hang up and call the number on your card.'}};}},
+  {label:'HANG UP. CALL NUMBER ON CARD.', go:function(){ return {smart:1, d:{sec:14},
+    msg:'The real bank: "No fraud on your account, and that call wasn\u2019t us." You\u2019ve just dodged the single most expensive phone call available to consumers.',
+    tip:'Always end the call and dial the bank yourself on the number printed on your card. Scammers can spoof caller ID; they can\u2019t answer the real line.'};}},
+  {label:'"PROVE YOU\u2019RE THE BANK"', go:function(){ return {oops:1, d:{sec:-10},
+    msg:'They read out your name, the last four digits of your card, and your recent coffee purchase. Convincing! Also all available from a data breach and a stolen receipt. You stay on the line ten more dangerous minutes before doubt saves you.',
+    tip:'Scammers pass "prove it" tests using breached data. The only real verification is hanging up and calling back on an official number.'};}}]},
+
+{id:'aipaste', title:'DEADLINE VS ROBOT', icon:'laptop', text:function(){
+  return 'A 90-page client contract needs summarizing by 3pm. A shiny website offers: <span class="dim">"FREE AI SUMMARIZER \u2014 paste any document!"</span> The contract is marked CONFIDENTIAL in three places.'+hint('Free tools keep what you paste. That\u2019s the price. The contract\u2019s confidentiality clause is on page 2.');},
+ choices:[
+  {label:'PASTE ALL 90 PAGES', go:function(){ return {oops:1, d:{sec:-18, rep:-10},
+    msg:'Great summary! Also, a confidential merger contract now lives on an unknown company\u2019s servers, possibly as future training data. The summary took 8 seconds. Explaining this to legal takes considerably longer.',
+    tip:'Anything pasted into a free online tool leaves your control forever. Confidential data goes only into tools your company has approved \u2014 read the retention policy, or assume the worst.'};}},
+  {label:'USE THE APPROVED INTERNAL TOOL', go:function(){ return {smart:1, d:{sec:10, energy:-4},
+    msg:'The company\u2019s sanctioned AI tool does the same job inside the firewall. Slightly uglier interface, infinitely fewer lawyers involved.',
+    tip:'The approved tool exists so you get the speed without the leak. If there isn\u2019t one, that\u2019s a request to IT \u2014 not a green light for random websites.'};}},
+  {label:'READ IT YOURSELF. LIKE AN ANIMAL.', go:function(){ return {smart:1, d:{energy:-14, rep:5},
+    msg:'Ninety pages. Your eyes ache. But your summary includes the weird clause on page 61 that no robot flagged, and the client notices.',
+    tip:'No security tip \u2014 just respect. Sometimes the secure option and the thorough option are the same tired option.'};}}]},
+
+{id:'sharescreen', title:'CLIENT PRESENTATION', icon:'zoom', text:function(){
+  return 'Big client call. Time to share your screen. Your desktop currently contains: the deck, your email, a chat window, and a browser tab you would describe as "personal."'+hint('Share the window, not the screen. Notifications love an audience.');},
+ choices:[
+  {label:'SHARE ENTIRE SCREEN. YOLO.', go:function(){ return {oops:1, d:{rep:-15},
+    msg:'Slide 3 is going great when a chat notification slides in: <span class="dim">"is the client being weird again or is it just me lol"</span>. From you. About them. The silence has texture.',
+    tip:'Screen-sharing leaks are a real breach category \u2014 credentials, salaries, and worse have all aired live. Share the single window, and mute notifications before every call.'};}},
+  {label:'SHARE THE SINGLE WINDOW', go:function(){ return {smart:1, d:{rep:8, sec:5},
+    msg:'The client sees the deck and only the deck. Your chats, tabs, and secrets stay backstage where they belong.',
+    tip:'Window-sharing is the seatbelt of presentations: one click, prevents disasters. Do-not-disturb mode is the airbag.'};}}]},
+
+{id:'wrongdave', title:'SENT.', icon:'mail', text:function(){
+  return 'You email the salary review sheet to Dave in Finance. Autocomplete had other plans: it went to <span class="dim">Dave Hendricks (EXTERNAL \u2014 Hendricks Catering)</span>. The whoosh sound has never sounded so final.';},
+ choices:[
+  {label:'PRETEND IT NEVER HAPPENED', go:function(){ return {oops:1, d:{sec:-15, rep:-10},
+    msg:'Catering Dave opens it, is baffled, forwards it to a friend "for a laugh." Six weeks later it surfaces in a group chat with 200 members. The delay didn\u2019t shrink the breach \u2014 it grew it, with your fingerprints on the silence.',
+    tip:'Misdirected email is one of the most common data breaches there is. Reporting fast lets IT recall it, contact the recipient, and contain it. Hiding it only adds "cover-up" to the incident report.'};}},
+  {label:'RECALL + TELL IT IMMEDIATELY', go:function(){ return {smart:1, d:{sec:10, rep:-4},
+    msg:'Recall fired, IT notified, Catering Dave contacted \u2014 he deletes it unread and asks if the company needs sandwiches. Embarrassing for an hour, contained forever.',
+    tip:'Everyone misfires an email eventually. The difference between "incident" and "breach" is how fast you raise your hand.'};}},
+  {label:'EMAIL DAVE: "PLS IGNORE THX"', go:function(){ return {oops:1, d:{sec:-8},
+    msg:'You\u2019ve now sent Catering Dave a second email confirming the first one was juicy. He was going to skim it. Now he reads it like a novel.',
+    tip:'"Please ignore" is a highlighter, not an eraser. Recall via IT and notify properly \u2014 quietly asking nicely is not a control.'};}}]},
+
+{id:'typo', title:'MONDAY FINGERS', icon:'laptop', text:function(){
+  return 'You type the company portal address from memory and hit enter. The page loads\u2026 the logo is slightly stretched. The login box is slightly off-center. The URL says <span class="dim">portaI-corp.com</span>.'+hint('Capital I, not lowercase L. Typosquatters registered every fat-fingered version of the real address.');},
+ choices:[
+  {label:'LOG IN. LOOKS FINE-ISH.', go:function(){ G.flags.credsLeaked=true; return {oops:1, d:{sec:-25},
+    msg:'You log in. The page "errors" and bounces you to the real portal, where you log in again without thinking twice. That first login went somewhere else entirely, and it\u2019s already been tried on your email.',
+    tip:'Typosquatting sites clone real login pages on lookalike domains. A "failed" login that redirects you is the classic sign your password was just harvested.'};}},
+  {label:'STOP. CHECK THE URL.', go:function(){ return {smart:1, d:{sec:12},
+    msg:'Capital-i portaI. You close it, report the domain, and type the real address very carefully, like defusing a small boring bomb.',
+    tip:'Read URLs character by character when anything feels off \u2014 lookalike letters (I/l, 0/o, rn/m) are the entire business model.'};}},
+  {label:'BOOKMARK THE REAL ONE FOREVER', go:function(){ return {smart:1, d:{sec:10},
+    msg:'One bookmark. You will never type that URL again, and typos can no longer hurt you. Elegant. Permanent. Free.',
+    tip:'Bookmarks beat memory: for anything with a login, click the saved link instead of typing. Typosquatters can\u2019t intercept a bookmark.'};}}]},
+
+{id:'popup', title:'YOUR BROWSER SCREAMS', icon:'bug', text:function(){
+  return 'A popup fills the screen, flashing red, with a robot voice: <span class="dim">"WINDOWS DEFENDER ALERT!! 5 VIRUSES DETECTED!! DO NOT CLOSE THIS WINDOW!! CALL MICROSOFT SUPPORT: 1-800-XXX-XXXX"</span> It is very loud.'+hint('Microsoft doesn\u2019t know your computer exists, and their alerts don\u2019t come with hold music.');},
+ choices:[
+  {label:'CALL THE NUMBER. IT SAID TO.', go:function(){ return {oops:1, d:{sec:-20, energy:-12},
+    msg:'"Microsoft" answers instantly (suspicious) and spends 40 minutes trying to get you to install a remote tool. You eventually escape, but they now call YOU twice a day forever. The popup was an ad. You were the product.',
+    tip:'Scare popups with phone numbers are tech-support scams, start to finish. Real security warnings never tell you to call anyone.'};}},
+  {label:'CLOSE THE TAB. REPORT IT.', go:function(){ return {smart:1, d:{sec:10},
+    msg:'Ctrl+W. The "unstoppable virus warning" stops, because it was a webpage. You report the site that spawned it. The office is quiet again.',
+    tip:'If a "system alert" lives inside a browser tab, it\u2019s a webpage wearing a costume. Close the tab; if it fights you, close the browser from Task Manager.'};}},
+  {label:'PANIC. HOLD THE POWER BUTTON.', go:function(){ return {d:{energy:-8},
+    msg:'Hard reboot. Technically effective, spiritually a fire alarm response to a scented candle. Your unsaved spreadsheet sends its regards.',
+    tip:'It works, but closing the tab works too and keeps your work. The popup can\u2019t touch your files \u2014 unless you call the number.'};}}]},
+
+{id:'macro', title:'ATTACHMENT: INVOICE.DOC', icon:'mail', text:function(){
+  return 'An email from a supplier you actually use: <span class="dim">"Please find attached invoice."</span> The document opens to a blurred page and a yellow bar: <span class="dim">"ENABLE MACROS to view content."</span>'+hint('Documents don\u2019t need macros to be read. Malware needs macros to run.');},
+ choices:[
+  {label:'ENABLE MACROS', go:function(){ G.flags.malware=true; return {oops:1, d:{sec:-30},
+    msg:'The blur never clears, because there was never an invoice \u2014 the "document" was a delivery vehicle, and you just signed for the package. A script runs in the background with your permissions, all of them.',
+    tip:'"Enable macros to view" is the oldest malware delivery trick still working. Real invoices never require it. If the yellow bar asks, the answer is no and the email goes to IT.'};}},
+  {label:'CALL THE SUPPLIER TO CHECK', go:function(){ return {smart:1, d:{sec:12},
+    msg:'"We didn\u2019t send an invoice this week." Their email account was compromised \u2014 you\u2019ve just alerted them to a breach they didn\u2019t know they had. They are alarmingly grateful.',
+    tip:'Malware often arrives from REAL compromised accounts, which beats sender-checking. When an attachment behaves oddly, verify out-of-band \u2014 you might be the one who catches the breach.'};}},
+  {label:'PREVIEW IT. NEVER ENABLE.', go:function(){ return {smart:1, d:{sec:8},
+    msg:'Protected view shows you everything safe to show: a blurry nothing. You forward it to IT, macros still sealed, like handing over a snake in a jar.',
+    tip:'Protected/preview mode exists exactly for this \u2014 look, don\u2019t touch. The macro prompt is the trap; unsprung, it\u2019s just evidence.'};}}]},
+
+{id:'photog', title:'SMILE!', icon:'badge', text:function(){
+  return 'A cheerful stranger with a lanyard (backwards) is photographing the planning whiteboards. "Internal newsletter!" they beam. The whiteboard behind them has the Q3 roadmap and \u2014 oh no \u2014 someone\u2019s written a wifi password on it.'+hint('The newsletter is written by Grace. That is not Grace.');},
+ choices:[
+  {label:'POSE. YOU LOOK GREAT TODAY.', go:function(){ return {oops:1, d:{sec:-18},
+    msg:'You give them your best quarterly-report smile. They get you, the roadmap, and the wifi password in one frame. You never appear in any newsletter, because there was no newsletter.',
+    tip:'Physical recon is real: whiteboards, screens, and desk papers photograph beautifully. Challenge unknown photographers, and never leave credentials on a wall.'};}},
+  {label:'"WHO ARE YOU WITH?" + ESCORT', go:function(){ return {smart:1, d:{sec:14, rep:4},
+    msg:'"Uh, the\u2026 newsletter team?" The newsletter team is one person and she\u2019s on leave. You walk them to reception, where their story dissolves like sugar. The whiteboard gets erased within the hour.',
+    tip:'Anyone photographing work areas should expect to be asked who they are. Asking isn\u2019t rude \u2014 it\u2019s the badge system with legs.'};}},
+  {label:'ERASE THE PASSWORD, SAY NOTHING', go:function(){ return {d:{sec:5},
+    msg:'You casually erase the wifi password mid-photo, like a magician\u2019s assistant working against the magician. Half a fix \u2014 the roadmap still walks out the door.',
+    tip:'Good instinct, incomplete play. Remove the secret AND question the stranger \u2014 physical security fails in layers, and it holds in layers too.'};}}]},
+
+{id:'train', title:'THE 8:15 EXPRESS', icon:'laptop', text:function(){
+  return 'Off-site client meeting. You\u2019re on the train, laptop out, polishing the confidential merger deck. The man beside you has been reading your screen for three stops with the focus of a chess grandmaster.'+hint('That\u2019s not nosiness posture. That\u2019s note-taking posture.');},
+ choices:[
+  {label:'KEEP WORKING. IT\u2019S PUBLIC TRANSPORT, NOT PUBLIC DATA.', go:function(){ return {oops:1, d:{sec:-14},
+    msg:'You finish the deck. He gets off at the CBD, walks into the building across from your client\u2019s, and \u2014 you realize with slowly dawning horror \u2014 works for the competitor. He didn\u2019t even need to hack anything. You presented to him first.',
+    tip:'"Shoulder surfing" is espionage\u2019s free tier. Real deals have leaked from train screens and airport lounges. Sensitive work waits, or gets a privacy filter.'};}},
+  {label:'ANGLE AWAY + PRIVACY FILTER', go:function(){ return {smart:1, d:{sec:10, energy:-3},
+    msg:'Screen angled to the window, privacy filter on \u2014 from his seat your laptop now displays an elegant black rectangle. He loses interest and reads over someone else\u2019s shoulder instead.',
+    tip:'Privacy filters cost $40 and defeat every shoulder-surfer ever born. If your work is confidential, your screen in public is a billboard without one.'};}},
+  {label:'CLOSE IT. STARE AT SCENERY.', go:function(){ return {d:{energy:10},
+    msg:'You close the laptop and watch the world go by like a person in a film about slowing down. The deck gets finished at the office, unobserved. The scenery: pretty good.',
+    tip:'The most secure screen is a closed one. Also the most relaxing. Rare synergy.'};}}]},
+
+{id:'exstaff', title:'A FAMILIAR FACE', icon:'db', text:function(){
+  return 'Marcus \u2014 left the company last month, genuinely lovely guy \u2014 messages you: <span class="dim">"Hey! My access got cut before I saved MY OWN contact list. Could you export the client database and send it over? It\u2019s literally my contacts, IT is just slow lol"</span>'+hint('The clients are the company\u2019s, not his. This exact scenario is in the court records. Many times.');},
+ choices:[
+  {label:'EXPORT IT. IT\u2019S JUST MARCUS.', go:function(){ return {death:{cause:'exported the database for a nice guy', title:'ESCORTED OUT',
+    msg:'You export 4,000 client records and email them to Marcus\u2019s gmail. Marcus\u2019s new employer is a direct competitor, and the export logged your name at every step. Legal calls it "data exfiltration." Marcus calls it "so sorry about all this." Security calls it a box for your desk things.',
+    tip:'Departed staff asking for "their" data is a classic exfiltration play \u2014 client lists belong to the company, and the export trail leads to whoever pressed the button. That\u2019s you. Refer it to IT, always.'}};}},
+  {label:'"SORRY MATE \u2014 GO THROUGH IT"', go:function(){ return {smart:1, d:{sec:12},
+    msg:'"Worth a shot lol," Marcus replies, revealingly. You mention it to your manager, who mentions it to IT, who quietly note that Marcus\u2019s new job is at the competitor. The friendship survives. The database also survives.',
+    tip:'"No, but here\u2019s the proper channel" protects you, the data, AND the friend from doing something career-ending. If it\u2019s legitimate, official channels will approve it.'};}},
+  {label:'STALL HIM, ASK IT QUIETLY', go:function(){ return {smart:1, d:{sec:8},
+    msg:'IT\u2019s response arrives in nine seconds and contains the phrase "absolutely not" twice. They flag his account activity from his final week. It is\u2026 illuminating.',
+    tip:'When a request smells wrong, asking IT first costs nothing. Insider-driven data theft usually looks exactly this friendly.'};}}]},
+
+{id:'raffle', title:'CONGRATULATIONS!!', icon:'gift', text:function(){
+  return 'An email bursts with confetti GIFs: <span class="dim">"'+G.name.toUpperCase()+', you WON the Employee Appreciation Raffle! $500!! To process your prize, confirm your bank details and employee ID here."</span><br><br>You do not remember entering a raffle.'+hint('There is no raffle. There has never been a raffle. This company\u2019s idea of appreciation is a pizza with insufficient slices.');},
+ choices:[
+  {label:'CLAIM THE $500!!', go:function(){ return {oops:1, d:{sec:-18},
+    msg:'You submit your bank details and employee ID to claim a prize from a raffle that doesn\u2019t exist, run by a committee that doesn\u2019t exist, for winners who don\u2019t exist. One of those details was real, though: yours.',
+    tip:'Prize scams work because wanting $500 is universal. You can\u2019t win a raffle you never entered \u2014 and no prize ever requires your bank login.'};}},
+  {label:'ASK HR: "WHAT RAFFLE?"', go:function(){ return {smart:1, d:{sec:10},
+    msg:'HR: "What raffle?" Exactly. They send a company-wide warning, and three colleagues quietly close the claim form they were halfway through filling in.',
+    tip:'One question to a human kills most scams instantly. Internal-sounding prizes verify in one message to HR.'};}},
+  {label:'DEMAND THE PRIZE IN PERSON, IN CASH', go:function(){ return {smart:1, d:{rep:4},
+    msg:'"I\u2019ll collect it from the prize desk on level 2 at 3pm. Cash only." The scammer, faced with a fictional desk on a fictional errand, never replies. You have out-fictioned them.',
+    tip:'Scams need you to act inside THEIR process. Any demand to step outside it \u2014 in person, on a known phone number \u2014 collapses the whole script.'};}}]},
+
+{id:'crack', title:'LICENSE EXPIRED', icon:'laptop', text:function(){
+  return 'Deadline in 3 hours. Your design software: <span class="dim">"LICENSE EXPIRED."</span> A coworker slides over: "Just grab the cracked version, everyone in my old team used it. Totally clean, trust me. Here\u2019s the link."'+hint('The crack site\u2019s top review says \u201Cworked great, ignore antivirus warning.\u201D That\u2019s not a review, that\u2019s a confession.');},
+ choices:[
+  {label:'DOWNLOAD THE CRACK', go:function(){ G.flags.malware=true; return {oops:1, d:{sec:-26},
+    msg:'The crack works! The software runs! Also running: whatever was bundled inside the crack, which your antivirus flagged and you \u2014 per the instructions \u2014 told it to ignore. You manually disarmed your own smoke detector to let the fire in.',
+    tip:'Cracked software is the #1 malware delivery method that victims install voluntarily. "Disable your antivirus first" is the punchline and the whole joke.'};}},
+  {label:'ASK IT FOR A LICENSE', go:function(){ return {smart:1, d:{sec:8, energy:-4},
+    msg:'IT assigns you a license from the pool in 20 minutes. Twenty minutes! The deadline survives. The urgency was real; the emergency was optional.',
+    tip:'License problems are ticket problems, not security decisions. IT can usually fix "expired" faster than a crack can finish downloading.'};}},
+  {label:'USE THE FREE OPEN-SOURCE ONE', go:function(){ return {smart:1, d:{sec:6, energy:-8},
+    msg:'The open-source alternative has a weirder interface and a mascot that is somehow a wrench. But it\u2019s legal, clean, and exports the file. The deadline is met with 40 minutes to spare.',
+    tip:'Legitimate free software exists for almost everything. Get it from the official site \u2014 crack sites also fake THOSE downloads.'};}}]},
+
+{id:'charity', title:'FROM THE CEO\u2019S HEART', icon:'mail', text:function(){
+  return 'Company-wide email, hours after a disaster hits the news: <span class="dim">"I\u2019m personally organizing relief donations. Given banking delays, I\u2019m collecting via crypto for speed. Every coin counts. \u2014 [CEO name], sent from my iPhone"</span>'+hint('The CEO\u2019s actual emails are written by comms and have never contained warmth or cryptocurrency.');},
+ choices:[
+  {label:'DONATE CRYPTO. FOR THE CAUSE.', go:function(){ return {oops:1, d:{sec:-14, rep:-5},
+    msg:'Your donation arrives safely \u2014 in the wallet of someone who registered the lookalike domain forty minutes after the news broke. Disaster scammers are the fastest developers in the industry.',
+    tip:'Scammers weaponize breaking news within hours, and crypto\u2019s speed cuts both ways: irreversible for you too. Donate via established charities\u2019 official sites, never via email links.'};}},
+  {label:'CHECK WITH COMMS, DONATE PROPERLY', go:function(){ return {smart:1, d:{sec:10, rep:6},
+    msg:'Comms: "The CEO is not collecting crypto." A warning goes out; you donate through the charity\u2019s real website; the money reaches humans instead of wallets.',
+    tip:'Verify surprising internal emails through a second channel \u2014 then donate directly at the charity\u2019s own site so 100% of your intent arrives.'};}},
+  {label:'REPLY-ALL: "IS THIS REAL?"', go:function(){ return {d:{rep:-3, sec:4},
+    msg:'You reply-all to 800 people. The scam dies of exposure, but so does everyone\u2019s inbox \u2014 47 people also reply-all to say "please stop replying all." A messy, noisy, technically-effective victory.',
+    tip:'Right instinct, loud method. Report suspicious mail to IT or comms directly \u2014 they can warn everyone once, without the avalanche.'};}}]},
+
+{id:'sharepw', title:'FAVOR REQUEST', icon:'note', text:function(){
+  return 'Your boss, from a beach, via text: <span class="dim">"Hey! Sandra needs to pull a report from my dashboard but her access is broken. Just give her YOUR password, easiest fix, I\u2019ll authorize it. Don\u2019t make it a whole thing \uD83D\uDE05"</span>'+hint('It is, unfortunately, a whole thing. Passwords are single-occupancy.');},
+ choices:[
+  {label:'SHARE IT. BOSS AUTHORIZED IT.', go:function(){ return {oops:1, d:{sec:-22},
+    msg:'Sandra gets the report. Sandra also \u2014 weeks later, after Sandra leaves \u2014 still technically has your password, written in her notes app under "misc." Everything done with your account, by anyone, forever, has your name on it.',
+    tip:'A boss can authorize access; nobody can authorize sharing YOUR password \u2014 it makes every future action untraceable and yours. "Authorized" sharing is how audits become mysteries.'};}},
+  {label:'"NO \u2014 BUT I\u2019LL PULL THE REPORT"', go:function(){ return {smart:1, d:{sec:12, rep:4},
+    msg:'You run the report yourself and send it over in six minutes. Sandra\u2019s unblocked, the boss is happy, and your password remains a population of one.',
+    tip:'There\u2019s almost always a way to help that isn\u2019t credential-sharing: do the task, request delegate access, or loop in IT. Helpful and secure aren\u2019t opposites.'};}},
+  {label:'SHARE IT, CHANGE IT TONIGHT', go:function(){ return {oops:1, d:{sec:-10},
+    msg:'A compromise, in the sense that you compromised your account for one business day. Whatever happened under your name between 2pm and tonight is a mystery you\u2019ve pre-agreed to own.',
+    tip:'"Temporarily shared" is still shared \u2014 the risk isn\u2019t the duration, it\u2019s the attribution. Even one hour of shared credentials makes the logs lie.'};}}]},
+
+{id:'gitleak', title:'CASUAL BROWSING', icon:'db', text:function(){
+  return 'Poking around the dev team\u2019s public GitHub repo, you spot a file: <span class="dim">config_backup.js</span>. Inside, in plain text: <span class="dim">API_KEY = "sk_live_\u2026"</span>. That\u2019s the payment system. That\u2019s the LIVE payment system.'+hint('Bots scan public repos for keys like this within about 60 seconds of pushing. This one\u2019s been up for 3 days.');},
+ choices:[
+  {label:'POST ABOUT IT ONLINE. LOL.', go:function(){ return {oops:1, d:{sec:-20, rep:-12},
+    msg:'"lmao my company pushed live payment keys to a public repo" gets 40,000 views, several of which belong to people who immediately try the key. You\u2019ve turned a quiet leak into a public invitation with a countdown.',
+    tip:'Publicly disclosing a live vulnerability before it\u2019s fixed hands it to attackers gift-wrapped. Report first, joke never \u2014 or at least joke after rotation.'};}},
+  {label:'TELL THE DEV LEAD IMMEDIATELY', go:function(){ return {smart:1, d:{sec:15, rep:8},
+    msg:'The key is revoked in eleven minutes and the repo scrubbed. The dev lead buys you a coffee and speaks of you, briefly, with something approaching respect. The audit finds the key was tried by bots \u2014 four minutes after revocation.',
+    tip:'Exposed keys are race conditions: reporter vs. scanner bots. Fast, quiet, direct reporting wins the race. Secrets never belong in repos \u2014 that\u2019s what vaults are for.'};}},
+  {label:'NOT MY REPO, NOT MY PROBLEM', go:function(){ return {oops:1, d:{sec:-12},
+    msg:'You close the tab. Two weeks later, "unusual payment activity" locks the whole system for a day, and you sit in the incident review saying nothing, radiating a very specific silence.',
+    tip:'Security is see-something-say-something. You don\u2019t need to fix it or understand it \u2014 just route it to someone who can, today.'};}}]},
+
+{id:'simswap', title:'NO SERVICE', icon:'phone', cond:function(){ return G.flags.credsLeaked || G.flags.postedQuiz; }, text:function(){
+  return 'Your phone abruptly shows <span class="dim">NO SERVICE</span> in the middle of the office. Wifi still works \u2014 and over it, emails begin arriving: <span class="dim">"Your password reset code is\u2026" "Your password was changed\u2026"</span> You didn\u2019t request any of this.'+hint('Someone\u2019s hijacked your number \u2014 a SIM swap. Every SMS code now goes to THEIR phone. The clock is running.');},
+ choices:[
+  {label:'CALL THE CARRIER FROM A DESK PHONE. NOW.', go:function(){ return {smart:1, d:{sec:18, energy:-10},
+    msg:'The carrier confirms someone "verified" as you an hour ago \u2014 with details matching what leaked earlier this week \u2014 and moved your number to their SIM. They reverse it, lock the account with a port-out PIN, and you spend a frantic hour resetting passwords. Exhausting. Successful.',
+    tip:'SIM swaps hijack your number to intercept SMS codes \u2014 built from leaked personal data. Sudden NO SERVICE plus reset emails means minutes matter: call the carrier from any other phone, then rotate passwords. App-based MFA beats SMS for exactly this reason.'};}},
+  {label:'"WEIRD. PROBABLY A TOWER THING."', go:function(){ return {oops:1, d:{sec:-30},
+    msg:'You wait for the tower to fix itself. The tower is fine. By 4pm, "you" have reset your email, and your email has reset everything else, like dominoes made of your accounts. Recovery takes weeks and several extremely humbling phone calls.',
+    tip:'Legit outages don\u2019t come with password-reset notifications. NO SERVICE + reset emails = active account takeover in progress. React like it\u2019s a fire, because it is.'};}}]},
+
+{id:'shred', title:'BY THE RECYCLING', icon:'note', text:function(){
+  return 'Next to the recycling bins: a cardboard box, overflowing with paper, labeled in marker: <span class="dim">"HR \u2014 TO SHRED"</span>. It has been sitting there since at least yesterday. The top page has someone\u2019s salary on it.';},
+ choices:[
+  {label:'TIP IT INTO RECYCLING. HELPING!', go:function(){ return {oops:1, d:{sec:-12},
+    msg:'Efficient! The salary reviews, disciplinary letters, and medical certificates are now loose in a public recycling stream, one dumpster-dive away from being a very bad news story. The label said shred. Recycling is not shredding.',
+    tip:'"Dumpster diving" is real reconnaissance \u2014 unshredded HR paper is a jackpot. TO SHRED means the secure console or the shredder, never the open bin.'};}},
+  {label:'WALK IT TO THE SHRED CONSOLE', go:function(){ return {smart:1, d:{sec:10, rep:4},
+    msg:'You carry the box to the locked shred console and post it through, page by satisfying page. HR, informed, goes several shades of pale and thanks you twice.',
+    tip:'Physical documents breach companies too. If confidential paper is sitting unattended, secure it and tell the owner \u2014 the fix costs five minutes.'};}},
+  {label:'HAVE A LITTLE READ FIRST', go:function(){ return {oops:1, d:{rep:-10},
+    msg:'You learn three salaries and one disciplinary outcome. This information sits in your head like a stone. You mention none of it and somehow everyone can tell you know things.',
+    tip:'Even authorized-adjacent snooping is snooping. Confidential means confidential from you too \u2014 secure it unread.'};}}]},
+
+{id:'tray', title:'ON THE PRINTER', icon:'printer', text:function(){
+  return 'Collecting your printout, you find someone else\u2019s underneath, fresh and warm: <span class="dim">"PROJECT SUNSET \u2014 PROPOSED RESTRUCTURE \u2014 STRICTLY CONFIDENTIAL."</span> It is a list of roles. Some have strikethrough.'+hint('Left on the shared printer. The confidential document delivery system with a public tray.');},
+ choices:[
+  {label:'READ IT. ALL OF IT. TWICE.', go:function(){ return {oops:1, d:{rep:-14},
+    msg:'You now know things you cannot unknow and cannot mention. At lunch you say "big changes coming, that\u2019s all I\u2019ll say" to seem interesting, and by 3pm the rumor has mutated, spread to two floors, and been traced \u2014 accurately \u2014 back to you.',
+    tip:'Found confidential material is a trust test with your name on the log. Reading it makes you a leak vector; sharing hints makes you the leak.'};}},
+  {label:'DELIVER IT FACE-DOWN TO ITS OWNER', go:function(){ return {smart:1, d:{sec:8, rep:8},
+    msg:'The header names the owner. You hand it over face-down: "This was on the printer." Their face does the entire five stages of grief in two seconds. You are now considered dangerously trustworthy.',
+    tip:'Face-down, direct, unmentioned \u2014 the gold standard for found documents. Also: secure-print-release exists so pages only print when you badge in. Suggest it.'};}},
+  {label:'LEAVE IT. NOT YOUR PAGES.', go:function(){ return {oops:1, d:{sec:-8},
+    msg:'You leave it in the tray, where four more people find it before the owner does. By Friday everyone knows, nobody admits it, and the printer gains a reputation as "the leaky one," which is unfair to the printer.',
+    tip:'A confidential page in a shared tray leaks by default \u2014 walking away just chooses who finds it next. Secure it or deliver it.'};}}]},
+
+{id:'freegame', title:'LUNCH BREAK', icon:'bug', text:function(){
+  return 'Lunch. An ad appears: <span class="dim">"FISH TYCOON DELUXE \u2014 100% FREE! No.1 relaxing game! \u2B50\u2B50\u2B50\u2B50\u2B50"</span> Your work laptop is right there. The fish look so peaceful.'+hint('It\u2019s \u201Cfree\u201D at the price of one (1) browser homepage, three (3) toolbars, and your search history.');},
+ choices:[
+  {label:'INSTALL FISH TYCOON DELUXE', go:function(){ G.flags.adware=true; return {oops:1, d:{sec:-15},
+    msg:'The fish ARE relaxing. Less relaxing: your browser homepage is now "SearchZone Plus," a toolbar you cannot name has appeared, and something called "FishHelper Updater" runs at startup forever. The aquarium came with roommates.',
+    tip:'Free games on work machines bundle adware and worse \u2014 and a compromised work laptop is a company problem. Personal downloads belong on personal devices.'};}},
+  {label:'PLAY ON YOUR OWN PHONE', go:function(){ return {smart:1, d:{energy:8},
+    msg:'Fish acquired, on your own device, from the official app store. The virtual guppies thrive. The work laptop remains a place of business, untainted by aquaculture.',
+    tip:'Right game, right device. Official app stores aren\u2019t perfect, but they beat "FREE download" ads by a nautical mile.'};}},
+  {label:'GO OUTSIDE. TOUCH GRASS.', go:function(){ return {d:{energy:12},
+    msg:'You take an actual walk in actual sunlight. A real bird does something interesting. You return weirdly refreshed, having played the original open-world game.',
+    tip:'No security tip. The bird was free and contained no adware.'};}}]},
+
+{id:'airdrop', title:'INCOMING FILE', icon:'cable', text:function(){
+  return 'Your phone lights up: <span class="dim">"iPhone (Unknown)" would like to share "budget_final_FINAL_v2.xlsx"</span>. You don\u2019t recognize the device. You are also, magnetically, curious about the budget.'+hint('Your file sharing is set to \u201CEveryone.\u201D Someone within 10 meters is fishing.');},
+ choices:[
+  {label:'ACCEPT. FREE BUDGET.', go:function(){ return {oops:1, d:{sec:-12},
+    msg:'The "spreadsheet" is a shortcut file that opens a phishing page styled as a cloud login. You close it in time \u2014 probably \u2014 but somewhere nearby, someone watched you take the bait and is now mapping who else will.',
+    tip:'Unsolicited file drops are proximity phishing \u2014 the sender is in the room or very near it. Never open files from unknown devices.'};}},
+  {label:'DECLINE + SET TO "CONTACTS ONLY"', go:function(){ return {smart:1, d:{sec:10},
+    msg:'Declined, and receiving set to contacts only. Your phone vanishes from the stranger\u2019s target list mid-hunt. Somewhere nearby, mild frustration.',
+    tip:'Sharing set to "Everyone" makes you visible to every device in range. "Contacts only" or off \u2014 there\u2019s no third option worth having.'};}},
+  {label:'LOOK AROUND FOR THE SENDER', go:function(){ return {d:{sec:5, energy:-4},
+    msg:'You scan the caf\u00E9 like a detective. Three people are on phones. One avoids your gaze a half-second too long. You decline the file while maintaining eye contact. Nothing is proven. A message is sent anyway.',
+    tip:'Intimidation is not a security control, but declining is. Report repeated attempts \u2014 in an office, that\u2019s someone probing staff devices.'};}}]},
+
+{id:'journalist', title:'FRIENDLY CALL', icon:'phone', text:function(){
+  return '"Hi! I\u2019m writing an industry piece \u2014 nothing formal! Just background. So, that unreleased project\u2026 NIGHTJAR, is it? How\u2019s the timeline going? Off the record, obviously."'+hint('\u201COff the record\u201D is an agreement journalists honor. It is also two words anyone can say on a phone.');},
+ choices:[
+  {label:'CHAT AWAY. IT\u2019S OFF THE RECORD.', go:function(){ return {oops:1, d:{rep:-18, sec:-8},
+    msg:'You confirm the name, the delay, and \u2014 flattered by the listening \u2014 the supplier issue. Wednesday, it\u2019s all published, attributed to "a source inside the company." There are four people it could be. Everyone correctly guesses which one talks this much.',
+    tip:'Confirming, denying, or "just background" all leak \u2014 even the project NAME was confidential. Anything you say may be quoted, "off the record" or not, and callers may not be journalists at all.'};}},
+  {label:'"YOU\u2019LL WANT OUR PRESS OFFICE"', go:function(){ return {smart:1, d:{sec:10, rep:5},
+    msg:'You give them the press office email and precisely nothing else. "Worth a try," they say, cheerfully. It always is. That\u2019s why the press office exists.',
+    tip:'One sentence handles every media call: name, press office, goodbye. Deciding what\u2019s shareable is someone\u2019s whole job \u2014 and it isn\u2019t yours.'};}},
+  {label:'"NIGHTJAR? NEVER HEARD OF IT."', go:function(){ return {d:{sec:4, rep:-3},
+    msg:'A denial so quick and so specific it functions as a confirmation. "Interesting," they say, audibly writing. You have communicated everything by communicating nothing badly.',
+    tip:'Denying a specific name confirms the name exists. "You\u2019ll want our press office" reveals nothing \u2014 it\u2019s the only line that doesn\u2019t leak.'};}}]},
+
+{id:'docusign', title:'SIGNATURE REQUESTED', icon:'mail', text:function(){
+  return 'Email: <span class="dim">"DocuSign: The document \u2018Updated Remote Work Policy\u2019 is awaiting your signature. REVIEW DOCUMENT"</span><br><br>HR did mention a policy update. Recently. Ish.'+hint('Real e-sign emails include the sender\u2019s name and a security code. This one includes vibes.');},
+ choices:[
+  {label:'CLICK, LOG IN, SIGN', go:function(){ G.flags.credsLeaked=true; return {oops:1, d:{sec:-24},
+    msg:'The "review" page asks for your work email login \u2014 to "verify your identity" \u2014 then shows a generic PDF. You signed nothing. You handed over your password to a costume, and the costume said thank you.',
+    tip:'Fake e-signature emails are top-tier credential phishing because signing feels routine. Real ones never require your WORK password \u2014 when in doubt, go to the e-sign service directly, not via the email.'};}},
+  {label:'ASK HR IF THEY SENT IT', go:function(){ return {smart:1, d:{sec:12},
+    msg:'HR: "Policy update\u2019s not out till next month \u2014 that\u2019s not ours." IT blocks the sender; the warning goes company-wide; you get a "good catch" with an exclamation mark, which from HR is basically a parade.',
+    tip:'Attackers time fake documents to real events \u2014 policy season, tax season, review season. One message to the supposed sender settles it.'};}},
+  {label:'HOVER THE BUTTON FIRST', go:function(){ return {smart:1, d:{sec:10},
+    msg:'The "REVIEW DOCUMENT" button points to <span class="dim">docusign-secure.review-portal.cc</span>, a domain assembled from trustworthy words by someone untrustworthy. Reported and deleted with prejudice.',
+    tip:'Hovering reveals the real destination before you commit. Legit services link to their own domain \u2014 word-salad lookalikes are the giveaway.'};}}]},
+
+{id:'kitchen', title:'THE KITCHEN COLD WAR', icon:'note', text:function(){
+  return 'A new note on the office fridge, in aggressive Comic Sans: <span class="dim">"To WHOEVER keeps microwaving FISH: we KNOW it\u2019s you. This is your FINAL warning. \u2014 Concerned Colleagues"</span><br><br>It was you. It has always been you.';},
+ choices:[
+  {label:'MICROWAVE FISH AGAIN. TODAY. DEFIANT.', go:function(){ return {d:{energy:8, rep:-10},
+    msg:'The salmon rotates. The smell colonizes two floors. Someone unplugs the microwave WHILE IT RUNS. You eat your fish in the stairwell like an outlaw, warm and unrepentant and alone.',
+    tip:'No security tip. Some threats come from inside the building, and today that threat is you.'};}},
+  {label:'ADD A COUNTER-NOTE, ANONYMOUS', go:function(){ return {d:{energy:-4, rep:2},
+    msg:'"Perhaps the REAL smell is judgment," your note reads. By 3pm there are six notes, two laminated, one citing the employee handbook. The fridge is now a debate stage. Nobody suspects you. The perfect crime continues.',
+    tip:'No security tip \u2014 though anonymous notes escalate exactly like reply-all threads, and end the same way: laminated.'};}},
+  {label:'RETIRE THE FISH. EAT SANDWICHES.', go:function(){ return {d:{energy:4, rep:6},
+    msg:'You bring sandwiches all week. The notes stop. Peace returns. Months from now, you will microwave one final fish on your last day, as a signature. But for now: statesmanship.',
+    tip:'No security tip. Sometimes de-escalation is just sandwiches.'};}}]}
 ];
 
 function hint(t){
