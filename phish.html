@@ -1190,16 +1190,62 @@ function BOSSC(){ return G.role.id==='ceo' ? 'The board chair' : 'The CEO'; }
 function BOSSU(){ return G.role.id==='ceo' ? 'BOARD CHAIR' : 'CEO'; }
 
 /* ── scripted events ── */
-var STANDUP={id:'standup', title:'MONDAY STANDUP', icon:'zoom', text:function(){
+/* ── openers: one is picked at random so no two weeks start the same ── */
+var WELCOME='Welcome to the trail. Watch your three meters \u2014 and trust nothing with a link in it.';
+var OPENERS=[
+{id:'op_standup', title:'MONDAY STANDUP', icon:'zoom', text:function(){
   if(G.role.id==='ceo') return '9AM. The all-hands you called. Fourteen faces in a grid, waiting for you to speak. You called this meeting. You no longer remember why.';
   return '9AM. The weekly standup. Fourteen faces in a grid. Someone is eating cereal directly into their mic. It is your turn to give an update on the thing you have not started.';},
  choices:[
   {label:'"MAKING GOOD PROGRESS"', go:function(){ return {d:{rep:5, energy:-5},
     msg:'A classic. Technically, deciding to start is progress. Nobody follows up. Nobody ever follows up.',
-    tip:'Welcome to the trail. Watch your three meters \u2014 and trust nothing with a link in it.'};}},
+    tip:WELCOME};}},
   {label:'"BLOCKED. BY EVERYTHING."', go:function(){ return {d:{rep:-3, energy:3},
     msg:'Radical honesty. The manager says "let\u2019s park that." It is now parked forever, which is what you wanted.',
-    tip:'Welcome to the trail. Watch your three meters \u2014 and trust nothing with a link in it.'};}}]};
+    tip:WELCOME};}}]},
+
+{id:'op_inbox', title:'MONDAY INBOX', icon:'mail', text:function(){
+  return '9AM. You open your laptop to 78 unread emails, three "URGENT" flags, and a calendar that is one solid block of colour until Thursday. The cursor blinks. It knows.';},
+ choices:[
+  {label:'DECLARE INBOX BANKRUPTCY', go:function(){ return {d:{energy:8, rep:-4},
+    msg:'You select all, archive, and decide anything important will come back. Bold. Reckless. Weirdly freeing. Two of those emails will indeed come back, louder.',
+    tip:WELCOME};}},
+  {label:'TRIAGE LIKE A PROFESSIONAL', go:function(){ return {d:{energy:-8, rep:5},
+    msg:'You sort by sender, star the real ones, and clear the noise. It takes forty minutes and the satisfaction of a tidy inbox lasts nearly that long.',
+    tip:WELCOME};}}]},
+
+{id:'op_coffee', title:'THE COFFEE QUEUE', icon:'clock', text:function(){
+  return '8:55AM. The office coffee machine has a queue of six and a sign reading "BEAN HOPPER EMPTY \u2014 ask Reception (Reception is also empty)." Monday is testing you before you\u2019ve even sat down.';},
+ choices:[
+  {label:'FIX THE MACHINE YOURSELF', go:function(){ return {d:{energy:6, rep:6},
+    msg:'You find the beans, refill the hopper, and become an instant office legend. Six people love you. The machine rewards you with the first, best cup.',
+    tip:WELCOME};}},
+  {label:'GIVE UP, DRINK THE BAD TEA', go:function(){ return {d:{energy:-6, rep:2},
+    msg:'You retreat to the sad tea bags nobody claims. It tastes of warm cardboard and lowered expectations. But you are, technically, caffeinated. Sort of.',
+    tip:WELCOME};}}]},
+
+{id:'op_login', title:'PASSWORD EXPIRED', icon:'laptop', text:function(){
+  if(G.role.id==='ceo') return '9AM. "YOUR PASSWORD HAS EXPIRED." On a Monday. To you. The system does not care that you own a meaningful slice of the company. It wants twelve characters, one symbol, and your soul.';
+  return '9AM. "YOUR PASSWORD HAS EXPIRED. Choose a new one." It must differ from your last 24 passwords, contain a symbol, and not resemble anything you could ever remember. Monday could not wait.';},
+ choices:[
+  {label:'PASSWORD MANAGER, LONG + RANDOM', go:function(){ return {smart:1, d:{sec:10, energy:-4},
+    msg:'You let the manager generate 20 random characters and save it. You will never know what your own password is, which is exactly the point.',
+    tip:WELCOME+' (Starting strong: a password manager is the single best habit here.)'};}},
+  {label:'ADD A "1" TO THE OLD ONE', go:function(){ return {oops:1, d:{sec:-6, energy:2},
+    msg:'Autumn2024! becomes Autumn2024!1. Technically new. Spiritually identical. Every attacker\u2019s first guess is your last password plus a number.',
+    tip:WELCOME+' Predictable tweaks (+1, +!) are the first thing password-crackers try.'};}}]},
+
+{id:'op_commute', title:'THE COMMUTE IN', icon:'badge', text:function(){
+  return '8:45AM. You arrive to find the office door propped open with a fire extinguisher and a friendly stranger holding two coffees: "Oh thank god \u2014 can you badge me in? Hands full! I\u2019m new, start today." He does not have a badge. He has excellent coffee.';},
+ choices:[
+  {label:'BADGE HIM IN. HE SEEMS NICE.', go:function(){ return {oops:1, d:{sec:-12},
+    msg:'You tap him through. He thanks you warmly and disappears toward the server room, never to be seen at any desk, ever. Nice, it turns out, is a tactic.',
+    tip:WELCOME+' That was tailgating \u2014 the coffee was the disguise. Everyone badges themselves in, no exceptions.'};}},
+  {label:'"REALLY SORRY \u2014 CHECK WITH RECEPTION"', go:function(){ return {smart:1, d:{sec:12, rep:2},
+    msg:'You hold firm, politely. He sighs, the friendliness evaporates a little too fast, and he heads for reception \u2014 or rather, doesn\u2019t. You start the week one social-engineer up.',
+    tip:WELCOME+' Holding the badge line while staying polite is exactly the muscle this week trains.'};}}]}
+];
+function pickOpener(){ return OPENERS[(Math.random()*OPENERS.length)|0]; }
 
 var RANSOM={id:'ransom', title:'YOUR SCREEN TURNS RED', icon:'skull', text:function(){
   return '<span class="blink">ALL YOUR FILES HAVE BEEN ENCRYPTED.</span><br><br>"Send 2 BTC within 48 hours or your data is deleted forever. Do not contact IT. Do not turn off the machine. \u2014 xX_CryptoLord_Xx"'+hint('That malware you picked up earlier just cashed in.');},
@@ -1263,7 +1309,7 @@ function startWeek(){
   showTrail(); walking=false;
   caption('');
   log(DAYS[0]+', 9AM. It begins.');
-  runEvent(STANDUP);
+  runEvent(pickOpener());
 }
 
 function nextSegment(){
