@@ -317,7 +317,8 @@ var SPR = {
   clock:["   ######   ","  ##    ##  "," ##  ##  ## "," #   ##   # "," #   ####  # "," ##      ## ","  ##    ##  ","   ######   "]
 };
 
-function drawMap(ctx,map,x,y,s){
+function drawMap(ctx,map,x,y,s,color){
+  ctx.fillStyle=color||'#fff';
   for(var r=0;r<map.length;r++){
     var row=map[r];
     for(var c=0;c<row.length;c++){
@@ -334,6 +335,9 @@ var sceneMode='trail';          // 'trail' | 'icon' | 'sleep'
 var sceneIcon=null, iconScale=4;
 var PROPS=[ [SPR.desk,0], [SPR.plant,120], [SPR.cooler,230], [SPR.desk,320], [SPR.rack,440], [SPR.plant,540], [SPR.desk,620] ];
 var TRAILLEN=740;
+/* the office's only two spots of colour */
+var PLANT_GREEN='#5fcf6b', COOLER_BLUE='#5aa9f0';
+function propColor(m){ return m===SPR.plant ? PLANT_GREEN : (m===SPR.cooler ? COOLER_BLUE : '#fff'); }
 
 function render(){
   ctx.clearRect(0,0,W,H);
@@ -365,7 +369,20 @@ function render(){
   for(var p=0;p<PROPS.length;p++){
     var m2=PROPS[p][0];
     var px=((PROPS[p][1]-scroll)%TRAILLEN+TRAILLEN)%TRAILLEN-40;
-    if(px>-70 && px<W+10) drawMap(ctx,m2,px,H-14-m2.length*3,3);
+    if(px>-70 && px<W+10){
+      if(m2===SPR.plant){
+        /* green leaves, white pot (bottom 3 rows) */
+        var py=H-14-m2.length*3;
+        for(var pr=0;pr<m2.length;pr++){
+          var col2 = pr < m2.length-3 ? PLANT_GREEN : '#fff';
+          for(var pc=0;pc<m2[pr].length;pc++) if(m2[pr][pc]!==' '){
+            ctx.fillStyle=col2; ctx.fillRect(px+pc*3, py+pr*3, 3, 3);
+          }
+        }
+      } else {
+        drawMap(ctx,m2,px,H-14-m2.length*3,3,propColor(m2));
+      }
+    }
   }
   // player
   var pm = sceneMode==='sleep' ? SPR.sleep : (walking && (frame%16<8) ? SPR.walk2 : SPR.walk1);
