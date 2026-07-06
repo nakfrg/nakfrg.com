@@ -81,6 +81,10 @@
 
   #actionRow { display:flex; gap:16px; margin:14px 2px 6px; }
   #actionRow .pixbtn { flex:1; text-align:center; }
+  #evInstinct { display:block; margin:12px auto 2px; text-align:center; font-size:9px; }
+  #evInstinct:disabled { opacity:0.5; cursor:default; }
+  #coffeeCups { display:inline-flex; gap:3px; vertical-align:middle; margin-left:5px; }
+  #coffeeCups canvas { image-rendering:pixelated; image-rendering:crisp-edges; }
 
   /* ── panels ── */
   .panel { margin:14px 0 6px; }
@@ -197,7 +201,7 @@
     <div id="travelPanel" class="panel hidden">
       <div id="actionRow">
         <button class="pixbtn" id="btnWork">KEEP WORKING</button>
-        <button class="pixbtn" id="btnCoffee">COFFEE <span id="coffeeCount"></span></button>
+        <button class="pixbtn" id="btnCoffee">COFFEE<span id="coffeeCups"></span></button>
       </div>
     </div>
 
@@ -205,6 +209,8 @@
     <div id="eventPanel" class="panel hidden">
       <div class="panelTitle" id="evTitle"></div>
       <div class="panelText" id="evText"></div>
+      <button class="pixbtn hidden" id="evInstinct"></button>
+      <div class="tipBox hidden" id="evHint"></div>
       <div class="choices" id="evChoices"></div>
     </div>
 
@@ -383,13 +389,14 @@ var G=null;
 var ROLES=[
   {id:'intern', name:'THE INTERN', desc:'No access, no fear, nothing to lose. Damage reduced. Nobody listens to you.', energy:100,sec:70,rep:40, mod:{dmg:0.75}},
   {id:'manager', name:'MIDDLE MANAGER', desc:'Drowning in email. Balanced stats, maximum meetings.', energy:85,sec:60,rep:60, mod:{}},
-  {id:'itadmin', name:'IT ADMIN', desc:'You know things. Threats get hints. But admin access means bigger explosions.', energy:80,sec:75,rep:55, mod:{hints:true,dmg:1.3}},
+  {id:'itadmin', name:'IT ADMIN', desc:'You know things. Spend IT INSTINCT to reveal a threat (3 per week). But admin access means bigger explosions.', energy:80,sec:75,rep:55, mod:{hints:true,dmg:1.3}},
   {id:'ceo', name:'THE CEO', desc:'Whale-sized target. Everyone is hunting you, personally. Big hits, small wins. Hard mode.', energy:75,sec:40,rep:90, mod:{dmg:1.35,whale:true}}
 ];
 
+var COFFEE_GAIN=18, SEG_DRAIN=10;   /* passive fatigue per work segment */
 function newGame(name, role){
   G={ name:name, role:role, day:0, seg:0, energy:role.energy, sec:role.sec, rep:role.rep,
-      coffees:3, smart:0, oops:0, flags:{}, queue:[], usedEvents:{}, over:false };
+      coffees:3, hintCharges:3, smart:0, oops:0, flags:{}, queue:[], usedEvents:{}, over:false };
 }
 
 /* ── stat plumbing ── */
@@ -421,11 +428,39 @@ function setBar(id,v){
   el.querySelector('.val').textContent=v;
   el.classList.toggle('low', v<=25);
 }
+/* a tiny 1-bit coffee cup: filled = available, outline = spent */
+function cupCanvas(filled){
+  var c=document.createElement('canvas'); c.width=9; c.height=9;
+  c.style.width='11px'; c.style.height='11px';
+  var x=c.getContext('2d'); x.fillStyle='#fff';
+  var CUP=[
+   "        ",
+   " ###### #",
+   " #    # #",
+   " #    ##",
+   " #    # ",
+   " #    # ",
+   "  ####  "];
+  for(var r=0;r<CUP.length;r++) for(var col=0;col<CUP[r].length;col++){
+    if(CUP[r][col]!=='#') continue;
+    if(filled){ x.fillRect(col,r,1,1); }
+    else {
+      /* outline only when spent */
+      var edge = r===0||r===CUP.length-1||col===0 ||
+        (r>0 && CUP[r-1][col]!=='#') || (r<CUP.length-1 && (CUP[r+1]||'')[col]!=='#') ||
+        (CUP[r][col-1]!=='#') || (CUP[r][col+1]!=='#');
+      if(edge) x.fillRect(col,r,1,1);
+    }
+  }
+  if(!filled) c.style.opacity='0.35';
+  return c;
+}
 function updateHud(){
   $('hudDay').textContent = DAYS[G.day];
   var hr = 9 + G.seg*2;
   $('hudTime').textContent = (hr<=12? hr+'AM' : (hr-12)+'PM');
-  $('coffeeCount').textContent = 'x'+G.coffees;
+  var box=$('coffeeCups'); box.innerHTML='';
+  for(var i=0;i<3;i++) box.appendChild(cupCanvas(i<G.coffees));
 }
 
 /* ── log ── */
@@ -1145,9 +1180,9 @@ var EVENTS=[
     tip:'A password change alone doesn\u2019t evict an attacker \u2014 active sessions, app tokens, and mail rules survive it. Compromise response needs IT, every time, however kind the cover-up feels.'};}}]}
 ];
 
-function hint(t){
-  return (G && G.role.mod.hints) ? '<br><br><span class="dim">[IT INSTINCT] '+t+'</span>' : '';
-}
+/* IT INSTINCT is now an activated power (3 charges/run), not passive text.
+   hint() just records the tip during ev.text(); runEvent decides how to surface it. */
+function hint(t){ if(G && G.role.mod.hints) G._hint=t; return ''; }
 
 /* who outranks you depends on who you are */
 function BOSS(){ return G.role.id==='ceo' ? 'the board chair' : 'the CEO'; }
@@ -1238,6 +1273,9 @@ function nextSegment(){
   G.seg++;
   if(G.seg>3){ G.seg=0; G.day++; G.coffees=3;
     if(G.day<=4) log('\u2014 '+DAYS[G.day]+' \u2014'); }
+  /* the working day itself is tiring */
+  var drain = SEG_DRAIN + (G.role.mod.whale ? 2 : 0);   /* the CEO sleeps worse */
+  G.energy = clamp(G.energy - drain);
   updateHud();
   show('travelPanel');
   showTrail(); walking=true; caption('');
@@ -1272,7 +1310,31 @@ function runEvent(ev){
   showIcon(ev.icon, 4);
   blip(440,0.06); setTimeout(function(){blip(330,0.08);},80);
   $('evTitle').textContent=ev.title;
+  G._hint=null;
   $('evText').innerHTML=ev.text();
+  $('evHint').classList.add('hidden'); $('evHint').innerHTML='';
+  var instinct=$('evInstinct');
+  if(G.role.mod.hints && G._hint){
+    instinct.classList.remove('hidden');
+    if(G.hintCharges>0){
+      instinct.disabled=false;
+      instinct.innerHTML='\uD83D\uDD0D IT INSTINCT \u00B7 '+G.hintCharges+' LEFT';
+      var tip=G._hint;
+      instinct.onclick=function(){
+        if(G.hintCharges<=0) return;
+        G.hintCharges--; sGood();
+        $('evHint').innerHTML='<span class="dim">[IT INSTINCT] '+tip+'</span>';
+        $('evHint').classList.remove('hidden');
+        instinct.classList.add('hidden');
+        updateHud();
+      };
+    } else {
+      instinct.disabled=true; instinct.onclick=null;
+      instinct.innerHTML='\uD83D\uDD0D IT INSTINCT \u00B7 SPENT';
+    }
+  } else {
+    instinct.classList.add('hidden');
+  }
   var box=$('evChoices'); box.innerHTML='';
   ev.choices.forEach(function(c,i){
     var b=document.createElement('button');
@@ -1328,8 +1390,12 @@ $('btnCoffee').onclick=function(){
     return;
   }
   G.coffees--; updateHud(); sGood();
-  applyDelta({energy:16});
-  showOutcome({msg:'Coffee #'+(3-G.coffees)+'. The beans scream so you don\u2019t have to.'+deltaText({energy:16})});
+  applyDelta({energy:COFFEE_GAIN});
+  var left=G.coffees;
+  var quip = left===2 ? 'First cup. The world sharpens into focus.'
+           : left===1 ? 'Second cup. You could hear colours now.'
+           : 'Last cup of the day. Use the clarity wisely.';
+  showOutcome({msg:quip+' The beans scream so you don\u2019t have to.'+deltaText({energy:COFFEE_GAIN})});
 };
 
 /* ── inbox minigame ── */
