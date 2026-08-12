@@ -280,6 +280,7 @@
   var selIdx = 0;                 // highlighted tile on the level-select screen
   var shopIdx = 0, shopFrom = 0;  // 0 = came from the title, 1 = from the stage summary
   var sumIdx = 1;                 // 0 = upgrades, 1 = next stage
+  var resetArm = 0, resetDone = 0;   // two-step confirm on the save wipe
 
   function loadNum(k){ try { return parseInt(localStorage.getItem(k) || '0', 10) || 0; } catch (e) { return 0; } }
   function saveNum(k,v){ try { localStorage.setItem(k, ''+v); } catch (e) {} }
@@ -859,6 +860,7 @@
     game.msgFxT=Math.max(0,game.msgFxT-1);
     game.shakeT=Math.max(0,game.shakeT-1);
     game.hurtT=Math.max(0,game.hurtT-1);
+    resetArm=Math.max(0,resetArm-1); resetDone=Math.max(0,resetDone-1);
     updateParticles();
     if(tongue){ tongue.t--; if(tongue.t<=0) tongue=null; }
 
@@ -1388,14 +1390,33 @@
   var SHOP_GO_Y=SHOP_Y0+UPG.length*(SHOP_RH+SHOP_RG)+8, SHOP_GO_H=26;
   function shopRect(i){ return { x:SHOP_X, y:SHOP_Y0+i*(SHOP_RH+SHOP_RG), w:SHOP_W, h:SHOP_RH }; }
   function shopGoRect(){ return { x:SHOP_X+SHOP_W/4, y:SHOP_GO_Y, w:SHOP_W/2, h:SHOP_GO_H }; }
+  // Wiping the save is offered only from the title, never mid-run, and always
+  // takes two taps so a stray finger can't cost someone their upgrades.
+  function resetRect(){ return { x:(VW-130)/2, y:SHOP_GO_Y+61, w:130, h:22 }; }
+  function resetOffered(){ return shopFrom===0; }
+  function shopItems(){ return UPG.length + 1 + (resetOffered()?1:0); }
   function shopHitTest(vx,vy){
     for(var i=0;i<UPG.length;i++){ var t=shopRect(i);
       if(vx>=t.x&&vx<=t.x+t.w&&vy>=t.y&&vy<=t.y+t.h) return i; }
-    var g=shopGoRect();
-    if(vx>=g.x&&vx<=g.x+g.w&&vy>=g.y&&vy<=g.y+g.h) return UPG.length;
+    if(inRect(shopGoRect(),vx,vy)) return UPG.length;
+    if(resetOffered() && inRect(resetRect(),vx,vy)) return UPG.length+1;
     return -1;
   }
-  function openShop(from){ shopFrom=from; shopIdx=0; game.state=STATE.SHOP;
+  function armReset(){
+    if(resetArm>0){ resetProgress(); return; }
+    resetArm=200; blip(220,0.12,'sawtooth',0.06);
+  }
+  function resetProgress(){
+    for(var i=0;i<UPG.length;i++) upg[i]=0;
+    game.flies=0; game.unlocked=0; game.hi=0; game.hp=maxHp();
+    saveUpg();
+    saveNum('nakfrg_breaker_flies',0);
+    saveNum('nakfrg_breaker_unlocked',0);
+    saveNum('nakfrg_breaker_hi',0);
+    selIdx=0; resetArm=0; resetDone=140;
+    flash(14); shake(9,4); blip(110,0.45,'sawtooth',0.07);
+  }
+  function openShop(from){ shopFrom=from; shopIdx=0; resetArm=0; game.state=STATE.SHOP;
     var a=audio(); if(a&&a.state==='suspended') a.resume(); }
   function buyUpgrade(i){
     if(upg[i]>=UPG[i].max){ blip(150,0.08,'sawtooth',0.05); return; }
@@ -1408,7 +1429,11 @@
     levelSpeed=speedForLevel(game.level); rescaleBalls();
     blip(760,0.10,'triangle',0.06); flash(5);
   }
-  function shopActivate(i){ if(i<UPG.length) buyUpgrade(i); else closeShop(); }
+  function shopActivate(i){
+    if(i<UPG.length) buyUpgrade(i);
+    else if(i===UPG.length) closeShop();
+    else if(resetOffered()) armReset();
+  }
   function closeShop(){
     blip(600,0.06,'square',0.05);
     // From the summary the shop is a detour, not a gate: hand control back so
@@ -1465,6 +1490,25 @@
 
     ctx.fillStyle='#fff'; ctx.globalAlpha=0.4; ctx.font='9px ui-monospace, monospace';
     ctx.fillText('tap a row to buy', VW/2, g.y+g.h+18);
+    ctx.globalAlpha=1; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+    if(resetOffered()) drawResetBtn();
+  }
+  function drawResetBtn(){
+    var r=resetRect(), on=(shopIdx===UPG.length+1);
+    var armed=resetArm>0, done=resetDone>0;
+    var label = done ? 'PROGRESS WIPED' : (armed ? 'TAP AGAIN TO WIPE' : 'RESET PROGRESS');
+    // Quiet until it is armed, then it shouts.
+    ctx.globalAlpha = done ? 1 : (armed ? 1 : (on?0.75:0.45));
+    if(armed && blinkT%16<8){ ctx.fillStyle='#fff'; ctx.fillRect(px(r.x),px(r.y),r.w,r.h); }
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1;
+    ctx.strokeRect(px(r.x)+0.5,px(r.y)+0.5,r.w-1,r.h-1);
+    ctx.fillStyle=(armed && blinkT%16<8)?'#000':'#fff';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font=(label.length>14?'8px':'9px')+' ui-monospace, monospace';
+    ctx.fillText(label, r.x+r.w/2, r.y+r.h/2+1);
+    if(armed){ ctx.font='7px ui-monospace, monospace'; ctx.fillStyle='#fff'; ctx.globalAlpha=0.6;
+      ctx.fillText('clears flies, upgrades, stages, HI', VW/2, r.y+r.h+10); }
     ctx.globalAlpha=1; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   }
 
@@ -1533,7 +1577,7 @@
     else if(i<0||i>=n) return;
     selIdx=i; blip(420,0.02,'square',0.03);
   }
-  function moveShop(d){ var n=UPG.length+1; shopIdx=(shopIdx+d+n)%n; blip(420,0.02,'square',0.03); }
+  function moveShop(d){ var n=shopItems(); shopIdx=(shopIdx+d+n)%n; blip(420,0.02,'square',0.03); }
   function sumActivate(i){ if(i===0) openShop(1); else leaveSummary(); }
   function primaryAction(){ var a=audio(); if(a&&a.state==='suspended') a.resume();
     if(game.paused){ game.paused=false; return; }
