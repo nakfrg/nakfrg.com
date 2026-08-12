@@ -483,8 +483,11 @@
   }
   function spawnRow(y){
     var pool=ROW_POOLS[game.tier], pat=pool[(Math.random()*pool.length)|0];
+    // Random cyclic shift so the specials land in a different column every
+    // row; the patterns are middle-heavy and a centred gun farmed them.
+    var shift=(Math.random()*COLS)|0;
     for(var c=0;c<COLS;c++){
-      var ch=pat[c]; if(ch==='.') continue;
+      var ch=pat[(c+shift)%COLS]; if(ch==='.') continue;
       game.bricks.push(brickFromChar(ch,c,y,game.hpBonus));
     }
     game.rowsSpawned++;
@@ -649,13 +652,16 @@
     dmgSrc='gun';
     for(var i=shots.length-1;i>=0;i--){ var s=shots[i];
       s.y-=6*SPEED_SCALE; s.x+=s.vx;
-      if(s.y<TOP_Y-4 || s.x<WALL || s.x>VW-WALL){ shots.splice(i,1); continue; }
+      // Shots stop where the ball does. Rows still sliding in above the field
+      // edge are out of reach — no more farming bricks the player can't see.
+      if(s.y<TOP_Y+2 || s.x<WALL || s.x>VW-WALL){ spawnDust(s.x,Math.max(s.y,TOP_Y+2),2); shots.splice(i,1); continue; }
       var hit=false, k;
-      for(k=0;k<invaders.length;k++){ var v=invaders[k]; if(!v.alive) continue;
+      for(k=0;k<invaders.length;k++){ var v=invaders[k]; if(!v.alive || v.y+INV_H<=TOP_Y) continue;
         if(s.x>=v.x && s.x<=v.x+INV_W && s.y<=v.y+INV_H && s.y>=v.y-6){ hurtInvader(v,s.dmg); hit=true; break; } }
       if(!hit && boss && !boss.dead && !boss.entering &&
          s.x>=boss.x && s.x<=boss.x+boss.w && s.y<=boss.y+boss.h && s.y>=boss.y-6){ damageBoss(s.dmg); hit=true; }
-      if(!hit) for(k=0;k<game.bricks.length;k++){ var b=game.bricks[k]; if(!brickSolid(b)) continue;
+      if(!hit) for(k=0;k<game.bricks.length;k++){ var b=game.bricks[k];
+        if(!brickSolid(b) || b.y+b.h<=TOP_Y) continue;
         if(s.x>=b.x && s.x<=b.x+b.w && s.y<=b.y+b.h && s.y>=b.y-6){ damageBrick(b,s.dmg); hit=true; break; } }
       if(hit){ spawnDust(s.x,s.y,2); shots.splice(i,1); }
     }
