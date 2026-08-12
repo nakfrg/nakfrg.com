@@ -138,7 +138,16 @@
   var BALL_R_BASE = 6, BALL_R = 6;
   var BRICK_W = 0, BLAST_R = 40;
   var NET_Y = VH - 16;
-  var MAX_LIVES = 6;
+  // ── damage ──
+  //  There are no lives. A ball that gets past you rebounds off the back wall
+  //  and play carries on; the cost is HP. HP is counted in whole hits so the
+  //  bar reads as "shots left": at baseline 6 HP that is 3 missed balls or
+  //  6 bolts, and every MAX HP rank buys one more miss.
+  var BACK_Y = VH - WALL - 1;
+  var DMG_DROP = 2;      // ball reaches the back wall
+  var DMG_BOLT = 1;      // enemy fire hits the paddle
+  var DMG_BREACH = 3;    // the wall reaches the danger line
+  var REPAIR = 2;        // the repair capsule
 
   var SPEED_SCALE = 1.2;              // global tempo, +20% over the original
   var BASE_SPEED = 3.3 * SPEED_SCALE;
@@ -203,19 +212,22 @@
     { key:'rate', name:'RATE OF FIRE', max:7, base:12, step:10 },
     { key:'gdmg', name:'SHOT DAMAGE',  max:6, base:16, step:14 },
     { key:'bspd', name:'BALL SPEED',   max:6, base:14, step:12 },
-    { key:'bdmg', name:'BALL DAMAGE',  max:6, base:18, step:16 }
+    { key:'bdmg', name:'BALL DAMAGE',  max:6, base:18, step:16 },
+    { key:'hp',   name:'MAX HP',       max:6, base:15, step:13 }
   ];
-  var upg = [0,0,0,0];
+  var upg = [0,0,0,0,0];
   function upgCost(i){ return UPG[i].base + upg[i]*UPG[i].step; }
   function gunInterval(){ return Math.max(12, 38 - upg[0]*4); }
   function gunDamage(){ return 1 + upg[1]; }
   function ballSpeedMul(){ return 1 + upg[2]*0.05; }
   function ballDamage(){ return 1 + upg[3]; }
+  function maxHp(){ return 6 + upg[4]*2; }
   function upgValue(i){
     if(i===0) return (60/gunInterval()).toFixed(1)+'/s';
     if(i===1) return gunDamage()+' dmg';
     if(i===2) return ballSpeedMul().toFixed(2)+'x';
-    return ballDamage()+' dmg';
+    if(i===3) return ballDamage()+' dmg';
+    return maxHp()+' hp . '+(maxHp()/DMG_DROP)+' misses';
   }
 
   // ── power-ups ──
@@ -225,11 +237,11 @@
     pierce:   { tag:'PR',  label:'PIERCE',       good:true,  dur:1800 },
     slow:     { tag:'SL',  label:'SLOW BALL',    good:true,  dur:1800 },
     bigball:  { tag:'O+',  label:'BIG BALL',     good:true,  dur:1800 },
-    bigpad:   { tag:'W+',  label:'WIDE PADDLE',  good:true,  dur:1800 },
+    bigpad:   { tag:'W+',  label:'WIDE + 3 GUNS', good:true, dur:1800 },
     laser:    { tag:'LZ',  label:'TRIPLE SHOT',  good:true,  dur:1800 },
     safety:   { tag:'SN',  label:'SAFETY NET',   good:true,  dur:1800 },
     bombball: { tag:'B!',  label:'BOMB BALL',    good:true,  dur:1800 },
-    extralife:{ tag:'1UP', label:'EXTRA LIFE',   good:true,  dur:0   },
+    repair:   { tag:'HP+', label:'REPAIR',       good:true,  dur:0   },
     fast:     { tag:'F!',  label:'FAST BALL',    good:false, dur:600 },
     shortpad: { tag:'W-',  label:'SHORT PADDLE', good:false, dur:600 },
     shrink:   { tag:'><',  label:'TINY BALL',    good:false, dur:600 }
@@ -237,16 +249,20 @@
   var DROP_TABLE = [
     'sticky','sticky','sticky','double','double','double','pierce','pierce',
     'slow','slow','bigball','bigball','bigpad','bigpad','bigpad','laser','laser',
-    'safety','safety','bombball','bombball','extralife',
+    'safety','safety','bombball','bombball','repair',
     'fast','fast','shortpad','shortpad','shrink','shrink'
   ];
-  var GOOD_DROPS = ['sticky','double','pierce','slow','bigball','bigpad','laser','safety','bombball','extralife'];
+  var GOOD_DROPS = ['sticky','double','pierce','slow','bigball','bigpad','laser','safety','bombball','repair'];
   var FXKEYS = ['sticky','pierce','slow','bigball','bigpad','fast','shortpad','laser','safety','bombball','shrink'];
 
   // ── state ──
-  var STATE = { TITLE:0, READY:1, PLAY:2, CLEAR:4, OVER:5, WIN:6, SELECT:7, SHOP:8 };
+  var STATE = { TITLE:0, READY:1, PLAY:2, CLEAR:4, OVER:5, WIN:6, SELECT:7, SHOP:8, SUMMARY:9 };
+  // Per-stage tally for the clear screen. `dmgSrc` names whoever is dealing
+  // damage right now, so explosions and chained TNT credit the right weapon.
+  var stat = { gun:0, ball:0, frames:0 }, dmgSrc = 'ball';
+  function credit(n){ if(n>0){ if(dmgSrc==='gun') stat.gun+=n; else stat.ball+=n; } }
   var PHASE = { WAVE:0, BOSS:1 };
-  var game = { state:STATE.TITLE, phase:PHASE.WAVE, score:0, hi:0, lives:3, level:0,
+  var game = { state:STATE.TITLE, phase:PHASE.WAVE, score:0, hi:0, hp:100, hurtT:0, level:0,
                bricks:[], rowsSpawned:0, rowsTotal:0, descend:0.16, rowGap:2, hpBonus:0,
                lastRowY:0, invDone:false,
                flashT:0, msgT:0, msg:'', msgSub:'', msgFx:'', msgFxT:0, combo:0, mult:1,
@@ -262,7 +278,8 @@
   var keys = {};
   var pointerX = null;
   var selIdx = 0;                 // highlighted tile on the level-select screen
-  var shopIdx = 0, shopFrom = 0;  // 0 = came from the title, 1 = between levels
+  var shopIdx = 0, shopFrom = 0;  // 0 = came from the title, 1 = from the stage summary
+  var sumIdx = 1;                 // 0 = upgrades, 1 = next stage
 
   function loadNum(k){ try { return parseInt(localStorage.getItem(k) || '0', 10) || 0; } catch (e) { return 0; } }
   function saveNum(k,v){ try { localStorage.setItem(k, ''+v); } catch (e) {} }
@@ -367,7 +384,7 @@
     game.lastRowY-=ROW_STEP*3;
     pruneBricks(); syncInvaders();
     game.msg='BREACH'; game.msgSub=''; game.msgT=50;
-    loseLife();
+    damage(DMG_BREACH);
   }
 
   // ── invaders ──
@@ -389,12 +406,14 @@
     v.x=v.bx+invGroup.dx; v.y=v.by+invGroup.dy; } }
   function invadersAlive(){ var n=0; for(var i=0;i<invaders.length;i++) if(invaders[i].alive) n++; return n; }
   function killInvader(v){
+    if(v.hp>0){ credit(v.hp); v.hp=0; }   // pierce / blast kills bypass hurtInvader
     v.alive=false; game.score += 60*game.mult;
     spawnDust(v.x+INV_W/2, v.y+INV_H/2, 12); shake(4,2);
     blip(180,0.10,'sawtooth',0.06);
     if(Math.random()<0.25) spawnDrop(v.x+INV_W/2, v.y+INV_H/2, true);
   }
   function hurtInvader(v,dmg){
+    credit(Math.min(v.hp,dmg));
     v.hp-=dmg; v.hurtT=5;
     if(v.hp<=0) killInvader(v);
     else { spawnDust(v.x+INV_W/2, v.y+INV_H/2, 3); game.score+=10; blip(280,0.04,'square',0.05); }
@@ -441,19 +460,27 @@
         spawnDust(bo.x,NET_Y,4); blip(500,0.04,'sine',0.05); bolts.splice(i,1); continue; }
       if(game.state===STATE.PLAY && bo.y>=PADDLE_Y-2 && bo.y<=PADDLE_Y+PADDLE_H+2 &&
          Math.abs(bo.x-paddle.x)<=PADDLE_W/2+2){
-        bolts.splice(i,1); spawnDust(bo.x,PADDLE_Y,14); loseLife(); return; }
+        bolts.splice(i,1); spawnDust(bo.x,PADDLE_Y,14); damage(DMG_BOLT); return; }
       if(bo.y>VH) bolts.splice(i,1);
     }
   }
 
   // ── the paddle gun ──
+  //  A wide paddle can't travel as far into the corners, which used to put the
+  //  outer brick columns out of the centre gun's reach. It gains a muzzle at
+  //  each edge instead, so wider means three firing lines rather than a blind spot.
+  function muzzleOffsets(){
+    if(fx.bigpad>0){ var e=PADDLE_W/2-3; return [-e, 0, e]; }
+    return [0];
+  }
   function updateGun(){
     if(game.state!==STATE.PLAY) return;
     var iv=gunInterval(); if(fx.laser>0) iv=Math.max(9, iv*0.6);
     if(++gunTick < iv) return;
     gunTick=0;
-    var dmg=gunDamage();
-    shots.push({ x:paddle.x, y:PADDLE_Y-2, vx:0, dmg:dmg });
+    var dmg=gunDamage(), off=muzzleOffsets();
+    for(var m=0;m<off.length;m++)
+      shots.push({ x:paddle.x+off[m], y:PADDLE_Y-2, vx:0, dmg:dmg });
     if(fx.laser>0){
       shots.push({ x:paddle.x-PADDLE_W*0.34, y:PADDLE_Y, vx:-0.9, dmg:dmg });
       shots.push({ x:paddle.x+PADDLE_W*0.34, y:PADDLE_Y, vx:0.9, dmg:dmg });
@@ -461,6 +488,7 @@
     blip(880,0.03,'square',0.035);
   }
   function updateShots(){
+    dmgSrc='gun';
     for(var i=shots.length-1;i>=0;i--){ var s=shots[i];
       s.y-=6*SPEED_SCALE; s.x+=s.vx;
       if(s.y<TOP_Y-4 || s.x<WALL || s.x>VW-WALL){ shots.splice(i,1); continue; }
@@ -508,6 +536,7 @@
   }
   function damageBoss(n){
     if(!boss || boss.dead || boss.entering || boss.invT>0) return;
+    credit(Math.min(boss.hp,n));
     boss.hp-=n; boss.hurtT=10; boss.invT=6;
     shake(5,3); blip(160,0.09,'square',0.06);
     spawnDust(boss.x+boss.w/2, boss.y+boss.h/2, 6);
@@ -610,17 +639,19 @@
     game.descend=cfg.descend*SPEED_SCALE; game.rowGap=cfg.gap;
     game.hpBonus=cfg.hpBonus; game.tier=cfg.tier; game.invDone=false;
     invaders=[]; bolts=[]; boss=null; drops=[]; pendingBlasts=[];
+    stat.gun=0; stat.ball=0; stat.frames=0;
     levelSpeed=speedForLevel(n);
     clearEffects(); resetCombo();
     for(var r=2;r>=0;r--) spawnRow(TOP_Y + r*ROW_STEP);   // a little wall to start on
     game.lastRowY=TOP_Y;
+    game.hp=maxHp(); game.hurtT=0;      // patched up between stages
     paddle.x=paddle.targetX=VW/2; resetServe(); gunTick=0;
     game.msg='LEVEL '+(n+1); game.msgSub=cfg.name; game.msgT=70;
     game.state=STATE.READY; flash(8);
   }
   function startGame(lv){
     lv=Math.max(0,Math.min(LEVELS.length-1,lv|0));
-    game.score=0; game.lives=3; game.earned=0; particles=[];
+    game.score=0; game.earned=0; particles=[];
     game.paused=false;
     loadLevel(lv);
   }
@@ -628,20 +659,31 @@
     if(game.state!==STATE.PLAY) return;
     game.state=STATE.CLEAR; game.msg='CLEARED'; game.msgSub=''; game.msgT=70;
     flash(12); blip(740,0.12,'triangle',0.07);
-    var reward=12 + game.level*5 + game.lives*5;
+    var reward=12 + game.level*5 + Math.round(game.hp/maxHp()*20);
     game.earned=reward; game.flies+=reward; saveNum('nakfrg_breaker_flies',game.flies);
     saveHi(); unlock(game.level+1);
     setTimeout(function(){
       if(game.state!==STATE.CLEAR) return;
-      if(game.level+1>=LEVELS.length){ game.state=STATE.WIN; flash(16); blip(880,0.2,'triangle',0.07); }
-      else openShop(1);
+      sumIdx=1; game.state=STATE.SUMMARY; blip(620,0.08,'triangle',0.05);
     }, 1100);
   }
-  function loseLife(){
-    game.lives--; blip(200,0.25,'sawtooth',0.06); shake(7,4);
+  function lastLevel(){ return game.level+1>=LEVELS.length; }
+  function leaveSummary(){
+    if(lastLevel()){ game.state=STATE.WIN; flash(16); blip(880,0.2,'triangle',0.07); }
+    else { blip(700,0.08,'triangle',0.06); loadLevel(game.level+1); }
+  }
+  // Damage never interrupts the rally. The ball stays live, the wall keeps
+  // creeping, and the only thing that changes is the health bar.
+  function damage(n){
+    if(game.state!==STATE.PLAY) return;
+    game.hp-=n; game.hurtT=20;
+    shake(6,3); flash(5); blip(190,0.20,'sawtooth',0.06);
+    if(game.hp<=0){ game.hp=0; gameOver(); }
+  }
+  function gameOver(){
+    game.state=STATE.OVER; saveHi(); flash(16); shake(14,6);
+    blip(90,0.5,'sawtooth',0.07);
     clearEffects(); resetCombo(); drops=[]; bolts=[];
-    if(game.lives<=0){ game.state=STATE.OVER; saveHi(); flash(14); }
-    else { resetServe(); gunTick=0; game.state=STATE.READY; }
   }
 
   // ── particles / effects ──
@@ -660,7 +702,7 @@
     var meta=PWR[type];
     blip(meta.good?660:300, 0.09, meta.good?'square':'sawtooth', 0.06);
     if(type==='double'){ splitBalls(); }
-    else if(type==='extralife'){ game.lives=Math.min(MAX_LIVES, game.lives+1); flash(8); }
+    else if(type==='repair'){ game.hp=Math.min(maxHp(), game.hp+REPAIR); flash(8); }
     else {
       if(type==='bigpad') fx.shortpad=0; if(type==='shortpad') fx.bigpad=0;
       if(type==='slow') fx.fast=0;       if(type==='fast') fx.slow=0;
@@ -671,7 +713,7 @@
   }
 
   // ── brick destruction ──
-  function detonate(cx,cy,r){ pendingBlasts.push({ x:cx, y:cy, r:r }); }
+  function detonate(cx,cy,r){ pendingBlasts.push({ x:cx, y:cy, r:r, src:dmgSrc }); }
   function explodeOnce(cx,cy,r){
     shake(7,5); flash(5); blip(120,0.16,'sawtooth',0.07);
     for(var i=0;i<14;i++){ var a=Math.random()*Math.PI*2, s=1+Math.random()*3;
@@ -686,10 +728,12 @@
       if(vx*vx+vy*vy<=r*r) killInvader(v);
     }
   }
-  function runBlasts(){ var guard=0; while(pendingBlasts.length && guard++<120){ var p=pendingBlasts.shift(); explodeOnce(p.x,p.y,p.r); } }
+  function runBlasts(){ var guard=0;
+    while(pendingBlasts.length && guard++<120){ var p=pendingBlasts.shift(); dmgSrc=p.src; explodeOnce(p.x,p.y,p.r); } }
 
   function breakBrick(b){
     if(!b.alive) return;
+    if(b.hp>0){ credit(b.hp); b.hp=0; }   // pierce / blast kills bypass damageBrick
     b.alive=false;
     game.combo++; game.mult=Math.min(5, 1+Math.floor(game.combo/4));
     var base = 10 + b.max*4 + (b.tnt?20:0) + (b.bonus?50:0);
@@ -700,6 +744,7 @@
     if(b.tnt) detonate(b.x+b.w/2, b.y+b.h/2, BLAST_R);
   }
   function damageBrick(b,dmg){
+    credit(Math.min(b.hp,dmg));
     b.hp-=dmg; b.hurtT=4;
     if(b.hp<=0) breakBrick(b);
     else { game.score+=3; blip(300,0.03,'square',0.04); }
@@ -711,6 +756,7 @@
     game.msgT=Math.max(0,game.msgT-1);
     game.msgFxT=Math.max(0,game.msgFxT-1);
     game.shakeT=Math.max(0,game.shakeT-1);
+    game.hurtT=Math.max(0,game.hurtT-1);
     updateParticles();
     if(tongue){ tongue.t--; if(tongue.t<=0) tongue=null; }
 
@@ -739,6 +785,7 @@
         activate(d.type); drops.splice(i,1); continue; }
       if(d.y>VH+10) drops.splice(i,1); }
 
+    if(game.state===STATE.PLAY) stat.frames++;
     updateGun(); updateShots(); updateBolts();
 
     if(game.state===STATE.PLAY){ updateWall(); updateInvaders(); }
@@ -758,14 +805,22 @@
     runBlasts();
     checkBreach();
 
-    for(i=balls.length-1;i>=0;i--){ if(balls[i].y-BALL_R>VH){ spawnDust(balls[i].x,VH-10,8); balls.splice(i,1); } }
-    if(game.state===STATE.PLAY && balls.length===0) loseLife();
+    // Safety net for a ball that somehow tunnels past the back wall: charge for
+    // it and put a fresh one on the paddle rather than stalling the stage.
+    for(i=balls.length-1;i>=0;i--){ if(balls[i].y-BALL_R>VH+8){
+      spawnDust(balls[i].x,VH-10,8); balls.splice(i,1); damage(DMG_DROP); } }
+    if(game.state===STATE.PLAY && balls.length===0){ balls=[makeBall(true)]; game.state=STATE.READY; }
   }
 
   function collideWalls(b){
     if(b.x-BALL_R<WALL){ b.x=WALL+BALL_R; b.vx=Math.abs(b.vx); impact(b,1,0); blip(320,0.03,'square',0.04); }
     else if(b.x+BALL_R>VW-WALL){ b.x=VW-WALL-BALL_R; b.vx=-Math.abs(b.vx); impact(b,1,0); blip(320,0.03,'square',0.04); }
     if(b.y-BALL_R<TOP_Y){ b.y=TOP_Y+BALL_R; b.vy=Math.abs(b.vy); impact(b,0,1); blip(360,0.03,'square',0.04); }
+    // The back wall keeps the ball in play and bills you for the miss.
+    else if(b.y+BALL_R>BACK_Y && b.vy>0){
+      b.y=BACK_Y-BALL_R; b.vy=-Math.abs(b.vy); impact(b,0,1);
+      spawnDust(b.x,BACK_Y,10); damage(DMG_DROP);
+    }
   }
   function collideNet(b){
     if(fx.safety>0 && b.vy>0 && b.y+BALL_R>=NET_Y){ b.y=NET_Y-BALL_R; b.vy=-Math.abs(b.vy); impact(b,0,1); blip(420,0.04,'sine',0.05); }
@@ -782,6 +837,7 @@
     }
   }
   function collideInvaders(b){
+    dmgSrc='ball';
     for(var i=0;i<invaders.length;i++){ var v=invaders[i]; if(!v.alive) continue;
       var nx=Math.max(v.x,Math.min(b.x,v.x+INV_W)), ny=Math.max(v.y,Math.min(b.y,v.y+INV_H));
       var dx=b.x-nx, dy=b.y-ny;
@@ -798,6 +854,7 @@
   }
   function collideBoss(b){
     if(!boss || boss.dead) return false;
+    dmgSrc='ball';
     var nx=Math.max(boss.x,Math.min(b.x,boss.x+boss.w)), ny=Math.max(boss.y,Math.min(b.y,boss.y+boss.h));
     var dx=b.x-nx, dy=b.y-ny;
     if(dx*dx+dy*dy>BALL_R*BALL_R) return false;
@@ -812,6 +869,7 @@
     return true;
   }
   function collideBricks(b){
+    dmgSrc='ball';
     for(var i=0;i<game.bricks.length;i++){ var br=game.bricks[i]; if(!br.alive) continue;
       var nx=Math.max(br.x,Math.min(b.x,br.x+br.w)), ny=Math.max(br.y,Math.min(b.y,br.y+br.h));
       var dx=b.x-nx, dy=b.y-ny;
@@ -850,28 +908,26 @@
       ctx.fillText(key, r.x+r.w-5, r.y+r.h/2+1); ctx.globalAlpha=1; }
     ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   }
-  // Pause / mute sit in the free gap of the HUD strip, between the level
-  // readout and the lives.
-  var HUD_BTN = { pause:{ x:187, y:5, w:16, h:16 }, mute:{ x:207, y:5, w:16, h:16 } };
+  // Pause / mute sit between the score (ends at x 82 with the combo badge) and
+  // the level readout (starts at x 136); the health bar owns everything past
+  // 193. Kept inside y 9..26 so the boxes clear the frame border and the divider.
+  var HUD_BTN = { pause:{ x:92, y:10, w:14, h:14 }, mute:{ x:112, y:10, w:14, h:14 } };
   function pauseBtnLive(){ return game.state===STATE.PLAY || game.state===STATE.READY; }
-  function drawHudBtns(){
-    var r;
-    if(pauseBtnLive()){ r=HUD_BTN.pause;
-      ctx.strokeStyle='rgba(255,255,255,0.28)'; ctx.lineWidth=1;
-      ctx.strokeRect(px(r.x)+0.5,px(r.y)+0.5,r.w-1,r.h-1);
-      ctx.fillStyle='rgba(255,255,255,0.75)';
-      if(!game.paused){ ctx.fillRect(px(r.x+5),px(r.y+3),3,10); ctx.fillRect(px(r.x+9),px(r.y+3),3,10); }
-      else for(var i=0;i<5;i++) ctx.fillRect(px(r.x+5+i),px(r.y+3+i),1,10-i*2);
-    }
-    r=HUD_BTN.mute;
+  function hudBtnBox(r){
     ctx.strokeStyle='rgba(255,255,255,0.28)'; ctx.lineWidth=1;
     ctx.strokeRect(px(r.x)+0.5,px(r.y)+0.5,r.w-1,r.h-1);
     ctx.fillStyle='rgba(255,255,255,0.75)';
-    ctx.fillRect(px(r.x+3),px(r.y+6),3,4); ctx.fillRect(px(r.x+6),px(r.y+4),2,8);
-    if(muted){ ctx.fillRect(px(r.x+9),px(r.y+5),1,1); ctx.fillRect(px(r.x+10),px(r.y+6),1,1);
-      ctx.fillRect(px(r.x+11),px(r.y+7),1,1); ctx.fillRect(px(r.x+11),px(r.y+5),1,1);
-      ctx.fillRect(px(r.x+10),px(r.y+7),1,1); ctx.fillRect(px(r.x+9),px(r.y+8),1,1); }
-    else { ctx.fillRect(px(r.x+9),px(r.y+5),1,5); ctx.fillRect(px(r.x+11),px(r.y+4),1,7); }
+  }
+  function drawHudBtns(){
+    var r, i;
+    if(pauseBtnLive()){ r=HUD_BTN.pause; hudBtnBox(r);
+      if(!game.paused){ ctx.fillRect(px(r.x+4),px(r.y+3),2,8); ctx.fillRect(px(r.x+8),px(r.y+3),2,8); }
+      else for(i=0;i<4;i++) ctx.fillRect(px(r.x+5+i),px(r.y+3+i),1,8-i*2);
+    }
+    r=HUD_BTN.mute; hudBtnBox(r);
+    ctx.fillRect(px(r.x+3),px(r.y+6),2,3); ctx.fillRect(px(r.x+5),px(r.y+4),2,7);
+    if(muted){ for(i=0;i<9;i++) ctx.fillRect(px(r.x+3+i),px(r.y+2+i),1,1); }
+    else { ctx.fillRect(px(r.x+8),px(r.y+5),1,5); ctx.fillRect(px(r.x+10),px(r.y+4),1,7); }
   }
 
   function drawFrame(){
@@ -889,13 +945,27 @@
     ctx.fillText('SC '+pad(game.score,5), WALL+5, HUD_H/2+1);
     ctx.textAlign='center';
     ctx.fillText('LV '+(game.level+1)+'/'+LEVELS.length, VW/2, HUD_H/2+1);
-    var lx=VW-WALL-8, shown=Math.min(MAX_LIVES,game.lives);
-    for(var i=0;i<shown;i++) drawFrogHead(lx-i*12, HUD_H/2, 0.85);
     if(game.mult>1){ ctx.textAlign='left'; ctx.globalAlpha=0.5+0.5*Math.abs(Math.sin(blinkT*0.18));
       ctx.font='9px ui-monospace, monospace'; ctx.fillText('x'+game.mult, WALL+62, HUD_H/2+1); ctx.globalAlpha=1; }
     ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     drawHudBtns();
+    drawHealth();
     drawMeter();
+  }
+  // One segment per hit you can still take, so the bar reads as a countdown
+  // rather than a percentage. It also visibly lengthens as MAX HP is bought.
+  function drawHealth(){
+    var x=204, y=10, h=8, seg=4, gap=1, max=maxHp();
+    drawFrogHead(196, HUD_H/2, 0.8);
+    var hot = game.hurtT>0 ? (blinkT%6<3) : (game.hp<=DMG_DROP && blinkT%30<15);
+    for(var i=0;i<max;i++){
+      var sx=x+i*(seg+gap);
+      if(i<game.hp){ ctx.fillStyle = hot ? 'rgba(255,255,255,0.45)' : '#fff';
+        ctx.fillRect(px(sx),px(y),seg,h); }
+      else { ctx.fillStyle='rgba(255,255,255,0.22)';
+        ctx.fillRect(px(sx),px(y)+3,seg,2); }
+    }
+    ctx.fillStyle='#fff';
   }
   function drawMeter(){
     var w=VW-WALL*2-24, x=WALL+12, frac, solid;
@@ -984,7 +1054,8 @@
     ctx.strokeStyle='#fff'; ctx.lineWidth=1;
     capsule(px(x0)+0.5, px(PADDLE_Y)+0.5, PADDLE_W-1, PADDLE_H-1); ctx.stroke();
     ctx.fillStyle='#fff';
-    ctx.fillRect(px(paddle.x)-1, px(PADDLE_Y)-3, 3, 3);              // the muzzle
+    var off=muzzleOffsets();
+    for(var m=0;m<off.length;m++) ctx.fillRect(px(paddle.x+off[m])-1, px(PADDLE_Y)-3, 3, 3);
     if(fx.laser>0){ ctx.fillRect(px(paddle.x-PADDLE_W*0.34)-1,px(PADDLE_Y)-2,2,2);
       ctx.fillRect(px(paddle.x+PADDLE_W*0.34)-1,px(PADDLE_Y)-2,2,2); }
   }
@@ -1077,7 +1148,7 @@
       ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.globalAlpha=0.4; ctx.font='9px ui-monospace, monospace';
       ctx.fillText('drag to move . the paddle fires', VW/2, 318);
-      ctx.fillText('catch capsules . hold the line', VW/2, 331);
+      ctx.fillText('a missed ball costs HP, not a life', VW/2, 331);
       ctx.globalAlpha=1;
     } else if(game.state===STATE.OVER){
       ctx.font='bold 20px ui-monospace, monospace'; ctx.fillText('GAME OVER', VW/2, VH*0.36);
@@ -1146,8 +1217,72 @@
     ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   }
 
+  // ── stage summary ──
+  //  Shown the moment a stage is cleared: how long it took, which weapon did
+  //  the work, what it paid out. Doubles as the hub for the upgrade screen.
+  function mmss(frames){ var s=Math.round(frames/60); return Math.floor(s/60)+':'+pad(s%60,2); }
+  function sumBtns(){
+    var y=286, w=100, g=10, x0=(VW-(w*2+g))/2;
+    return [ { x:x0, y:y, w:w, h:28 }, { x:x0+w+g, y:y, w:w, h:28 } ];
+  }
+  function sumHitTest(vx,vy){ var b=sumBtns();
+    if(inRect(b[0],vx,vy)) return 0;
+    if(inRect(b[1],vx,vy)) return 1;
+    return -1; }
+  function sumRow(label,value,y){
+    ctx.font='9px ui-monospace, monospace'; ctx.textBaseline='middle';
+    ctx.globalAlpha=0.55; ctx.textAlign='left';
+    ctx.fillText(label, WALL+22, y);
+    ctx.globalAlpha=1; ctx.textAlign='right'; ctx.font='11px ui-monospace, monospace';
+    ctx.fillText(value, VW-WALL-22, y);
+  }
+  function drawSummary(){
+    panel();
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='bold 15px ui-monospace, monospace';
+    ctx.fillText('STAGE CLEARED', VW/2, HUD_H+24);
+    ctx.globalAlpha=0.5; ctx.font='8px ui-monospace, monospace';
+    ctx.fillText('LV '+(game.level+1)+' . '+LEVELS[game.level].name, VW/2, HUD_H+40);
+    ctx.globalAlpha=1;
+
+    var tot=stat.gun+stat.ball;
+    sumRow('TIME', mmss(stat.frames), 100);
+    sumRow('GUN DAMAGE', ''+stat.gun, 120);
+    sumRow('BALL DAMAGE', ''+stat.ball, 140);
+
+    // Split bar: how much of the stage each weapon actually carried.
+    var bx=WALL+22, bw=VW-WALL*2-44, gy=156;
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(px(bx)+0.5,px(gy)+0.5,bw,7);
+    if(tot>0){ var gw=Math.round((bw-2)*stat.gun/tot);
+      ctx.fillStyle='#fff'; ctx.fillRect(px(bx)+1,px(gy)+1,gw,6);
+      for(var i=gw;i<bw-2;i+=2) ctx.fillRect(px(bx)+1+i,px(gy)+1,1,6); }
+    ctx.globalAlpha=0.5; ctx.font='7px ui-monospace, monospace';
+    ctx.textAlign='left'; ctx.fillText('GUN', bx, gy+15);
+    ctx.textAlign='right'; ctx.fillText('BALL', bx+bw, gy+15);
+    ctx.globalAlpha=1;
+
+    sumRow('HP LEFT', game.hp+' / '+maxHp(), 190);
+
+    ctx.textAlign='left'; ctx.font='9px ui-monospace, monospace'; ctx.globalAlpha=0.55;
+    ctx.fillText('FLIES EARNED', WALL+22, 214); ctx.globalAlpha=1;
+    ctx.textAlign='right'; ctx.font='13px ui-monospace, monospace';
+    ctx.fillText('+'+game.earned, VW-WALL-22, 214);
+    drawFly(VW-WALL-26-ctx.measureText('+'+game.earned).width, 214, false);
+    ctx.textAlign='center'; ctx.globalAlpha=0.45; ctx.font='8px ui-monospace, monospace';
+    ctx.fillText('banked  '+game.flies+'   score  '+game.score, VW/2, 234);
+    ctx.globalAlpha=1;
+
+    var b=sumBtns();
+    drawBtn(b[0],'UPGRADES','U',sumIdx===0);
+    drawBtn(b[1], lastLevel()?'FINISH':'NEXT STAGE', null, sumIdx===1);
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.globalAlpha=0.4;
+    ctx.font='9px ui-monospace, monospace';
+    ctx.fillText('tap a button to carry on', VW/2, 330);
+    ctx.globalAlpha=1; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  }
+
   // ── upgrade shop ──
-  var SHOP_X=WALL+10, SHOP_W=VW-WALL*2-20, SHOP_Y0=HUD_H+56, SHOP_RH=40, SHOP_RG=6;
+  var SHOP_X=WALL+10, SHOP_W=VW-WALL*2-20, SHOP_Y0=HUD_H+56, SHOP_RH=36, SHOP_RG=5;
   var SHOP_GO_Y=SHOP_Y0+UPG.length*(SHOP_RH+SHOP_RG)+8, SHOP_GO_H=26;
   function shopRect(i){ return { x:SHOP_X, y:SHOP_Y0+i*(SHOP_RH+SHOP_RG), w:SHOP_W, h:SHOP_RH }; }
   function shopGoRect(){ return { x:SHOP_X+SHOP_W/4, y:SHOP_GO_Y, w:SHOP_W/2, h:SHOP_GO_H }; }
@@ -1171,8 +1306,10 @@
   function shopActivate(i){ if(i<UPG.length) buyUpgrade(i); else closeShop(); }
   function closeShop(){
     blip(600,0.06,'square',0.05);
-    if(shopFrom===1) loadLevel(game.level+1);
-    else game.state=STATE.TITLE;
+    // From the summary the shop is a detour, not a gate: hand control back so
+    // the player still chooses when to start the next stage.
+    game.state = shopFrom===1 ? STATE.SUMMARY : STATE.TITLE;
+    sumIdx=1;
   }
   function drawShop(){
     panel();
@@ -1196,14 +1333,14 @@
       ctx.font='9px ui-monospace, monospace';
       ctx.fillText(UPG[i].name, t.x+8, t.y+12);
       ctx.globalAlpha=on?0.7:0.5; ctx.font='8px ui-monospace, monospace';
-      ctx.fillText(upgValue(i), t.x+8, t.y+30); ctx.globalAlpha=1;
-      // pips
-      var pw=7, pg=2, px0=t.x+80;
+      ctx.fillText(upgValue(i), t.x+8, t.y+26); ctx.globalAlpha=1;
+      // pips, clear of the widest value string ("18 hp . 9 misses")
+      var pw=7, pg=2, px0=t.x+96;
       for(var k=0;k<UPG[i].max;k++){
         var fill=k<upg[i];
         ctx.strokeStyle=ink; ctx.fillStyle=ink;
-        if(fill) ctx.fillRect(px(px0+k*(pw+pg)), px(t.y+24), pw, 6);
-        else { ctx.globalAlpha=on?0.4:0.35; ctx.strokeRect(px(px0+k*(pw+pg))+0.5, px(t.y+24)+0.5, pw-1, 5); ctx.globalAlpha=1; }
+        if(fill) ctx.fillRect(px(px0+k*(pw+pg)), px(t.y+21), pw, 6);
+        else { ctx.globalAlpha=on?0.4:0.35; ctx.strokeRect(px(px0+k*(pw+pg))+0.5, px(t.y+21)+0.5, pw-1, 5); ctx.globalAlpha=1; }
       }
       ctx.textAlign='right'; ctx.fillStyle=ink;
       if(maxed){ ctx.font='9px ui-monospace, monospace'; ctx.globalAlpha=0.6;
@@ -1219,7 +1356,7 @@
     ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(px(g.x)+0.5,px(g.y)+0.5,g.w-1,g.h-1);
     ctx.fillStyle=gOn?'#000':'#fff'; ctx.textAlign='center';
     ctx.font='11px ui-monospace, monospace';
-    ctx.fillText(shopFrom===1?('LEVEL '+(game.level+2)):'BACK', g.x+g.w/2, g.y+g.h/2+1);
+    ctx.fillText('BACK', g.x+g.w/2, g.y+g.h/2+1);
 
     ctx.fillStyle='#fff'; ctx.globalAlpha=0.4; ctx.font='9px ui-monospace, monospace';
     ctx.fillText('tap a row to buy', VW/2, g.y+g.h+18);
@@ -1257,11 +1394,13 @@
     ctx.save(); ctx.beginPath(); ctx.rect(WALL+1, TOP_Y, VW-WALL*2-2, VH-WALL-TOP_Y); ctx.clip();
     drawBoss(); drawBricks(); drawInvaders(); ctx.restore();
     drawDanger(); drawBolts(); drawNet(); drawDrops(); drawShots(); drawPaddle();
-    if(game.state!==STATE.TITLE && game.state!==STATE.SELECT && game.state!==STATE.SHOP) drawBalls();
+    if(game.state!==STATE.TITLE && game.state!==STATE.SELECT &&
+       game.state!==STATE.SHOP && game.state!==STATE.SUMMARY) drawBalls();
     drawEffects(); drawParticles(); drawMessage();
     if(game.paused && (game.state===STATE.PLAY||game.state===STATE.READY)) drawPaused();
     if(game.state===STATE.SELECT) drawSelect();
     else if(game.state===STATE.SHOP) drawShop();
+    else if(game.state===STATE.SUMMARY) drawSummary();
     else if(game.state===STATE.TITLE||game.state===STATE.OVER||game.state===STATE.WIN) drawOverlay();
     if(game.flashT>0){ ctx.fillStyle='rgba(255,255,255,'+(game.flashT/14*0.25)+')'; ctx.fillRect(0,0,VW,VH); }
   }
@@ -1289,10 +1428,12 @@
     selIdx=i; blip(420,0.02,'square',0.03);
   }
   function moveShop(d){ var n=UPG.length+1; shopIdx=(shopIdx+d+n)%n; blip(420,0.02,'square',0.03); }
+  function sumActivate(i){ if(i===0) openShop(1); else leaveSummary(); }
   function primaryAction(){ var a=audio(); if(a&&a.state==='suspended') a.resume();
     if(game.paused){ game.paused=false; return; }
     if(game.state===STATE.SELECT){ chooseLevel(selIdx); return; }
     if(game.state===STATE.SHOP){ shopActivate(shopIdx); return; }
+    if(game.state===STATE.SUMMARY){ sumActivate(sumIdx); return; }
     if(game.state===STATE.TITLE) startGame(0);
     else if(game.state===STATE.READY) launchAll();
     else if(game.state===STATE.PLAY){ if(anyStuck()) launchAll(); }
@@ -1315,6 +1456,10 @@
       var s=shopHitTest(vx,vy);
       if(s>=0){ shopIdx=s; shopActivate(s); }
       return; }
+    if(game.state===STATE.SUMMARY){
+      var u=sumHitTest(vx,vy);
+      if(u>=0){ sumIdx=u; sumActivate(u); }
+      return; }
     if(game.state===STATE.TITLE||game.state===STATE.OVER||game.state===STATE.WIN){
       var mb=menuBtns();
       if(inRect(mb[0],vx,vy)){ openShop(0); return; }
@@ -1327,6 +1472,7 @@
     var vx=toVirtualX(e.clientX), vy=((e.clientY-r.top)/r.height)*VH;
     if(game.state===STATE.SELECT){ var h=selHitTest(vx,vy); if(h>=0) selIdx=h; return false; }
     if(game.state===STATE.SHOP){ var s=shopHitTest(vx,vy); if(s>=0) shopIdx=s; return false; }
+    if(game.state===STATE.SUMMARY){ var u=sumHitTest(vx,vy); if(u>=0) sumIdx=u; return false; }
     return true;
   }
   window.addEventListener('pointermove', function(e){ if(!hoverMenu(e)) return;
@@ -1347,6 +1493,13 @@
       if(e.code==='ArrowDown'||e.code==='KeyS'){ e.preventDefault(); moveShop(1); return; }
       if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); shopActivate(shopIdx); return; }
       if(e.code==='Escape'||e.code==='KeyU'){ closeShop(); return; }
+      return;
+    }
+    if(game.state===STATE.SUMMARY){
+      if(e.code==='ArrowLeft'||e.code==='KeyA'){ e.preventDefault(); sumIdx=0; blip(420,0.02,'square',0.03); return; }
+      if(e.code==='ArrowRight'||e.code==='KeyD'){ e.preventDefault(); sumIdx=1; blip(420,0.02,'square',0.03); return; }
+      if(e.code==='Space'||e.code==='Enter'){ e.preventDefault(); sumActivate(sumIdx); return; }
+      if(e.code==='KeyU'){ openShop(1); return; }
       return;
     }
     if(e.code==='ArrowLeft'||e.code==='KeyA'){ keys.left=true; pointerX=null; }
