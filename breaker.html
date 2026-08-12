@@ -181,19 +181,19 @@
   //  gap     : spacing between spawned rows, in row-heights
   //  inv     : squadron that joins the wall after `at` rows
   var LEVELS = [
-    { name:"LILYPAD",      rows: 9, tier:0, descend:0.13, gap:2.40, hpBonus:0, boss:'toad',  bossHp:10 },
-    { name:"RIBBIT",       rows:10, tier:0, descend:0.15, gap:2.20, hpBonus:0, boss:'toad',  bossHp:13 },
-    { name:"DRAGONFLY",    rows:11, tier:0, descend:0.17, gap:2.10, hpBonus:0, boss:'toad',  bossHp:16, inv:{ n:3, hp:1, at:6 } },
-    { name:"CATTAILS",     rows:12, tier:1, descend:0.18, gap:2.00, hpBonus:1, boss:'toad',  bossHp:19, inv:{ n:3, hp:2, at:7 } },
-    { name:"DUCKWEED",     rows:13, tier:1, descend:0.20, gap:1.90, hpBonus:1, boss:'heron', bossHp:23, inv:{ n:4, hp:2, at:7 } },
-    { name:"THE BOG",      rows:14, tier:1, descend:0.22, gap:1.80, hpBonus:1, boss:'heron', bossHp:27, inv:{ n:4, hp:2, at:8 } },
-    { name:"SPILLWAY",     rows:15, tier:1, descend:0.24, gap:1.70, hpBonus:2, boss:'heron', bossHp:31, inv:{ n:5, hp:2, at:8 } },
-    { name:"DEEP POND",    rows:16, tier:2, descend:0.26, gap:1.60, hpBonus:2, boss:'heron', bossHp:35, inv:{ n:5, hp:3, at:9 } },
-    { name:"THE RAPIDS",   rows:17, tier:2, descend:0.28, gap:1.55, hpBonus:2, boss:'bull',  bossHp:40, inv:{ n:6, hp:3, at:9 } },
-    { name:"HERON'S NEST", rows:18, tier:2, descend:0.30, gap:1.50, hpBonus:3, boss:'bull',  bossHp:45, inv:{ n:6, hp:3, at:10 } },
-    { name:"MOONLIGHT",    rows:19, tier:2, descend:0.32, gap:1.45, hpBonus:3, boss:'bull',  bossHp:50, inv:{ n:7, hp:3, at:10 } },
-    { name:"BLACK WATER",  rows:20, tier:2, descend:0.34, gap:1.40, hpBonus:4, boss:'bull',  bossHp:56, inv:{ n:7, hp:4, at:11 } },
-    { name:"THE FLOOD",    rows:22, tier:2, descend:0.36, gap:1.35, hpBonus:4, boss:'bull',  bossHp:64, inv:{ n:8, hp:4, at:12 } }
+    { name:"LILYPAD",      rows: 9, tier:0, descend:0.13, gap:2.40, hpBonus:0, boss:'toad',  bossHp:14 },
+    { name:"RIBBIT",       rows:10, tier:0, descend:0.15, gap:2.20, hpBonus:0, boss:'toad',  bossHp:22 },
+    { name:"DRAGONFLY",    rows:11, tier:0, descend:0.17, gap:2.10, hpBonus:0, boss:'toad',  bossHp:34,   inv:{ n:3, hp:1, at:6 } },
+    { name:"CATTAILS",     rows:12, tier:1, descend:0.18, gap:2.00, hpBonus:1, boss:'toad',  bossHp:52,   inv:{ n:3, hp:2, at:7 } },
+    { name:"DUCKWEED",     rows:13, tier:1, descend:0.20, gap:1.90, hpBonus:1, boss:'heron', bossHp:80,   inv:{ n:4, hp:2, at:7 } },
+    { name:"THE BOG",      rows:14, tier:1, descend:0.22, gap:1.80, hpBonus:1, boss:'heron', bossHp:120,  inv:{ n:4, hp:2, at:8 } },
+    { name:"SPILLWAY",     rows:15, tier:1, descend:0.24, gap:1.70, hpBonus:2, boss:'heron', bossHp:180,  inv:{ n:5, hp:2, at:8 } },
+    { name:"DEEP POND",    rows:16, tier:2, descend:0.26, gap:1.60, hpBonus:2, boss:'heron', bossHp:265,  inv:{ n:5, hp:3, at:9 } },
+    { name:"THE RAPIDS",   rows:17, tier:2, descend:0.28, gap:1.55, hpBonus:2, boss:'bull',  bossHp:390,  inv:{ n:6, hp:3, at:9 } },
+    { name:"HERON'S NEST", rows:18, tier:2, descend:0.30, gap:1.50, hpBonus:3, boss:'bull',  bossHp:580,  inv:{ n:6, hp:3, at:10 } },
+    { name:"MOONLIGHT",    rows:19, tier:2, descend:0.32, gap:1.45, hpBonus:3, boss:'bull',  bossHp:820,  inv:{ n:7, hp:3, at:10 } },
+    { name:"BLACK WATER",  rows:20, tier:2, descend:0.34, gap:1.40, hpBonus:4, boss:'bull',  bossHp:1160, inv:{ n:7, hp:4, at:11 } },
+    { name:"THE FLOOD",    rows:22, tier:2, descend:0.36, gap:1.35, hpBonus:4, boss:'bull',  bossHp:1650, inv:{ n:8, hp:4, at:12 } }
   ];
 
   var FROG = [ "..#...#..", ".#O#.#O#.", ".#######.", "#########", "#########", "#.#####.#", ".#.....#." ];
@@ -303,6 +303,103 @@
       g.gain.setValueAtTime(g.gain.value,t); g.gain.exponentialRampToValueAtTime(0.0001,t+(dur||0.06));
       o.start(t); o.stop(t+(dur||0.06)); }catch(e){} }
   function setMute(m){ muted=m; try{ localStorage.setItem('nakfrg_breaker_mute',m?'1':'0'); }catch(e){} }
+
+  // ── chiptune ──
+  //  Three looping tracks: a menu jingle, a stage groove and a boss theme.
+  //  Two tone voices (square lead, triangle bass) plus a noise/kick channel,
+  //  scheduled a beat ahead of the audio clock so the loop never stutters when
+  //  the render thread hitches. Steps are 16ths; 0 is a rest.
+  //  Drums: k = kick, s = snare, h = hat, . = nothing.
+  var TRACKS = {
+    menu: { bpm:128,
+      lead:[76, 0,79, 0,81, 0,79, 0, 76, 0,74, 0,76, 0, 0, 0,
+            74, 0,76, 0,79, 0,76, 0, 74, 0,72, 0,69, 0, 0, 0,
+            76, 0,79, 0,84, 0,81, 0, 79, 0,76, 0,74, 0, 0, 0,
+            72, 0,74, 0,76, 0,79, 0, 81, 0,79, 0,76, 0, 0, 0],
+      bass:[45, 0,45, 0,45, 0,45, 0, 45, 0,45, 0,45, 0,45, 0,
+            41, 0,41, 0,41, 0,41, 0, 41, 0,41, 0,41, 0,41, 0,
+            43, 0,43, 0,43, 0,43, 0, 43, 0,43, 0,43, 0,43, 0,
+            40, 0,40, 0,40, 0,40, 0, 45, 0,45, 0,43, 0,43, 0],
+      drum:'k..hs..hk..hs..h' },
+    stage:{ bpm:146,
+      lead:[69, 0, 0,72, 0,69, 0,76, 74, 0, 0,72, 0,69, 0, 0,
+            67, 0, 0,71, 0,67, 0,74, 72, 0, 0,71, 0,67, 0, 0,
+            69, 0, 0,72, 0,76, 0,79, 77, 0,76, 0,74, 0,72, 0,
+            71, 0,74, 0,71, 0,67, 0, 69, 0, 0, 0, 0, 0, 0, 0],
+      bass:[45, 0,45,45, 0,45, 0,45, 45, 0,45,45, 0,45, 0,45,
+            43, 0,43,43, 0,43, 0,43, 43, 0,43,43, 0,43, 0,43,
+            41, 0,41,41, 0,41, 0,41, 41, 0,41,41, 0,41, 0,41,
+            40, 0,40,40, 0,40, 0,40, 45, 0,45, 0,43, 0,43, 0],
+      drum:'k.hhs.hhk.hhs.hh' },
+    boss: { bpm:164,
+      lead:[69, 0,70, 0,69, 0,65, 0, 69, 0,70, 0,72, 0,70, 0,
+            69, 0,70, 0,69, 0,65, 0, 64, 0,65, 0,67, 0,68, 0,
+            81, 0,80, 0,79, 0,77, 0, 76, 0,75, 0,74, 0,72, 0,
+            69,69, 0,69, 0,68, 0,67, 66, 0,65, 0,64, 0, 0, 0],
+      bass:[45,45, 0,45,45, 0,45, 0, 45,45, 0,45,45, 0,45, 0,
+            44,44, 0,44,44, 0,44, 0, 44,44, 0,44,44, 0,44, 0,
+            43,43, 0,43,43, 0,43, 0, 42,42, 0,42,42, 0,42, 0,
+            41,41, 0,41,41, 0,41, 0, 40,40, 0,40,40, 0,40, 0],
+      drum:'k.hks.hkk.hks.hh' }
+  };
+  var mus = { name:null, step:0, next:0, gain:null, noise:null };
+  function midi(m){ return 440*Math.pow(2,(m-69)/12); }
+  function musBus(a){
+    if(!mus.gain){ mus.gain=a.createGain(); mus.gain.gain.value=0; mus.gain.connect(a.destination); }
+    return mus.gain;
+  }
+  function musNoise(a){
+    if(!mus.noise){ var n=(a.sampleRate*0.25)|0, b=a.createBuffer(1,n,a.sampleRate), d=b.getChannelData(0);
+      for(var i=0;i<n;i++) d[i]=Math.random()*2-1; mus.noise=b; }
+    return mus.noise;
+  }
+  function musTone(a,t,f,dur,type,vol){
+    var o=a.createOscillator(), g=a.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+0.010);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(musBus(a)); o.start(t); o.stop(t+dur+0.02);
+  }
+  function musDrum(a,t,kind){
+    if(kind==='k'){
+      var o=a.createOscillator(), g=a.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(160,t);
+      o.frequency.exponentialRampToValueAtTime(45,t+0.09);
+      g.gain.setValueAtTime(0.16,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.13);
+      o.connect(g); g.connect(musBus(a)); o.start(t); o.stop(t+0.15); return;
+    }
+    var s=a.createBufferSource(), f=a.createBiquadFilter(), ng=a.createGain();
+    s.buffer=musNoise(a); f.type='highpass'; f.frequency.value = kind==='s'?1400:6000;
+    ng.gain.setValueAtTime(kind==='s'?0.10:0.035,t);
+    ng.gain.exponentialRampToValueAtTime(0.0001,t+(kind==='s'?0.09:0.035));
+    s.connect(f); f.connect(ng); ng.connect(musBus(a));
+    s.start(t); s.stop(t+0.16);
+  }
+  function wantedTrack(){
+    if(game.state===STATE.PLAY || game.state===STATE.READY || game.state===STATE.CLEAR)
+      return game.phase===PHASE.BOSS ? 'boss' : 'stage';
+    return 'menu';
+  }
+  function musicTick(){
+    var a=actx; if(!a) return;                  // waits for the first gesture
+    var bus=musBus(a);
+    var vol = muted ? 0 : (game.paused ? 0.30 : 1);
+    if(Math.abs(bus.gain.value-vol)>0.001) bus.gain.setTargetAtTime(vol, a.currentTime, 0.05);
+    var want=wantedTrack();
+    if(want!==mus.name){ mus.name=want; mus.step=0; mus.next=a.currentTime+0.06; }
+    var trk=TRACKS[mus.name], spb=60/trk.bpm/4;
+    if(mus.next < a.currentTime-0.3) mus.next=a.currentTime+0.03;   // tab was hidden
+    var guard=0;
+    while(mus.next < a.currentTime+0.18 && guard++<64){
+      var i=mus.step%trk.lead.length, t=mus.next;
+      if(trk.lead[i]) musTone(a,t,midi(trk.lead[i]),spb*2.4,'square',0.030);
+      if(trk.bass[i]) musTone(a,t,midi(trk.bass[i]),spb*2.0,'triangle',0.055);
+      var d=trk.drum.charAt(i%trk.drum.length);
+      if(d!=='.') musDrum(a,t,d);
+      mus.step++; mus.next+=spb;
+    }
+  }
 
   // ── scaling ──
   var scale=1, dpr=1, wrap=document.getElementById('wrap');
@@ -534,10 +631,14 @@
     for(var i=slots.length-1;i>0;i--){ var j=(Math.random()*(i+1))|0, t=slots[i]; slots[i]=slots[j]; slots[j]=t; }
     for(i=0;i<Math.min(count,slots.length);i++) addShieldBrick(slots[i][0], slots[i][1]);
   }
-  function damageBoss(n){
-    if(!boss || boss.dead || boss.entering || boss.invT>0) return;
+  // The invulnerability window exists so one ball can't register several hits
+  // across its collision substeps. Gun shots are already discrete, so they are
+  // never absorbed by it.
+  function damageBoss(n,fromBall){
+    if(!boss || boss.dead || boss.entering) return;
+    if(fromBall){ if(boss.invT>0) return; boss.invT=6; }
     credit(Math.min(boss.hp,n));
-    boss.hp-=n; boss.hurtT=10; boss.invT=6;
+    boss.hp-=n; boss.hurtT=10;
     shake(5,3); blip(160,0.09,'square',0.06);
     spawnDust(boss.x+boss.w/2, boss.y+boss.h/2, 6);
     if(boss.hp<=0){ boss.hp=0; boss.dead=true; killBoss(); }
@@ -644,7 +745,7 @@
     clearEffects(); resetCombo();
     for(var r=2;r>=0;r--) spawnRow(TOP_Y + r*ROW_STEP);   // a little wall to start on
     game.lastRowY=TOP_Y;
-    game.hp=maxHp(); game.hurtT=0;      // patched up between stages
+    game.hurtT=0;   // health carries across stages: a run is one health pool
     paddle.x=paddle.targetX=VW/2; resetServe(); gunTick=0;
     game.msg='LEVEL '+(n+1); game.msgSub=cfg.name; game.msgT=70;
     game.state=STATE.READY; flash(8);
@@ -652,6 +753,7 @@
   function startGame(lv){
     lv=Math.max(0,Math.min(LEVELS.length-1,lv|0));
     game.score=0; game.earned=0; particles=[];
+    game.hp=maxHp();          // a fresh run is the only full heal
     game.paused=false;
     loadLevel(lv);
   }
@@ -865,7 +967,7 @@
     if(ox<oy){ var sx=(b.x<cx?-1:1); b.x=cx+sx*(boss.w/2+BALL_R); b.vx=sx*Math.abs(b.vx); impact(b,1,0); }
     else { var sy=(b.y<cy?-1:1); b.y=cy+sy*(boss.h/2+BALL_R); b.vy=sy*Math.abs(b.vy); impact(b,0,1); }
     tongue={ x:b.x, y:b.y, tx:boss.x+boss.w/2, ty:boss.y+boss.h/2, t:7 };
-    damageBoss(ballDamage()*(fx.bombball>0?2:1));
+    damageBoss(ballDamage()*(fx.bombball>0?2:1), true);
     return true;
   }
   function collideBricks(b){
@@ -1300,6 +1402,9 @@
     var c=upgCost(i);
     if(game.flies<c){ blip(150,0.10,'sawtooth',0.05); flash(3); return; }
     game.flies-=c; upg[i]++; saveUpg(); saveNum('nakfrg_breaker_flies',game.flies);
+    // Buying capacity hands you the new capacity; it is not a heal of what you
+    // already spent, so the rest of the bar stays where you left it.
+    if(UPG[i].key==='hp') game.hp+=2;
     levelSpeed=speedForLevel(game.level); rescaleBalls();
     blip(760,0.10,'triangle',0.06); flash(5);
   }
@@ -1409,6 +1514,7 @@
   var last=performance.now(), acc=0, STEP=1000/60;
   function loop(now){ var dt=Math.min(100,now-last); last=now; acc+=dt; blinkT++;
     var guard=0; while(acc>=STEP && guard++<5){ update(); acc-=STEP; } render(); requestAnimationFrame(loop); }
+  setInterval(musicTick, 40);   // own timer so the music survives a render hitch
   requestAnimationFrame(loop);
 
   // ── input ──
