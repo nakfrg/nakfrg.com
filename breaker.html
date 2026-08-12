@@ -1807,9 +1807,6 @@
     else if(game.state===STATE.PLAY){ if(anyStuck()) launchAll(); }
     else if(game.state===STATE.OVER||game.state===STATE.WIN) startGame(0);
   }
-  /*DEBUG*/ window.__dbg={game:game,upg:upg,update:update,startGame:startGame,launchAll:launchAll,paddle:paddle,fx:fx,
-    balls:function(){return balls;},boss:function(){return boss;},bolts:function(){return bolts;},bricks:function(){return game.bricks;},
-    inv:function(){return invaders;},LEVELS:LEVELS,openSelect:openSelect,maxHp:maxHp};
   canvas.addEventListener('pointerdown', function(e){
     var r=canvas.getBoundingClientRect(), vx=toVirtualX(e.clientX);
     var vy=(e.clientY!==undefined)?(((e.clientY-r.top)/r.height)*VH):0;
