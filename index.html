@@ -140,6 +140,33 @@
       <div id="select">
         <div id="selHead" class="pix">SELECT GAME</div>
         <div id="selSub" class="pix">&#9650;&#9660; MOVE &nbsp; ENTER PLAY</div>
+        <a class="row" href="https://capydefence.nakfrg.com/" data-icon="rook">
+          <span class="cur pix">&#9658;</span>
+          <canvas width="16" height="14"></canvas>
+          <span class="meta">
+            <span class="name pix">CAPY DEFENCE</span>
+            <span class="tag pix" style="display:block">TOWER DEFENCE, CAPY STYLE.</span>
+            <span class="stat pix" style="display:block">CABINET LOCATED OFF-SITE</span>
+          </span>
+        </a>
+        <a class="row" href="https://capyheaven.nakfrg.com/" data-icon="bullet">
+          <span class="cur pix">&#9658;</span>
+          <canvas width="16" height="14"></canvas>
+          <span class="meta">
+            <span class="name pix">CAPY HEAVEN</span>
+            <span class="tag pix" style="display:block">BULLET HEAVEN. ENDLESS HORDES.</span>
+            <span class="stat pix" style="display:block">CABINET LOCATED OFF-SITE</span>
+          </span>
+        </a>
+        <a class="row" href="https://capycalc.nakfrg.com/" data-icon="capy">
+          <span class="cur pix">&#9658;</span>
+          <canvas width="16" height="14"></canvas>
+          <span class="meta">
+            <span class="name pix">CAPYCALC</span>
+            <span class="tag pix" style="display:block">CAPYBARA GO REFERENCE.</span>
+            <span class="stat pix" style="display:block">CABINET LOCATED OFF-SITE</span>
+          </span>
+        </a>
         <a class="row" href="tamafroggi.html" data-icon="frog">
           <span class="cur pix">&#9658;</span>
           <canvas width="16" height="14"></canvas>
@@ -158,15 +185,6 @@
             <span class="stat pix" style="display:block" data-stat="breaker"></span>
           </span>
         </a>
-        <a class="row" href="phish.html" data-icon="mail">
-          <span class="cur pix">&#9658;</span>
-          <canvas width="16" height="14"></canvas>
-          <span class="meta">
-            <span class="name pix">THE PHISHING TRAIL</span>
-            <span class="tag pix" style="display:block">SURVIVE THE WORK WEEK.</span>
-            <span class="stat pix" style="display:block" data-stat="phish"></span>
-          </span>
-        </a>
         <a class="row" href="froggp.html" data-icon="kart">
           <span class="cur pix">&#9658;</span>
           <canvas width="16" height="14"></canvas>
@@ -176,31 +194,13 @@
             <span class="stat pix" style="display:block" data-stat="gp"></span>
           </span>
         </a>
-        <a class="row" href="https://capyheaven.nakfrg.com/" data-icon="capy">
+        <a class="row" href="phish.html" data-icon="mail">
           <span class="cur pix">&#9658;</span>
           <canvas width="16" height="14"></canvas>
           <span class="meta">
-            <span class="name pix">CAPY HEAVEN</span>
-            <span class="tag pix" style="display:block">BULLET HEAVEN. ENDLESS HORDES.</span>
-            <span class="stat pix" style="display:block">CABINET LOCATED OFF-SITE</span>
-          </span>
-        </a>
-        <a class="row" href="https://capydefence.nakfrg.com/" data-icon="capy">
-          <span class="cur pix">&#9658;</span>
-          <canvas width="16" height="14"></canvas>
-          <span class="meta">
-            <span class="name pix">CAPY DEFENCE</span>
-            <span class="tag pix" style="display:block">TOWER DEFENCE, CAPY STYLE.</span>
-            <span class="stat pix" style="display:block">CABINET LOCATED OFF-SITE</span>
-          </span>
-        </a>
-        <a class="row" href="https://capycalc.nakfrg.com/" data-icon="capy">
-          <span class="cur pix">&#9658;</span>
-          <canvas width="16" height="14"></canvas>
-          <span class="meta">
-            <span class="name pix">CAPYCALC</span>
-            <span class="tag pix" style="display:block">CAPYBARA GO REFERENCE.</span>
-            <span class="stat pix" style="display:block">CABINET LOCATED OFF-SITE</span>
+            <span class="name pix">THE PHISHING TRAIL</span>
+            <span class="tag pix" style="display:block">SURVIVE THE WORK WEEK.</span>
+            <span class="stat pix" style="display:block" data-stat="phish"></span>
           </span>
         </a>
         <div id="selFoot" class="pix">&#169; 2026 NAKFRG &nbsp;&#183;&nbsp; <span id="creditN">CREDIT 1</span></div>
@@ -293,7 +293,26 @@ var SPR = {
          "##########",
          "##########",
          "## ### ## ",
-         "## ### ## "]
+         "## ### ## "],
+  rook:["# # # # #",
+         "#########",
+         " ####### ",
+         "  #####  ",
+         "  #####  ",
+         "  #####  ",
+         " ####### ",
+         "#########",
+         "#########"],
+  bullet:["   #   ",
+          "  ###  ",
+          " ##### ",
+          " ##### ",
+          " ##### ",
+          "#######",
+          "#######",
+          "#######",
+          "#######",
+          "#######"]
 };
 function drawSpr(ctx, map, ox, oy){
   ctx.fillStyle='#fff';
